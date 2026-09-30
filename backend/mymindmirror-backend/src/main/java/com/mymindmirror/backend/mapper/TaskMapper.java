@@ -11,7 +11,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import java.util.List;
 
-// ✅ ADDED: nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
+//  nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
 @Mapper(
         componentModel = "spring",
         uses = JsonMapperHelper.class,
@@ -19,7 +19,9 @@ import java.util.List;
 )
 public interface TaskMapper {
 
-    TaskResponse toResponse(Task task);
+    @Mapping(target = "subtasks", source = "subtasksJson", qualifiedByName = "jsonToStringList")
+    TaskResponse toResponse(Task task);;
+
     List<TaskResponse> toResponseList(List<Task> tasks);
 
     @Mapping(target = "subtasksJson", source = "subtasks", qualifiedByName = "stringListToJson")
