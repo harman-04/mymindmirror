@@ -73,47 +73,6 @@ public class JournalSearchService {
         return entries;
     }
 
-//    @Transactional(readOnly = true)
-//    public List<JournalEntry> searchJournalEntriesSemantically(User user, String concept) {
-//        log.info("Executing semantic concept search for user: {} -> '{}'", user.getUsername(), concept);
-//        String userSecret = user.getPasswordHash();
-//        if (userSecret == null || userSecret.isEmpty()) return List.of();
-//
-//        try {
-//            SearchRequest searchRequest = SearchRequest.builder()
-//                    .query(concept)
-//                    .topK(semanticSearchTopK)               // ✅ injected
-//                    .similarityThreshold(similarityThreshold) // ✅ injected
-//                    .filterExpression("userId == '" + user.getId().toString() + "'")
-//                    .build();
-//
-//            List<Document> documents = embeddingGenerationService.getVectorStore().similaritySearch(searchRequest);
-//            if (documents == null || documents.isEmpty()) return List.of();
-//
-//            List<UUID> orderedEntryIds = documents.stream()
-//                    .map(doc -> UUID.fromString(doc.getMetadata().get("entryId").toString()))
-//                    .collect(Collectors.toList());
-//
-//            List<JournalEntry> unorderedEntries = journalEntryRepository.findByIdIn(orderedEntryIds);
-//            Map<UUID, JournalEntry> entryMap = unorderedEntries.stream()
-//                    .collect(Collectors.toMap(JournalEntry::getId, java.util.function.Function.identity()));
-//
-//            List<JournalEntry> rankedAndDecrypted = new ArrayList<>();
-//            for (UUID id : orderedEntryIds) {
-//                JournalEntry entry = entryMap.get(id);
-//                if (entry != null) {
-//                    String decryptedText = EncryptionUtil.decrypt(entry.getRawText(), userSecret);
-//                    entry.setRawText(decryptedText != null ? decryptedText : "");
-//                    rankedAndDecrypted.add(entry);
-//                }
-//            }
-//            return rankedAndDecrypted;
-//        } catch (Exception e) {
-//            log.error("Fatal exception during semantic search execution", e);
-//            return List.of();
-//        }
-//    }
-
     @Transactional(readOnly = true)
     public List<JournalEntry> searchJournalEntriesSemantically(User user, String concept) {
         log.info("Executing semantic concept search for user: {} -> '{}'", user.getUsername(), concept);
@@ -169,8 +128,8 @@ public class JournalSearchService {
         try {
             SearchRequest searchRequest = SearchRequest.builder()
                     .query(query)
-                    .topK(topK)                                 // ✅ parameter passed from caller
-                    .similarityThreshold(similarityThresholdFallback) // ✅ injected
+                    .topK(topK)                                 //  parameter passed from caller
+                    .similarityThreshold(similarityThresholdFallback) //  injected
                     .filterExpression("userId == '" + user.getId().toString() + "'")
                     .build();
 
