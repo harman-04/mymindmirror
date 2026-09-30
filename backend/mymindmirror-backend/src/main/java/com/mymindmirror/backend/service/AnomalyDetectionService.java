@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.service;
 
 import com.mymindmirror.backend.payload.response.Anomaly;
+import com.mymindmirror.backend.payload.response.AnomalyDetectionResponse;
 import com.mymindmirror.backend.payload.response.DailyAggregatedDataResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,20 +25,22 @@ public class AnomalyDetectionService {
     @Value("${app.anomaly.min-days:5}")
     private int minDaysForAnomaly;
 
-    public Map<String, Object> detectAnomalies(List<DailyAggregatedDataResponse> dailyData) {
+    public AnomalyDetectionResponse detectAnomalies(List<DailyAggregatedDataResponse> dailyData) {
         if (dailyData == null || dailyData.isEmpty()) {
-            return Map.of("anomalies", List.of(), "message", "No data provided for anomaly detection.");
+            return new AnomalyDetectionResponse(
+                    List.of(),
+                    "No data provided for anomaly detection.");
         }
 
         dailyData.sort(Comparator.comparing(DailyAggregatedDataResponse::date));
 
         if (dailyData.size() < minDaysForAnomaly) {
-            String msg = String.format("Insufficient data (%d days). Need at least %d days for anomaly detection.",
+            String msg = String.format(
+                    "Insufficient data (%d days). Need at least %d days for anomaly detection.",
                     dailyData.size(), minDaysForAnomaly);
-            return Map.of("anomalies", List.of(), "message", msg);
+            return new AnomalyDetectionResponse(List.of(), msg);
         }
 
-        // ✅ Calculate alpha dynamically (no static constant)
         double alpha = 2.0 / (ewmaSpan + 1.0);
 
         DailyAggregatedDataResponse first = dailyData.get(0);
@@ -69,6 +72,7 @@ public class AnomalyDetectionService {
             if (i >= warmupDays - 1) {
                 boolean isMoodAnomaly = false;
                 String moodMsg = null;
+                //  Only z‑score branch is needed
                 if (moodStd > 0) {
                     double zScoreMood = (currentMood - moodEma) / moodStd;
                     if (Math.abs(zScoreMood) > moodThresholdStd) {
@@ -77,11 +81,6 @@ public class AnomalyDetectionService {
                         moodMsg = String.format("Your average mood (%.2f) was significantly %s than your recent typical mood (%.2f).",
                                 currentMood, dir, moodEma);
                     }
-                } else if (Math.abs(currentMood - moodEma) > 1e-6) {
-                    isMoodAnomaly = true;
-                    String dir = currentMood < moodEma ? "lower" : "higher";
-                    moodMsg = String.format("Your average mood (%.2f) was significantly %s than your recent constant mood (%.2f).",
-                            currentMood, dir, moodEma);
                 }
 
                 boolean isWordsAnomaly = false;
@@ -94,11 +93,6 @@ public class AnomalyDetectionService {
                         wordsMsg = String.format("You wrote %d words, which is %s than your recent typical word count (%.0f).",
                                 currentWords, dir, wordsEma);
                     }
-                } else if (Math.abs(currentWords - wordsEma) > 1e-6) {
-                    isWordsAnomaly = true;
-                    String dir = currentWords < wordsEma ? "less" : "more";
-                    wordsMsg = String.format("You wrote %d words, which is %s than your recent constant word count (%.0f).",
-                            currentWords, dir, wordsEma);
                 }
 
                 if (isMoodAnomaly || isWordsAnomaly) {
@@ -118,9 +112,13 @@ public class AnomalyDetectionService {
         }
 
         if (anomalies.isEmpty()) {
-            return Map.of("anomalies", List.of(), "message", "No significant anomalies detected in your recent journaling patterns.");
+            return new AnomalyDetectionResponse(
+                    List.of(),
+                    "No significant anomalies detected in your recent journaling patterns.");
         } else {
-            return Map.of("anomalies", anomalies, "message", "Detected " + anomalies.size() + " unusual journaling patterns.");
+            return new AnomalyDetectionResponse(
+                    anomalies,
+                    "Detected " + anomalies.size() + " unusual journaling patterns.");
         }
     }
 }
