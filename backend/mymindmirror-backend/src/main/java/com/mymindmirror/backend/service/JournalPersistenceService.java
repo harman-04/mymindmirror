@@ -16,6 +16,7 @@ import org.hibernate.Hibernate;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -25,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +45,6 @@ public class JournalPersistenceService {
     // ------------------------- CRUD -------------------------
 
     @Transactional
-//    @CacheEvict(value = "keyPhraseFrequencies", key = "#user.id")
     @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     public JournalEntry saveJournalEntry(User user, String rawText) {
         log.info("Saving new journal entry for user: {}", user.getUsername());
@@ -88,16 +89,18 @@ public class JournalPersistenceService {
     }
 
     @Transactional
-//    @CacheEvict(value = "keyPhraseFrequencies", key = "#user.id")
     @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     public JournalEntry updateJournalEntry(UUID entryId, User user, String updatedText) {
         log.info("Updating journal entry {} for user {}", entryId, user.getUsername());
 
+
         JournalEntry existingEntry = journalEntryRepository.findByIdWithDetails(entryId)
-                .orElseThrow(() -> new IllegalArgumentException("Journal entry not found with ID: " + entryId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Journal entry not found with ID: " + entryId));
 
         if (!existingEntry.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("You are not authorized to update this journal entry.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Journal entry not found with ID: " + entryId);
         }
 
         String userSecret = user.getPasswordHash();
@@ -132,16 +135,18 @@ public class JournalPersistenceService {
     }
 
     @Transactional
-//    @CacheEvict(value = "keyPhraseFrequencies", key = "#user.id")
     @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     public void deleteJournalEntry(UUID entryId, User user) {
         log.info("Deleting journal entry {} for user {}", entryId, user.getUsername());
 
         JournalEntry existingEntry = journalEntryRepository.findById(entryId)
-                .orElseThrow(() -> new IllegalArgumentException("Journal entry not found with ID: " + entryId));
+
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Journal entry not found with ID: " + entryId));
 
         if (!existingEntry.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("You are not authorized to delete this journal entry.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Journal entry not found with ID: " + entryId);
         }
 
         journalEntryRepository.delete(existingEntry);
@@ -262,9 +267,8 @@ public class JournalPersistenceService {
             }
             Hibernate.initialize(entry.getKeyPhrases());
             Hibernate.initialize(entry.getUser());
-//            responseList.add(buildJournalEntryResponse(entry, decryptedText));
 
-            // ✅ Use the mapper – it handles all JSON parsing via JsonMapperHelper
+            //  Use the mapper – it handles all JSON parsing via JsonMapperHelper
             responseList.add(journalMapper.toResponse(entry));
         }
 
@@ -292,7 +296,6 @@ public class JournalPersistenceService {
         } else {
             entry.setKeyPhrases(new ArrayList<>());
         }
-//        entry.setClusterId(null);
     }
 
 
@@ -305,16 +308,6 @@ public class JournalPersistenceService {
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
     }
 
-    /**
-     * Fetches journal entries for a date range without decrypting the raw text.
-     * Use this ONLY when you need metadata like summaries, dates, or emotions for AI context.
-     */
-//    @Transactional(readOnly = true)
-//    public List<JournalEntry> getJournalTimelineWithoutDecryption(User user, LocalDate startDate, LocalDate endDate) {
-//        log.debug("Fetching journal timeline metadata (no decryption) for user {} from {} to {}", user.getUsername(), startDate, endDate);
-//        return journalEntryRepository
-//                .findByUserAndEntryDateBetweenOrderByCreationTimestampDesc(user, startDate, endDate);
-//    }
 
     /**
      * Highly optimized fetch for AI Prompts.
