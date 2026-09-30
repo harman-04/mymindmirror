@@ -19,9 +19,11 @@ import com.mymindmirror.backend.service.ai.DynamicAiClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -65,16 +67,6 @@ public class MilestoneService {
     }
 
     /**
-     * Retrieves all milestones for a specific user, ordered by creation date descending.
-     * @param user The authenticated user.
-     * @return A list of Milestone entities.
-     */
-    public List<Milestone> getAllMilestonesForUser(User user) {
-        log.info("Fetching all milestones for user: {}", user.getUsername());
-        return milestoneRepository.findByUserOrderByCreationDateDesc(user);
-    }
-
-    /**
      * Retrieves a specific milestone by its ID for a given user.
      * Ensures that the milestone belongs to the authenticated user.
      * @param milestoneId The ID of the milestone.
@@ -106,7 +98,7 @@ public class MilestoneService {
      * @param newDueDate The new due date (optional).
      * @param newStatus The new status (optional).
      * @return The updated Milestone entity.
-     * @throws IllegalArgumentException if the milestone is not found or not owned by the user.
+     * @throws ResponseStatusException with 404 if the milestone is not found or not owned by the user.
      */
     @Transactional
     public Milestone updateMilestone(UUID milestoneId, User user,
@@ -118,7 +110,9 @@ public class MilestoneService {
         List<Milestone> milestones = milestoneRepository.findByIdAndUser(milestoneId, user);
         if (milestones.isEmpty()) {
             log.warn("Milestone {} not found or not owned by user {}", milestoneId, user.getUsername());
-            throw new IllegalArgumentException("Milestone not found or not owned by user.");
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Milestone not found or not owned by user.");
         }
         Milestone existingMilestone = milestones.get(0);
 
@@ -144,13 +138,15 @@ public class MilestoneService {
      * Ensures that the milestone belongs to the authenticated user.
      * @param milestoneId The ID of the milestone to delete.
      * @param user The authenticated user.
-     * @throws IllegalArgumentException if the milestone is not found or not owned by the user.
+     * @throws ResponseStatusException with 404 if the milestone is not found or not owned by the user.
      */
     @Transactional
     public void deleteMilestone(UUID milestoneId, User user) {
         log.info("Deleting milestone {} for user {}", milestoneId, user.getUsername());
         Milestone existingMilestone = getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
 
         milestoneRepository.delete(existingMilestone);
         log.info("Milestone {} deleted successfully.", milestoneId);
@@ -206,20 +202,18 @@ public class MilestoneService {
      * Parses a growth tip using AI and creates corresponding tasks.
      * AI call is outside the transaction to prevent holding database connections.
      */
-    public List<Task> importGrowthTipAsTask(User user, String tipText) {
-        // 1. Call AI (outside any transaction)
-        String prompt = buildParseGrowthTipPrompt(tipText);
-        GrowthTipParseResponse response;
-        try {
-            response = aiClientService.generateStructured(prompt, GrowthTipParseResponse.class, user.getId(), AITask.PARSE_GROWTH_TIP);
-        } catch (Exception e) {
-            log.error("Failed to parse growth tip via AI", e);
-            throw new RuntimeException("Failed to parse growth tip: " + e.getMessage(), e);
-        }
 
-        if (response == null || response.tasks() == null || response.tasks().isEmpty()) {
-            throw new RuntimeException("No tasks extracted from growth tip");
-        }
+public List<Task> importGrowthTipAsTask(User user, String tipText) {
+    // 1. Call AI (outside any transaction).
+    //    Let DynamicAiClientService's key-aware 503 propagate directly —
+    //    it already knows whether the shared key or the user's own key was exhausted.
+    String prompt = buildParseGrowthTipPrompt(tipText);
+    GrowthTipParseResponse response = aiClientService.generateStructured(
+            prompt, GrowthTipParseResponse.class, user.getId(), AITask.PARSE_GROWTH_TIP);
+
+    if (response == null || response.tasks() == null || response.tasks().isEmpty()) {
+        throw new RuntimeException("No tasks extracted from growth tip");
+    }
 
         // 2. Perform all DB operations in a short transaction
         return transactionTemplate.execute(status -> {
@@ -296,24 +290,26 @@ public class MilestoneService {
     @Transactional(readOnly = true)
     public List<MilestoneResponse> getAllMilestonesForUserAsDTO(User user) {
         List<Milestone> milestones = milestoneRepository.findByUserOrderByCreationDateDesc(user);
-        return milestoneMapper.toResponseList(milestones); // ✅ REPLACED whole stream block
+        return milestoneMapper.toResponseList(milestones);
     }
 
     public MilestoneResponse getMilestoneResponseById(UUID milestoneId, User user) {
         Milestone milestone = getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found"));
-        return milestoneMapper.toResponse(milestone); // ✅ REPLACED
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found"));
+        return milestoneMapper.toResponse(milestone);
     }
 
     public MilestoneResponse createMilestoneAsDTO(User user, String title, String description, LocalDate dueDate) {
         Milestone milestone = createMilestone(user, title, description, dueDate);
-        return milestoneMapper.toResponse(milestone); // ✅ REPLACED
+        return milestoneMapper.toResponse(milestone);
     }
 
     public MilestoneResponse updateMilestoneAsDTO(UUID milestoneId, User user,
                                                   String title, String description,
                                                   LocalDate dueDate, Status status) {
         Milestone updated = updateMilestone(milestoneId, user, title, description, dueDate, status);
-        return milestoneMapper.toResponse(updated); // ✅ REPLACED
+        return milestoneMapper.toResponse(updated);
     }
 }

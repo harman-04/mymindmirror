@@ -22,7 +22,6 @@ public class MilestoneInsightService {
     private final DynamicAiClientService aiClientService;
     private final GamificationService gamificationService;
 
-    // ✅ REMOVED Mono. Returns the response directly!
     public MilestoneInsightResponse getMilestoneInsights(Milestone milestone) {
         User user = milestone.getUser();
         log.info("Requesting native Spring AI insights for milestone: {}", milestone.getTitle());
@@ -46,11 +45,10 @@ public class MilestoneInsightService {
         );
 
         try {
-            // ✅ AI Call is completely synchronous and outside any database transactions
+            //  AI Call is completely synchronous and outside any database transactions
             MilestoneInsightResponse response = aiClientService.generateStructured(prompt, MilestoneInsightResponse.class, user.getId(), AITask.MILESTONE_INSIGHTS);
 
             // Record activity handles its own isolated micro-transaction
-//            gamificationService.recordActivity(user, "AI_INSIGHT");
             gamificationService.recordActivity(user, GamificationAction.AI_INSIGHT);
 
             return response;
@@ -63,9 +61,8 @@ public class MilestoneInsightService {
     private String buildInsightsPrompt(String title, String description, String dueDate,
                                        String status, double completionPercentage,
                                        List<TaskForInsightRequest> tasks) {
-        // ... Keep your exact prompt building code here!
         StringBuilder tasksStr = new StringBuilder();
-        if (tasks != null && !tasks.isEmpty()) {
+        if (!tasks.isEmpty()) {
             tasksStr.append("\nTasks:\n");
             for (TaskForInsightRequest task : tasks) {
                 tasksStr.append(String.format("- %s (Status: %s, Due: %s)\n",
