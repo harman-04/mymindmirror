@@ -64,7 +64,7 @@ public class DynamicAiClientService {
                     throw new RuntimeException("Empty response returned from model.");
                 }
 
-                //  CRITICAL: Handles Gemma/Thinking models by ALWAYS grabbing the final index (ignoring thoughts)
+                //  Handles Gemma/Thinking models by ALWAYS grabbing the final index (ignoring thoughts)
                 int lastIndex = response.getResults().size() - 1;
                 String finalAnswer = response.getResults().get(lastIndex).getOutput().getText();
                 return finalAnswer != null ? finalAnswer.trim() : "";
