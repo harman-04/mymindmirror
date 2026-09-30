@@ -9,6 +9,7 @@ import org.springframework.boot.jpa.autoconfigure.JpaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -17,6 +18,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import javax.sql.DataSource;
 
 @Configuration
+@Profile("!test")
 @EnableJpaRepositories(
         basePackages = "com.mymindmirror.backend.repository",  // your JPA repositories package
         entityManagerFactoryRef = "mysqlEntityManagerFactory",
@@ -33,6 +35,9 @@ public class MySqlDatabaseConfig {
         ds.setPassword(properties.password());
         ds.setDriverClassName(properties.driverClassName());
         ds.setMaximumPoolSize(10);
+        ds.setConnectionTimeout(5000);
+        ds.setValidationTimeout(3000);
+        ds.setMaxLifetime(240000);
         return ds;
     }
 
