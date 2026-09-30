@@ -74,16 +74,6 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    public List<User> findAllUsers() {
-        log.debug("Attempting to find all users.");
-        return userRepository.findAll();
-    }
-
-    public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username).orElse(null);
-    }
-
-
     @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#userId")
     public User updateUser(UUID userId, UserProfileRequest request) {
         log.info("Attempting to update user with ID: {}", userId);
@@ -95,7 +85,7 @@ public class UserService {
 
         boolean changed = false;
 
-        // ✅ FIX: Use record accessors .username() and .email()
+        //  Use record accessors .username() and .email()
         if (request.username() != null && !request.username().trim().isEmpty() && !request.username().equals(user.getUsername())) {
             if (userRepository.existsByUsername(request.username())) {
                 log.warn("User update failed: New username '{}' already exists.", request.username());
@@ -333,7 +323,7 @@ public class UserService {
         UserPreferences prefs = userPreferencesRepository.findByUser(user)
                 .orElseGet(() -> createDefaultPreferences(user));
 
-        // ✅ FIX: Construct the immutable record using the constructor. No more .setX()!
+        //  Construct the immutable record using the constructor. No more .setX()!
         return new UserFullProfileResponse(
                 user.getId(),
                 user.getUsername(),
@@ -366,36 +356,6 @@ public class UserService {
                 .orElseGet(() -> createDefaultPreferences(user));
     }
 
-    @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
-    @Transactional
-    public UserPreferences updateUserPreferences(User user, java.util.Map<String, Object> updates) {
-        UserPreferences prefs = userPreferencesRepository.findByUser(user)
-                .orElseGet(() -> createDefaultPreferences(user));
-
-        if (updates.containsKey("availableHoursJson")) {
-            prefs.setAvailableHoursJson((String) updates.get("availableHoursJson"));
-        }
-        if (updates.containsKey("timezone")) {
-            prefs.setTimezone((String) updates.get("timezone"));
-        }
-        if (updates.containsKey("energyPeak")) {
-            prefs.setEnergyPeak((String) updates.get("energyPeak"));
-        }
-        if (updates.containsKey("wakeTime")) {
-            prefs.setWakeTime(java.time.LocalTime.parse((String) updates.get("wakeTime")));
-        }
-        if (updates.containsKey("sleepTime")) {
-            prefs.setSleepTime(java.time.LocalTime.parse((String) updates.get("sleepTime")));
-        }
-        if (updates.containsKey("lunchTime")) {
-            prefs.setLunchTime(java.time.LocalTime.parse((String) updates.get("lunchTime")));
-        }
-        if (updates.containsKey("dailyHabitsJson")) {
-            prefs.setDailyHabitsJson((String) updates.get("dailyHabitsJson"));
-        }
-
-        return userPreferencesRepository.save(prefs);
-    }
 
     @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
     @Transactional
@@ -436,64 +396,4 @@ public class UserService {
                 saved.getDailyHabitsJson()
         );
     }
-
-//    public UserRoadmapPreferencesDto updateRoadmapPreferences(UUID userId, Map<String, Object> updates) {
-//        User user = findById(userId)
-//                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-//
-//        // Safe extraction
-//        String difficulty = updates.get("difficulty") instanceof String ? (String) updates.get("difficulty") : null;
-//        String languagePreference = updates.get("languagePreference") instanceof String ? (String) updates.get("languagePreference") : null;
-//        String learningStyle = updates.get("learningStyle") instanceof String ? (String) updates.get("learningStyle") : null;
-//
-//        Integer hoursPerWeek = null;
-//        if (updates.containsKey("hoursPerWeek")) {
-//            Object hoursObj = updates.get("hoursPerWeek");
-//            if (hoursObj instanceof Number) {
-//                hoursPerWeek = ((Number) hoursObj).intValue();
-//            } else if (hoursObj instanceof String) {
-//                try {
-//                    hoursPerWeek = Integer.parseInt((String) hoursObj);
-//                } catch (NumberFormatException ignored) {}
-//            }
-//        }
-//
-//        Boolean avoidWeekends = null;
-//        if (updates.containsKey("avoidWeekends")) {
-//            Object avoidObj = updates.get("avoidWeekends");
-//            if (avoidObj instanceof Boolean) {
-//                avoidWeekends = (Boolean) avoidObj;
-//            } else if (avoidObj instanceof String) {
-//                avoidWeekends = Boolean.parseBoolean((String) avoidObj);
-//            }
-//        }
-//
-//        UserRoadmapPreferences updated = updateRoadmapPreferences(user, difficulty, languagePreference, learningStyle, hoursPerWeek, avoidWeekends);
-//        // Return DTO directly from service now
-//        return new UserRoadmapPreferencesDto(
-//                updated.getDifficulty(),
-//                updated.getLanguagePreference(),
-//                updated.getLearningStyle(),
-//                updated.getHoursPerWeek(),
-//                updated.isAvoidWeekends()
-//        );
-//    }
-//
-//    public UserPreferencesResponse updateUserPreferences(UUID userId, Map<String, Object> updates) {
-//        User user = findById(userId)
-//                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-//
-//        UserPreferences updated = updateUserPreferences(user, updates);
-//
-//        // Return Response DTO directly
-//        return new UserPreferencesResponse(
-//                updated.getAvailableHoursJson(),
-//                updated.getTimezone(),
-//                updated.getEnergyPeak(),
-//                updated.getWakeTime() != null ? updated.getWakeTime().toString() : null,
-//                updated.getSleepTime() != null ? updated.getSleepTime().toString() : null,
-//                updated.getLunchTime() != null ? updated.getLunchTime().toString() : null,
-//                updated.getDailyHabitsJson()
-//        );
-//    }
 }

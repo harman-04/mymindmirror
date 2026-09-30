@@ -19,16 +19,6 @@ public class ChatMemoryService {
     private static final long SESSION_TTL_HOURS = 1;
 
 
-    // Standard POJO representation of a message turn
-//
-//    @Getter
-//    @Setter
-//    @NoArgsConstructor
-//    @AllArgsConstructor
-//    public static class ChatMessage implements Serializable {
-//        private String role; // "user" or "model"
-//        private String content;
-//}
     public record ChatMessage(String role, String content) implements Serializable {}
 
 
