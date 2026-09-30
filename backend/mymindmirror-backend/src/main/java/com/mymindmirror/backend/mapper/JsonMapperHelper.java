@@ -39,12 +39,14 @@ public class JsonMapperHelper {
         try {
             return objectMapper.writeValueAsString(list);
         } catch (JsonProcessingException e) {
-            return "[]";
+            // Unreachable in practice for List<String>, but the compiler
+            // requires us to handle the checked exception. Fail loudly.
+            log.error("Unexpected JSON serialization failure for list of size {}", list.size(), e);
+            throw new RuntimeException("Failed to serialize list to JSON", e);
         }
     }
 
 
-    // ... existing imports and class ...
 
     @Named("jsonToMap")
     public Map<String, Double> jsonToMap(String json) {
