@@ -9,8 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -71,45 +73,93 @@ public class JournalSearchService {
         return entries;
     }
 
+//    @Transactional(readOnly = true)
+//    public List<JournalEntry> searchJournalEntriesSemantically(User user, String concept) {
+//        log.info("Executing semantic concept search for user: {} -> '{}'", user.getUsername(), concept);
+//        String userSecret = user.getPasswordHash();
+//        if (userSecret == null || userSecret.isEmpty()) return List.of();
+//
+//        try {
+//            SearchRequest searchRequest = SearchRequest.builder()
+//                    .query(concept)
+//                    .topK(semanticSearchTopK)               // ✅ injected
+//                    .similarityThreshold(similarityThreshold) // ✅ injected
+//                    .filterExpression("userId == '" + user.getId().toString() + "'")
+//                    .build();
+//
+//            List<Document> documents = embeddingGenerationService.getVectorStore().similaritySearch(searchRequest);
+//            if (documents == null || documents.isEmpty()) return List.of();
+//
+//            List<UUID> orderedEntryIds = documents.stream()
+//                    .map(doc -> UUID.fromString(doc.getMetadata().get("entryId").toString()))
+//                    .collect(Collectors.toList());
+//
+//            List<JournalEntry> unorderedEntries = journalEntryRepository.findByIdIn(orderedEntryIds);
+//            Map<UUID, JournalEntry> entryMap = unorderedEntries.stream()
+//                    .collect(Collectors.toMap(JournalEntry::getId, java.util.function.Function.identity()));
+//
+//            List<JournalEntry> rankedAndDecrypted = new ArrayList<>();
+//            for (UUID id : orderedEntryIds) {
+//                JournalEntry entry = entryMap.get(id);
+//                if (entry != null) {
+//                    String decryptedText = EncryptionUtil.decrypt(entry.getRawText(), userSecret);
+//                    entry.setRawText(decryptedText != null ? decryptedText : "");
+//                    rankedAndDecrypted.add(entry);
+//                }
+//            }
+//            return rankedAndDecrypted;
+//        } catch (Exception e) {
+//            log.error("Fatal exception during semantic search execution", e);
+//            return List.of();
+//        }
+//    }
+
     @Transactional(readOnly = true)
     public List<JournalEntry> searchJournalEntriesSemantically(User user, String concept) {
         log.info("Executing semantic concept search for user: {} -> '{}'", user.getUsername(), concept);
         String userSecret = user.getPasswordHash();
         if (userSecret == null || userSecret.isEmpty()) return List.of();
 
+        // 1. Vector store call — Postgres-specific; fail loudly on outage
+        List<Document> documents;
         try {
             SearchRequest searchRequest = SearchRequest.builder()
                     .query(concept)
-                    .topK(semanticSearchTopK)               // ✅ injected
-                    .similarityThreshold(similarityThreshold) // ✅ injected
+                    .topK(semanticSearchTopK)
+                    .similarityThreshold(similarityThreshold)
                     .filterExpression("userId == '" + user.getId().toString() + "'")
                     .build();
 
-            List<Document> documents = embeddingGenerationService.getVectorStore().similaritySearch(searchRequest);
-            if (documents == null || documents.isEmpty()) return List.of();
-
-            List<UUID> orderedEntryIds = documents.stream()
-                    .map(doc -> UUID.fromString(doc.getMetadata().get("entryId").toString()))
-                    .collect(Collectors.toList());
-
-            List<JournalEntry> unorderedEntries = journalEntryRepository.findByIdIn(orderedEntryIds);
-            Map<UUID, JournalEntry> entryMap = unorderedEntries.stream()
-                    .collect(Collectors.toMap(JournalEntry::getId, java.util.function.Function.identity()));
-
-            List<JournalEntry> rankedAndDecrypted = new ArrayList<>();
-            for (UUID id : orderedEntryIds) {
-                JournalEntry entry = entryMap.get(id);
-                if (entry != null) {
-                    String decryptedText = EncryptionUtil.decrypt(entry.getRawText(), userSecret);
-                    entry.setRawText(decryptedText != null ? decryptedText : "");
-                    rankedAndDecrypted.add(entry);
-                }
-            }
-            return rankedAndDecrypted;
+            documents = embeddingGenerationService.getVectorStore().similaritySearch(searchRequest);
         } catch (Exception e) {
-            log.error("Fatal exception during semantic search execution", e);
-            return List.of();
+            log.error("Vector store (Postgres) unreachable during semantic search", e);
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Semantic search is temporarily unavailable. Please try again in a moment.",
+                    e);
         }
+
+        if (documents == null || documents.isEmpty()) return List.of();
+
+        // 2. Rest of the method — MySQL failures propagate to handleResourceFailure → 503
+        List<UUID> orderedEntryIds = documents.stream()
+                .map(doc -> UUID.fromString(doc.getMetadata().get("entryId").toString()))
+                .collect(Collectors.toList());
+
+        List<JournalEntry> unorderedEntries = journalEntryRepository.findByIdIn(orderedEntryIds);
+        Map<UUID, JournalEntry> entryMap = unorderedEntries.stream()
+                .collect(Collectors.toMap(JournalEntry::getId, java.util.function.Function.identity()));
+
+        List<JournalEntry> rankedAndDecrypted = new ArrayList<>();
+        for (UUID id : orderedEntryIds) {
+            JournalEntry entry = entryMap.get(id);
+            if (entry != null) {
+                String decryptedText = EncryptionUtil.decrypt(entry.getRawText(), userSecret);
+                entry.setRawText(decryptedText != null ? decryptedText : "");
+                rankedAndDecrypted.add(entry);
+            }
+        }
+        return rankedAndDecrypted;
     }
 
     // Changed to public and added @Transactional so it loads keyPhrases eagerly before returning
