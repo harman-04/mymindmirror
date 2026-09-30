@@ -1,6 +1,5 @@
 package com.mymindmirror.backend.payload.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,5 +18,4 @@ public record JournalEntryResponse(
         String summary,
         List<String> growthTips,
         List<String> keyPhrases
-//        Integer clusterId
 ) {}
