@@ -11,12 +11,14 @@ import com.mymindmirror.backend.repository.CustomTaskRepository;
 import com.mymindmirror.backend.repository.ScheduledTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +48,6 @@ public class CustomTaskService {
         if (task.getDescription() == null) task.setDescription("");
 
         CustomTask saved = customTaskRepository.save(task);
-//        gamificationService.recordActivity(user, "TASK_CREATE");
         gamificationService.recordActivity(user, GamificationAction.TASK_CREATE);
 
         return customTaskMapper.toResponse(saved);
@@ -55,10 +56,11 @@ public class CustomTaskService {
     @Transactional
     public CustomTaskResponse updateCustomTask(UUID id, User user, CustomTaskRequest request) {
         CustomTask existing = customTaskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Custom task not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Custom task not found"));
 
         if (!existing.getUser().getId().equals(user.getId())) {
-            throw new SecurityException("User not authorized to update this task.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Custom task not found");
         }
 
         boolean wasCompleted = existing.isCompleted();
@@ -79,7 +81,6 @@ public class CustomTaskService {
 
         // --- GAMIFICATION SYNC ---
         if (!wasCompleted && saved.isCompleted()) {
-//            gamificationService.recordActivity(user, "TASK");
             gamificationService.recordActivity(user, GamificationAction.TASK);
         }
 
@@ -89,10 +90,11 @@ public class CustomTaskService {
     @Transactional
     public void deleteCustomTask(UUID id, User user) {
         CustomTask task = customTaskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Custom task not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Custom task not found"));
 
         if (!task.getUser().getId().equals(user.getId())) {
-            throw new SecurityException("User not authorized to delete this task.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Custom task not found");
         }
 
         // Delete all corresponding tasks from the calendar!
