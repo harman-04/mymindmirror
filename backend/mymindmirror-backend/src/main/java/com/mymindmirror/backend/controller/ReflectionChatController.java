@@ -6,6 +6,7 @@ import com.mymindmirror.backend.payload.request.ChatRequest;
 import com.mymindmirror.backend.payload.response.ChatResponse;
 import com.mymindmirror.backend.service.ChatMemoryService;
 import com.mymindmirror.backend.service.JournalService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class ReflectionChatController {
     @PostMapping("/reflect")
     public ResponseEntity<ChatResponse> reflect(
             @CurrentUser User currentUser,
-            @RequestBody ChatRequest request) {
+            @Valid @RequestBody ChatRequest request) {
 
         String answer = journalService.generateReflectionChat(
                 currentUser,
@@ -44,7 +45,7 @@ public class ReflectionChatController {
             @CurrentUser User currentUser,
             @RequestParam String sessionId) {
 
-        if (sessionId != null && !sessionId.isBlank()) {
+        if (!sessionId.isBlank()) {
             chatMemoryService.clearHistory(currentUser.getId(), sessionId);
         }
         return ResponseEntity.ok().build();

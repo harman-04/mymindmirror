@@ -8,6 +8,7 @@ import com.mymindmirror.backend.payload.request.RoadmapGenerateRequest;
 import com.mymindmirror.backend.payload.response.ElaborationResponseDto;
 import com.mymindmirror.backend.payload.response.RoadmapResponse;
 import com.mymindmirror.backend.service.RoadmapService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class RoadmapController {
     @PostMapping("/generate")
     public ResponseEntity<RoadmapResponse> generateRoadmap(
             @CurrentUser User currentUser,
-            @RequestBody RoadmapGenerateRequest request)  {
+            @Valid @RequestBody RoadmapGenerateRequest request)  {
 
         RoadmapResponse response = roadmapService.generateRoadmapAsDTO(
                 currentUser,
@@ -56,7 +57,7 @@ public class RoadmapController {
     @PostMapping("/import-task")
     public ResponseEntity<String> importTaskToMilestone(
             @CurrentUser User currentUser,
-            @RequestBody ImportTaskRequest request) {
+            @Valid @RequestBody ImportTaskRequest request) {
         roadmapService.importTaskToMilestone(request.roadmapId(), request.taskId(), currentUser);
         return ResponseEntity.ok("Task imported successfully");
     }

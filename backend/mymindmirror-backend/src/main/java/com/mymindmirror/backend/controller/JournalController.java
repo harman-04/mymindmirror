@@ -19,6 +19,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.*;
@@ -112,11 +113,10 @@ public class JournalController {
         log.info("Received request for journal entry with ID: {}.", id);
         JournalEntry entry = journalService.getJournalEntryById(id)
                 .filter(e -> e.getUser().getId().equals(currentUser.getId()))
-                .orElseThrow(() -> new IllegalArgumentException("Journal entry not found or not owned."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Journal entry not found or not owned."));
 
         return ResponseEntity.ok(journalMapper.toResponse(entry));
     }
-
 
     @GetMapping("/trends")
     public ResponseEntity<Map<String, Long>> getJournalTrends(
@@ -127,7 +127,7 @@ public class JournalController {
 
         log.info("Received request for journal trends for user: {}", currentUser.getUsername());
 
-        // ✅ Parse dates in the controller using DateUtil
+        //  Parse dates in the controller using DateUtil
         DateRange range = DateUtil.parseDateRange(startDate, endDate, 90);
         Map<String, Long> trends = journalService.getTopKeyPhrases(
                 currentUser, range.start(), range.end(), limit

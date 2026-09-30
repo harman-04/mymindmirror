@@ -2,17 +2,19 @@ package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
 import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.payload.request.AnomalyDetectionRequest;
+import com.mymindmirror.backend.payload.response.AnomalyDetectionResponse;
 import com.mymindmirror.backend.payload.response.DailyAggregatedDataResponse;
 import com.mymindmirror.backend.service.JournalService;
 import com.mymindmirror.backend.util.DateRange;
 import com.mymindmirror.backend.util.DateUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ml")
@@ -39,22 +41,19 @@ public class AnalyticsController {
         return ResponseEntity.ok(data);
     }
 
+
     @PostMapping("/anomaly-detection")
-    public ResponseEntity<Map<String, Object>> runAnomalyDetection(
+    public ResponseEntity<AnomalyDetectionResponse> runAnomalyDetection(
             @CurrentUser User currentUser,
-            @RequestBody List<DailyAggregatedDataResponse> requestBody) {
+            @Valid @RequestBody AnomalyDetectionRequest request) {
 
         log.info("Received request to run anomaly detection for user: {}", currentUser.getUsername());
 
-        if (requestBody == null || requestBody.isEmpty()) {
-            throw new IllegalArgumentException("No data provided for anomaly detection.");
-        }
-
-        Map<String, Object> anomalyResults = journalService.runAnomalyDetection(requestBody);
+        AnomalyDetectionResponse response =
+                journalService.runAnomalyDetection(request.data());
 
         log.info("Anomaly detection completed for user {}, found {} anomalies.",
-                currentUser.getUsername(),
-                ((List<?>) anomalyResults.getOrDefault("anomalies", List.of())).size());
-        return ResponseEntity.ok(anomalyResults);
+                currentUser.getUsername(), response.anomalies().size());
+        return ResponseEntity.ok(response);
     }
 }

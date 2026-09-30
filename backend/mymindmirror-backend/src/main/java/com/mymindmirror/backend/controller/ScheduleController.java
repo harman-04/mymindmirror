@@ -45,23 +45,7 @@ public class ScheduleController {
         return ResponseEntity.ok(tasks);
     }
 
-//    @PutMapping("/task/{taskId}/move")
-//    public ResponseEntity<Void> moveScheduledTask(
-//            @CurrentUser User currentUser,
-//            @PathVariable UUID taskId,
-//            @RequestBody Map<String, String> request) {
-//
-//        String date = request.get("date");
-//        String startTime = request.get("startTime");
-//        String endTime = request.get("endTime");
-//
-//        if (date == null || startTime == null || endTime == null) {
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: date, startTime, or endTime");
-//        }
-//
-//        scheduleService.moveScheduledTask(taskId, currentUser, date, startTime, endTime);
-//        return ResponseEntity.ok().build();
-//    }
+
 
     @PutMapping("/task/{taskId}/move")
     public ResponseEntity<Void> moveScheduledTask(
@@ -69,7 +53,7 @@ public class ScheduleController {
             @PathVariable UUID taskId,
             @Valid @RequestBody MoveScheduledTaskRequest request) {
 
-        // ✅ Directly pass typed fields – no parsing!
+        //  Directly pass typed fields – no parsing!
         scheduleService.moveScheduledTask(taskId, currentUser, request.date(), request.startTime(), request.endTime());
         return ResponseEntity.ok().build();
     }
@@ -83,33 +67,13 @@ public class ScheduleController {
         return ResponseEntity.ok().build();
     }
 
-//    @PostMapping("/task/custom")
-//    public ResponseEntity<Void> scheduleCustomTaskManually(
-//            @CurrentUser User currentUser,
-//            @RequestBody Map<String, String> request) {
-//
-//        String customTaskIdStr = request.get("customTaskId");
-//        String title = request.get("title");
-//        String date = request.get("date");
-//        String startTime = request.get("startTime");
-//        String endTime = request.get("endTime");
-//        String priority = request.getOrDefault("priority", "MEDIUM");
-//
-//        if (customTaskIdStr == null || title == null || date == null || startTime == null || endTime == null) {
-//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: customTaskId, title, date, startTime, or endTime");
-//        }
-//
-//        UUID customTaskId = UUID.fromString(customTaskIdStr);
-//        scheduleService.scheduleCustomTaskManually(currentUser, customTaskId, title, date, startTime, endTime, priority);
-//        return ResponseEntity.ok().build();
-//    }
 
     @PostMapping("/task/custom")
     public ResponseEntity<Void> scheduleCustomTaskManually(
             @CurrentUser User currentUser,
             @Valid @RequestBody ScheduleCustomTaskRequest request) {
 
-        // ✅ All fields are typed – UUID, LocalDate, LocalTime – pass directly
+        //  All fields are typed – UUID, LocalDate, LocalTime – pass directly
         scheduleService.scheduleCustomTaskManually(
                 currentUser,
                 request.customTaskId(),

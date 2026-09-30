@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.mapper.MilestoneMapper;
 import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.Task;
 import com.mymindmirror.backend.model.User;
@@ -30,6 +31,7 @@ public class MilestoneController {
 
     private final MilestoneService milestoneService;
     private final MilestoneInsightService milestoneInsightService;
+    private final MilestoneMapper milestoneMapper;
 
     @PostMapping
     public ResponseEntity<MilestoneResponse> createMilestone(
@@ -51,12 +53,17 @@ public class MilestoneController {
         return ResponseEntity.ok(milestones);
     }
 
+
     @GetMapping("/{id}")
     public ResponseEntity<MilestoneResponse> getMilestoneById(
             @CurrentUser User currentUser,
             @PathVariable UUID id) {
 
-        MilestoneResponse response = milestoneService.getMilestoneResponseById(id, currentUser);
+        //  No try-catch – use Optional and ResponseStatusException
+        MilestoneResponse response = milestoneService.getMilestoneByIdForUser(id, currentUser)
+                .map(milestoneMapper::toResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
+
         return ResponseEntity.ok(response);
     }
 

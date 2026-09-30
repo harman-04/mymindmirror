@@ -28,7 +28,7 @@ public class TaskController {
             @PathVariable UUID milestoneId,
             @Valid @RequestBody TaskRequest taskRequest) {
 
-        // ✅ Pass the DTO directly – no manual unpacking!
+        //  Pass the DTO directly – no manual unpacking!
         TaskResponse newTask = taskService.createTask(milestoneId, currentUser, taskRequest);
         return new ResponseEntity<>(newTask, HttpStatus.CREATED);
     }
@@ -60,7 +60,7 @@ public class TaskController {
             @PathVariable UUID taskId,
             @Valid @RequestBody TaskRequest taskRequest) {
 
-        // ✅ Pass the DTO directly!
+        //  Pass the DTO directly!
         TaskResponse updatedTask = taskService.updateTask(taskId, milestoneId, currentUser, taskRequest);
         return ResponseEntity.ok(updatedTask);
     }
