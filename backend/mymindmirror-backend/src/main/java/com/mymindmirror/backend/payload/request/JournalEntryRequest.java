@@ -1,2 +1,7 @@
 package com.mymindmirror.backend.payload.request;
-public record JournalEntryRequest(String rawText) {}
+
+import jakarta.validation.constraints.NotBlank;
+
+public record JournalEntryRequest(
+        @NotBlank(message = "Journal text cannot be empty")
+        String rawText) {}

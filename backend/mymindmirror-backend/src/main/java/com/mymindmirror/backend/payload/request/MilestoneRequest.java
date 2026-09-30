@@ -1,8 +1,7 @@
 package com.mymindmirror.backend.payload.request;
 
 import com.mymindmirror.backend.enums.Status;
-import jakarta.validation.constraints.NotBlank; // ✅ Import
-import jakarta.validation.constraints.NotNull; // ✅ Import
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
 
@@ -14,6 +13,5 @@ public record MilestoneRequest(
 
         LocalDate dueDate,  // Optional
 
-//        @NotNull(message = "Status cannot be null") // ✅ Ensures status is provided (crucial for updates)
         Status status
 ) {}
