@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -36,7 +35,7 @@ public class JournalService {
     public Map<String, Long> getTopKeyPhrases(User user, LocalDate start, LocalDate end, int limit) {
         int safeLimit = Math.min(limit, MAX_TREND_LIMIT);
 
-        // ✅ Using the highly optimized, non‑decrypting fetch method
+        //  Using the highly optimized, non‑decrypting fetch method
         List<JournalEntry> entries = journalPersistenceService.getEntriesForTrendsWithoutDecryption(user, start, end);
 
         return entries.stream()
@@ -47,41 +46,28 @@ public class JournalService {
                 .entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .limit(safeLimit)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
+                .collect(
+                        LinkedHashMap::new,
+                        (map, entry) -> map.put(entry.getKey(), entry.getValue()),
+                        LinkedHashMap::putAll
+                );
     }
 
-//    private LocalDate parseDateOrDefault(String dateStr, LocalDate fallback) {
-//        if (dateStr == null || dateStr.isBlank()) return fallback;
-//        try {
-//            return LocalDate.parse(dateStr);
-//        } catch (DateTimeParseException e) {
-//            log.warn("Invalid date format '{}', using fallback {}", dateStr, fallback);
-//            return fallback;
-//        }
-//    }
 
     // ---------- Persistence ----------
     @Transactional
-//    @CacheEvict(value = "keyPhraseFrequencies", key = "#user.id")
     @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     public JournalEntry saveJournalEntry(User user, String rawText) {
         return journalPersistenceService.saveJournalEntry(user, rawText);
     }
 
     @Transactional
-//    @CacheEvict(value = "keyPhraseFrequencies", key = "#user.id")
     @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     public JournalEntry updateJournalEntry(UUID entryId, User user, String updatedText) {
         return journalPersistenceService.updateJournalEntry(entryId, user, updatedText);
     }
 
     @Transactional
-//    @CacheEvict(value = "keyPhraseFrequencies", key = "#user.id")
     @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     public void deleteJournalEntry(UUID entryId, User user) {
         journalPersistenceService.deleteJournalEntry(entryId, user);
@@ -133,28 +119,25 @@ public class JournalService {
     }
 
     // ---------- Reflection ----------
-//    @Transactional(readOnly = true)
     public String generateDailyReflection(User user) {
         return journalReflectionService.generateDailyReflection(user);
     }
 
-//    @Transactional(readOnly = true)
+    // Called from ReflectionChatController — ChatRequest.query is @NotBlank validated.
     public String generateReflectionChat(User user, String query, String sessionId, boolean rememberChat) {
         return journalReflectionService.generateReflectionChat(user, query, sessionId, rememberChat);
     }
 
-//    @Transactional(readOnly = true)
     public String generateReflectiveQuestion(User user) {
         return journalReflectionService.generateReflectiveQuestion(user);
     }
 
     // ---------- Anomaly ----------
-    public Map<String, Object> runAnomalyDetection(List<DailyAggregatedDataResponse> aggregatedData) {
+    public AnomalyDetectionResponse runAnomalyDetection(List<DailyAggregatedDataResponse> aggregatedData) {
         return anomalyDetectionService.detectAnomalies(aggregatedData);
     }
 
     // ---------- Key phrase frequencies (cached) ----------
-//    @Cacheable(value = "keyPhraseFrequencies", key = "#user.id")
     @Cacheable(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#user.id")
     @Transactional(readOnly = true)
     public Map<String, Long> getKeyPhraseFrequencies(User user) {
@@ -170,9 +153,4 @@ public class JournalService {
         }
         return freq;
     }
-
-    // ---------- Helper exposed for controller (may be removed later) ----------
-//    public JournalEntryResponse buildJournalEntryResponse(JournalEntry entry, String decryptedText) {
-//        return journalPersistenceService.buildJournalEntryResponse(entry, decryptedText);
-//    }
 }
