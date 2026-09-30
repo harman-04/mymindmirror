@@ -13,7 +13,9 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.UUID;
@@ -62,7 +64,7 @@ public class DynamicAiClientService {
                     throw new RuntimeException("Empty response returned from model.");
                 }
 
-                // 🔥 CRITICAL: Handles Gemma/Thinking models by ALWAYS grabbing the final index (ignoring thoughts)
+                //  CRITICAL: Handles Gemma/Thinking models by ALWAYS grabbing the final index (ignoring thoughts)
                 int lastIndex = response.getResults().size() - 1;
                 String finalAnswer = response.getResults().get(lastIndex).getOutput().getText();
                 return finalAnswer != null ? finalAnswer.trim() : "";
@@ -99,13 +101,16 @@ public class DynamicAiClientService {
         }
 
         log.error("CRITICAL: All structured models in cascade exhausted for task {}", task, lastException);
-        throw new RuntimeException("All allocated model endpoints are currently rate-limited or unavailable. Please retry shortly.", lastException);
+        throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                buildRateLimitMessage(userId),
+                lastException);
     }
 
     private <T> T executeStructuredCall(ChatModel model, String prompt, Class<T> responseType) {
         BeanOutputConverter<T> converter = new BeanOutputConverter<>(responseType);
 
-        // 🔥 Aggressive anti-hallucination prompt
+        //  Aggressive anti-hallucination prompt
         String structuredPromptText = prompt + "\n\n" +
                 "CRITICAL INSTRUCTIONS FOR AI:\n" +
                 "1. You MUST respond with a valid, perfectly formatted JSON object matching this schema:\n" +
@@ -178,7 +183,7 @@ public class DynamicAiClientService {
             }
         }
 
-        // ✅ FIX: Create an "effectively final" copy of the string to satisfy the Java lambda compiler rule!
+        //  Create an "effectively final" copy of the string to satisfy the Java lambda compiler rule!
         final String resolvedApiKey = apiKeyToUse;
         return userModelCache.computeIfAbsent(cacheKey, key -> buildSpecificModel(resolvedApiKey, targetModelName));
     }
@@ -202,7 +207,7 @@ public class DynamicAiClientService {
         if (rawResponse == null || rawResponse.isBlank()) return null;
         String text = rawResponse.trim();
 
-        // 🔥 NEW: Strip out illegal JSON escape sequences like \$ or \' that models sometimes hallucinate
+        //  Strip out illegal JSON escape sequences like \$ or \' that models sometimes hallucinate
         text = text.replace("\\$", "$").replace("\\'", "'");
 
         // Clean up markdown backticks if AI ignores instructions
@@ -231,5 +236,33 @@ public class DynamicAiClientService {
 
     public void evictUserModel(UUID userId) {
         userModelCache.keySet().removeIf(key -> key.startsWith(userId.toString()));
+    }
+
+    /**
+     * Builds a rate-limit message that tells the user which key was exhausted
+     * and what they can do about it.
+     */
+    private String buildRateLimitMessage(UUID userId) {
+        if (userHasOwnApiKey(userId)) {
+            return "Your Gemini API key has hit its rate limit. Please try again shortly, or check your quota in Google AI Studio.";
+        }
+        return "The shared AI service is currently at capacity. Please try again shortly, or add your own API key in Profile → Gemini API Key for priority access.";
+    }
+
+    /**
+     * Checks whether the user has configured their own API key.
+     * Fails safe — any lookup error is treated as "no custom key".
+     */
+    private boolean userHasOwnApiKey(UUID userId) {
+        if (userId == null) return false;
+        try {
+            User user = userService.findById(userId).orElse(null);
+            if (user == null) return false;
+            String key = apiKeyService.getDecryptedApiKey(user);
+            return key != null && !key.isBlank();
+        } catch (Exception e) {
+            log.warn("Could not determine API key source for user {}: {}", userId, e.getMessage());
+            return false;
+        }
     }
 }
