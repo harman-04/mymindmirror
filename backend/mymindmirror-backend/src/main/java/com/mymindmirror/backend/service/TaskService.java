@@ -13,8 +13,10 @@ import com.mymindmirror.backend.repository.RoadmapTaskRepository;
 import com.mymindmirror.backend.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -40,7 +42,9 @@ public class TaskService {
     @Transactional
     public TaskResponse createTask(UUID milestoneId, User user, TaskRequest request) {
         Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
 
         // Map DTO to entity (status is already set to PENDING in the DTO from controller? Actually the controller doesn't send status; we need to set it)
         // To be safe, we'll set status PENDING here if the request has null status.
@@ -60,9 +64,11 @@ public class TaskService {
     @Transactional
     public TaskResponse updateTask(UUID taskId, UUID milestoneId, User user, TaskRequest request) {
         Task existingTask = getTaskEntityByIdForMilestoneAndUser(taskId, milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found or not owned by user/milestone."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Task not found or not owned by user/milestone."));
 
-        // ✅ CRITICAL: Capture old status BEFORE MapStruct overwrites it
+        //  Capture old status BEFORE MapStruct overwrites it
         Status oldStatus = existingTask.getStatus();
 
         // Map all fields from the request (including status) to the existing entity
@@ -92,41 +98,13 @@ public class TaskService {
         return taskMapper.toResponse(updated);
     }
 
-    // ========================================================================
-    // DEPRECATED METHODS – Keep for backward compatibility, delegate to new ones
-    // ========================================================================
-
-    @Deprecated
-    @Transactional
-    public TaskResponse createTask(UUID milestoneId, User user, String description, LocalDate dueDate,
-                                   String details, List<String> subtasks) {
-        TaskRequest request = new TaskRequest(description, dueDate, Status.PENDING, details, subtasks);
-        return createTask(milestoneId, user, request);
-    }
-
-    @Deprecated
-    @Transactional
-    public TaskResponse createTask(UUID milestoneId, User user, String description, LocalDate dueDate) {
-        return createTask(milestoneId, user, description, dueDate, null, null);
-    }
-
-    @Deprecated
-    @Transactional
-    public TaskResponse updateTask(UUID taskId, UUID milestoneId, User user,
-                                   String newDescription, LocalDate newDueDate, Status newStatus,
-                                   String newDetails, List<String> newSubtasks) {
-        TaskRequest request = new TaskRequest(newDescription, newDueDate, newStatus, newDetails, newSubtasks);
-        return updateTask(taskId, milestoneId, user, request);
-    }
-
-    // ========================================================================
-    // EXISTING METHODS – Unchanged (already clean)
-    // ========================================================================
 
     @Transactional(readOnly = true)
     public List<TaskResponse> getAllTasksForMilestone(UUID milestoneId, User user) {
         Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
 
         return taskRepository.findByMilestoneOrderByCreationTimestampAsc(milestone).stream()
                 .map(taskMapper::toResponse)
@@ -136,7 +114,9 @@ public class TaskService {
     @Transactional(readOnly = true)
     public Optional<TaskResponse> getTaskByIdForMilestoneAndUser(UUID taskId, UUID milestoneId, User user) {
         Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
         List<Task> tasks = taskRepository.findByIdAndMilestone(taskId, milestone);
         if (tasks.isEmpty()) return Optional.empty();
         return Optional.of(taskMapper.toResponse(tasks.get(0)));
@@ -146,7 +126,9 @@ public class TaskService {
     public void deleteTask(UUID taskId, UUID milestoneId, User user) {
         log.info("Deleting task {} for milestone {} for user {}", taskId, milestoneId, user.getUsername());
         Task existingTask = getTaskEntityByIdForMilestoneAndUser(taskId, milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found or not owned by user/milestone."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Task not found or not owned by user/milestone."));
 
         Milestone milestone = existingTask.getMilestone();
         milestone.getTasks().remove(existingTask);
@@ -174,11 +156,6 @@ public class TaskService {
         return savedTask;
     }
 
-    @Transactional
-    public Task createTaskWithRoadmapLink(UUID milestoneId, User user, String description,
-                                          LocalDate dueDate, UUID roadmapTaskId) {
-        return createTaskWithRoadmapLink(milestoneId, user, description, dueDate, roadmapTaskId, null, null);
-    }
 
     // ========================================================================
     // PRIVATE HELPERS
@@ -186,7 +163,9 @@ public class TaskService {
 
     private Optional<Task> getTaskEntityByIdForMilestoneAndUser(UUID taskId, UUID milestoneId, User user) {
         Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
         List<Task> tasks = taskRepository.findByIdAndMilestone(taskId, milestone);
         return tasks.isEmpty() ? Optional.empty() : Optional.of(tasks.get(0));
     }
