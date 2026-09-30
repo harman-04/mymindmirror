@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mymindmirror.backend.constants.CacheConstants;
-import com.mymindmirror.backend.enums.GamificationAction; // ✅ IMPORTED ENUM
+import com.mymindmirror.backend.enums.GamificationAction;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.model.UserStats;
 import com.mymindmirror.backend.payload.response.UserStatsResponse;
@@ -61,7 +61,7 @@ public class GamificationService {
 
     @CacheEvict(value = CacheConstants.GAMIFICATION_STATS, key = "#user.id")
     @Transactional
-    public UserStats recordActivity(User user, GamificationAction action) { // ✅ UPDATED PARAMETER
+    public UserStats recordActivity(User user, GamificationAction action) {
         UserStats stats = userStatsRepository.findByUser(user)
                 .orElseGet(() -> initializeStats(user));
 
@@ -87,29 +87,30 @@ public class GamificationService {
         boolean badgesChanged = false;
 
         // 2. INCREMENT COUNTERS, ADD XP, AND AWARD INSTANT BADGES
-        switch (action) { // ✅ UPDATED SWITCH
+        switch (action) {
             case TASK:
                 stats.setTotalTasksCompleted(stats.getTotalTasksCompleted() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_TASK_COMPLETE);
-                if (stats.getTotalTasksCompleted() >= 1 && badges.add("FIRST_STEP")) badgesChanged = true;
+                if (badges.add("FIRST_STEP")) badgesChanged = true;
                 if (stats.getTotalTasksCompleted() >= 10 && badges.add("TASK_MASTER")) badgesChanged = true;
                 if (stats.getTotalTasksCompleted() >= 50 && badges.add("PRODUCTIVITY_NINJA")) badgesChanged = true;
                 break;
             case JOURNAL:
                 stats.setTotalJournalEntries(stats.getTotalJournalEntries() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_JOURNAL);
-                if (stats.getTotalJournalEntries() >= 1 && badges.add("FIRST_THOUGHT")) badgesChanged = true;
+                if (badges.add("FIRST_THOUGHT")) badgesChanged = true;
                 if (stats.getTotalJournalEntries() >= 5 && badges.add("REFLECTIVE_SOUL")) badgesChanged = true;
                 break;
             case SCHEDULE:
                 stats.setSchedulesGenerated(stats.getSchedulesGenerated() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_SCHEDULE);
-                if (stats.getSchedulesGenerated() >= 1 && badges.add("TIME_LORD")) badgesChanged = true;
+                if (badges.add("TIME_LORD")) badgesChanged = true;
+
                 break;
             case CHAT:
                 stats.setTotalChats(stats.getTotalChats() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_CHAT);
-                if (stats.getTotalChats() >= 1 && badges.add("FIRST_CHAT")) badgesChanged = true;
+                if (badges.add("FIRST_CHAT")) badgesChanged = true;
                 if (stats.getTotalChats() >= 20 && badges.add("AI_WHISPERER")) badgesChanged = true;
                 break;
             case TASK_CREATE:
