@@ -16,15 +16,15 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 🔥 CRITICAL
-@ToString(onlyExplicitlyIncluded = true) // 🔥 1. Add this
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(onlyExplicitlyIncluded = true)
 public class RoadmapTask {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
-    @EqualsAndHashCode.Include // 🔥 CRITICAL
-    @ToString.Include // 🔥 2. Add this
+    @EqualsAndHashCode.Include
+    @ToString.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,7 +33,7 @@ public class RoadmapTask {
     private Roadmap roadmap;
 
     @Column(nullable = false, length = 500)
-    @ToString.Include // 🔥 2. Add this
+    @ToString.Include
     private String description;
 
     @Column(columnDefinition = "TEXT")
@@ -46,7 +46,7 @@ public class RoadmapTask {
     private Integer dayNumber;
 
     @Column(name = "week_number")
-    @ToString.Include // 🔥 2. Add this
+    @ToString.Include
     private Integer weekNumber;
 
     @Column(nullable = false)

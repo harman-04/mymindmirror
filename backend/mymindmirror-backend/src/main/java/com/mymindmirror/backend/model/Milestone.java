@@ -71,32 +71,12 @@ public class Milestone {
     }
 
     /**
-     * Helper method to add a task to the milestone.
-     * Ensures bidirectional relationship is maintained.
-     * @param task The task to add.
-     */
-    public void addTask(Task task) {
-        this.tasks.add(task);
-        task.setMilestone(this);
-    }
-
-    /**
-     * Helper method to remove a task from the milestone.
-     * Ensures bidirectional relationship is maintained.
-     * @param task The task to remove.
-     */
-    public void removeTask(Task task) {
-        this.tasks.remove(task);
-        task.setMilestone(null);
-    }
-
-    /**
      * Calculates the completion percentage of the milestone based on its tasks.
      * @return Completion percentage (0-100).
      */
     @Transient // Not persisted in DB, calculated on the fly
     public double getCompletionPercentage() {
-        if (tasks.isEmpty()) {
+        if (tasks == null || tasks.isEmpty()) {
             return 0.0;
         }
         long completedTasks = tasks.stream()

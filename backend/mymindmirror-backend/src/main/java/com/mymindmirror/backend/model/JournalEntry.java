@@ -68,9 +68,6 @@ public class JournalEntry {
     @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<KeyPhrase> keyPhrases = new ArrayList<>();
 
-//    @Column(name = "cluster_id")
-//    private Integer clusterId; // Stores the ID of the cluster this entry belongs to
-
     @Column(name = "word_count", nullable = false)
     private int wordCount;
 }

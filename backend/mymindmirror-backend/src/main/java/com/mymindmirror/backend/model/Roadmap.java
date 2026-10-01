@@ -8,11 +8,6 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Entity
-//@NamedEntityGraph(name = "Roadmap.withAll", attributeNodes = {
-//        @NamedAttributeNode("resources"),
-//        @NamedAttributeNode("milestones"),
-//        @NamedAttributeNode("tasks")
-//})
 @NamedEntityGraph(name = "Roadmap.withTasksOnly", attributeNodes = {
         @NamedAttributeNode("tasks")
 })
@@ -25,15 +20,15 @@ import java.util.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 🔥 CRITICAL FOR SETS
-@ToString(onlyExplicitlyIncluded = true) // 🔥 1. Add this to the class
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) //  CRITICAL FOR SETS
+@ToString(onlyExplicitlyIncluded = true) //
 public class Roadmap {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
-    @EqualsAndHashCode.Include // 🔥 ONLY USE ID FOR EQUALITY
-    @ToString.Include // 🔥 2. Add to fields you want to see in logs
+    @EqualsAndHashCode.Include // ONLY USE ID FOR EQUALITY
+    @ToString.Include //  fields , want to see in logs
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -54,7 +49,7 @@ public class Roadmap {
     @ToString.Include
     private String status; // PLANNED, ACTIVE, COMPLETED
 
-    @BatchSize(size = 50) // ✅ Updated to match your global JDBC config
+    @BatchSize(size = 50) // Updated to match your global JDBC config
     @OrderBy("weekNumber ASC, dayNumber ASC")
     @OneToMany(mappedBy = "roadmap", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<RoadmapTask> tasks = new ArrayList<>();
@@ -77,7 +72,9 @@ public class Roadmap {
     private Integer generatedWeeks = 0; // maximum week number that has detailed tasks
 
     public boolean isFullyGenerated() {
-        return generatedWeeks != null && generatedWeeks >= durationWeeks;
+        return generatedWeeks != null
+                && durationWeeks != null
+                && generatedWeeks >= durationWeeks;
     }
 
     public Roadmap(User user, String title, String description, Integer durationWeeks) {

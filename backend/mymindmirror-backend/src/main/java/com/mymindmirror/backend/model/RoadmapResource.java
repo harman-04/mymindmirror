@@ -13,13 +13,13 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 🔥 CRITICAL
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class RoadmapResource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
-    @EqualsAndHashCode.Include // 🔥 CRITICAL
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
