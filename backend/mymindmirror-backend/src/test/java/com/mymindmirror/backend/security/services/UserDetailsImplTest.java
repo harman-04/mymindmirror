@@ -95,4 +95,17 @@ class UserDetailsImplTest {
         UserDetailsImpl sameId = new UserDetailsImpl(userId, "different", "diff@test.com", "pass", null);
         assertThat(sameId.hashCode()).isEqualTo(userDetails.hashCode());
     }
+
+    @Test
+    void equals_BothNullId_ShouldReturnTrue() {
+        UserDetailsImpl a = new UserDetailsImpl(null, "user1", "a@test.com", "pass", null);
+        UserDetailsImpl b = new UserDetailsImpl(null, "user2", "b@test.com", "pass", null);
+        assertThat(a.equals(b)).isTrue();
+    }
+
+    @Test
+    void hashCode_WithNullId_ShouldNotThrow() {
+        UserDetailsImpl a = new UserDetailsImpl(null, "user", "test@test.com", "pass", null);
+        assertThat(a.hashCode()).isNotNull();  // shouldn't NPE
+    }
 }
