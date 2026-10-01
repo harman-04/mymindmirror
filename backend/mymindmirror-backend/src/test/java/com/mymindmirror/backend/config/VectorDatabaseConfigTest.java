@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -95,7 +96,7 @@ class VectorDatabaseConfigTest {
     void optimizeVectorDatabase_createsBothIndexes() throws Exception {
         ApplicationRunner runner = config.optimizeVectorDatabase(vectorJdbcTemplate, vectorStore);
 
-        // ✅ Correct signature: run(ApplicationArguments)
+        //  Correct signature: run(ApplicationArguments)
         runner.run(emptyArgs);
 
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
@@ -116,16 +117,16 @@ class VectorDatabaseConfigTest {
     @Test
     @DisplayName("optimizeVectorDatabase() swallows exceptions so app startup is not blocked")
     void optimizeVectorDatabase_swallowsException() throws Exception {
-        // ✅ Void method → use doThrow().when() instead of when().thenThrow()
+        //  Void method → use doThrow().when() instead of when().thenThrow()
         doThrow(new RuntimeException("relation \"vector_store\" does not exist"))
                 .when(vectorJdbcTemplate).execute(anyString());
 
         ApplicationRunner runner = config.optimizeVectorDatabase(vectorJdbcTemplate, vectorStore);
 
-        // ✅ run() no longer declares a checked exception, so we can pass the args directly
+        //  run() no longer declares a checked exception, so we can pass the args directly
         assertThatCode(() -> runner.run(emptyArgs)).doesNotThrowAnyException();
 
-        // ✅ Only first execute() attempt happened – exception stopped the sequence
+        //  Only first execute() attempt happened – exception stopped the sequence
         verify(vectorJdbcTemplate, times(1)).execute(anyString());
     }
 
@@ -141,5 +142,16 @@ class VectorDatabaseConfigTest {
 
         assertThatCode(() -> runner.run(emptyArgs)).doesNotThrowAnyException();
         verify(vectorJdbcTemplate, times(2)).execute(anyString());
+    }
+
+    @Test
+    @DisplayName("vectorStore() bean builds PgVectorStore correctly")
+    void vectorStore_buildsSuccessfully() {
+        JdbcTemplate mockJdbc = mock(JdbcTemplate.class);
+        EmbeddingModel mockModel = mock(EmbeddingModel.class);
+
+        VectorStore store = config.vectorStore(mockJdbc, mockModel);
+
+        assertThat(store).isNotNull();
     }
 }
