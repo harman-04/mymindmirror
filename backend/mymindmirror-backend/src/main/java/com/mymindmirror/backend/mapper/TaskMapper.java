@@ -29,11 +29,13 @@ public interface TaskMapper {
     @Mapping(target = "milestone", ignore = true)
     @Mapping(target = "creationTimestamp", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "roadmapTaskId", ignore = true)
     Task toEntity(TaskRequest request);
 
     @Mapping(target = "subtasksJson", source = "subtasks", qualifiedByName = "stringListToJson")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "milestone", ignore = true)
     @Mapping(target = "creationTimestamp", ignore = true)
+    @Mapping(target = "roadmapTaskId", ignore = true)
     void updateEntity(@MappingTarget Task task, TaskRequest request);
 }

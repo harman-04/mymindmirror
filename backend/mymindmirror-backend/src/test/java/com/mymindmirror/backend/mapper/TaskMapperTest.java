@@ -160,14 +160,14 @@ class TaskMapperTest {
         assertThat(task.getDescription()).isEqualTo("Write docs");
         assertThat(task.getDueDate()).isEqualTo(LocalDate.of(2026, 11, 1));
         assertThat(task.getDetails()).isEqualTo("Long instructions");
-        // ✅ subtasks (List) → subtasksJson (String)
+        //  subtasks (List) → subtasksJson (String)
         assertThat(task.getSubtasksJson()).contains("a").contains("b");
     }
 
 
 
     @Test
-    @DisplayName("toEntity() should IGNORE id and milestone, but retain constructor defaults for creationTimestamp & status")
+    @DisplayName("toEntity() should IGNORE id, milestone, and roadmapTaskId, but retain constructor defaults for creationTimestamp & status")
     void toEntity_shouldIgnoreManagedFields() {
         TaskRequest request = new TaskRequest(
                 "Task", LocalDate.now(), Status.IN_PROGRESS, "details", List.of("a")
@@ -175,13 +175,14 @@ class TaskMapperTest {
 
         Task task = taskMapper.toEntity(request);
 
-        // ✅ Ignored — no source for these, so remain null
+        //  Ignored — remain null
         assertThat(task.getId()).isNull();
         assertThat(task.getMilestone()).isNull();
+        assertThat(task.getRoadmapTaskId()).isNull(); //  Added verification
 
-        // ⚠️ The Task() constructor sets defaults, so these are NOT null:
+        //  The Task() constructor sets defaults, so these are NOT null:
         assertThat(task.getCreationTimestamp()).isNotNull();
-        assertThat(task.getStatus()).isEqualTo(Status.PENDING);  // constructor default
+        assertThat(task.getStatus()).isEqualTo(Status.PENDING);
     }
 
     @Test
@@ -232,11 +233,12 @@ class TaskMapperTest {
     // ============================================================
 
     @Test
-    @DisplayName("updateEntity() should update fields but preserve managed fields")
+    @DisplayName("updateEntity() should update fields but preserve managed fields and roadmapTaskId")
     void updateEntity_shouldUpdateMutableFields() {
         Task existing = buildTask();
         UUID originalId = existing.getId();
         LocalDateTime originalCreationTs = existing.getCreationTimestamp();
+        UUID originalRoadmapTaskId = existing.getRoadmapTaskId(); //  Capture original value
 
         TaskRequest request = new TaskRequest(
                 "Updated description",
@@ -248,15 +250,16 @@ class TaskMapperTest {
 
         taskMapper.updateEntity(existing, request);
 
-        // ✅ Updated fields
+        //  Updated fields
         assertThat(existing.getDescription()).isEqualTo("Updated description");
         assertThat(existing.getDueDate()).isEqualTo(LocalDate.of(2026, 12, 1));
         assertThat(existing.getDetails()).isEqualTo("Updated details");
         assertThat(existing.getSubtasksJson()).contains("x").contains("y");
 
-        // ✅ Ignored fields remain unchanged
+        //  Ignored fields remain unchanged
         assertThat(existing.getId()).isEqualTo(originalId);
         assertThat(existing.getCreationTimestamp()).isEqualTo(originalCreationTs);
+        assertThat(existing.getRoadmapTaskId()).isEqualTo(originalRoadmapTaskId); //  Verify preservation
     }
 
     @Test
@@ -271,7 +274,7 @@ class TaskMapperTest {
 
         taskMapper.updateEntity(existing, request);
 
-        // ✅ NVPMS.IGNORE: source null → target NOT updated → old value preserved
+        //  NVPMS.IGNORE: source null → target NOT updated → old value preserved
         assertThat(existing.getSubtasksJson()).isEqualTo("[\"old\"]");
     }
     @Test
@@ -316,7 +319,7 @@ class TaskMapperTest {
 
         taskMapper.updateEntity(existing, request);
 
-        // ✅ Empty list → qualified method returns null → target overwritten with null
+        //  Empty list → qualified method returns null → target overwritten with null
         assertThat(existing.getSubtasksJson()).isNull();
     }
 
