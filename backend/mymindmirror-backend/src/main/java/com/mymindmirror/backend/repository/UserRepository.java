@@ -2,7 +2,6 @@ package com.mymindmirror.backend.repository;
 
 import com.mymindmirror.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,7 +9,6 @@ import java.util.UUID;
  * JPA Repository for User entities.
  * Provides standard CRUD operations and custom query methods for User data.
  */
-@Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByUsername(String username);
