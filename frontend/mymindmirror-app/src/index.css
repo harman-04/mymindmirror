@@ -425,7 +425,20 @@ header, main, .backdrop-blur-xl {
 @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(1.2); opacity: 0; } }
 @keyframes ping-slow { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(1.4); opacity: 0; } }
 @keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slide-down-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.animate-slide-down-fade {
+  animation: slide-down-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 /* Apply Safe Animation Classes */
 .animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 .animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }

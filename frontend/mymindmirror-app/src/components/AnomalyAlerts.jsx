@@ -18,7 +18,13 @@ function AnomalyAlerts() {
   const [showAllAnomalies, setShowAllAnomalies] = useState(false);
   const [dismissedKeys, setDismissedKeys] = useState(new Set());
 
-  const { data: anomalies = [], isLoading, isError } = useAnomalies();
+//   const { data: anomalies = [], isLoading, isError } = useAnomalies();
+// const { data, isLoading, isError } = useAnomalies();
+const { data, isLoading, isError, error, refetch } = useAnomalies();
+
+const anomalies = data?.anomalies ?? [];
+const insufficientData = data?.insufficientData ?? false;
+const daysAvailable = data?.daysAvailable ?? 0;
 
   // ==========================================================================
   // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
@@ -89,21 +95,50 @@ function AnomalyAlerts() {
      return <SkeletonAnomalyList />;
    }
 
-  if (isError) {
-    return (
-      <div className={`${baseCardClasses} p-6 lg:p-10 text-center`}>
-        <div className="inline-flex p-3 lg:p-4 rounded-full bg-rose-500/10 mb-4 lg:mb-5">
-          <AlertCircle className="w-8 h-8 lg:w-10 lg:h-10 text-rose-500" />
-        </div>
-        <h3 className="text-lg lg:text-xl font-bold text-rose-600 dark:text-rose-400">Failed to analyze patterns</h3>
-        <p className={`text-sm lg:text-base ${textSecondary} mt-2 max-w-sm mx-auto`}>
-          Anomaly detection requires the machine learning service to be active.
-        </p>
+if (isError) {
+  return (
+    <div className={`${baseCardClasses} p-6 lg:p-10 text-center`}>
+      <div className="inline-flex p-3 lg:p-4 rounded-full bg-rose-500/10 mb-4 lg:mb-5">
+        <AlertCircle className="w-8 h-8 lg:w-10 lg:h-10 text-rose-500" />
       </div>
-    );
-  }
+      <h3 className="text-lg lg:text-xl font-bold text-rose-600 dark:text-rose-400">
+        Couldn't analyze your patterns
+      </h3>
+      <p className={`text-sm lg:text-base ${textSecondary} mt-2 max-w-sm mx-auto`}>
+        {error?.response?.data?.message || 'Something went wrong while checking your journal patterns.'}
+      </p>
+      <button
+        onClick={() => refetch()}
+        className="mt-5 px-5 py-2 rounded-full text-sm font-bold text-purple-600 dark:text-teal-400 bg-purple-50 dark:bg-teal-900/20 border border-purple-200/50 dark:border-teal-500/20 hover:bg-purple-100 dark:hover:bg-teal-900/40 active:scale-95 transition-all"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
 
 if (visibleAnomalies.length === 0) {
+    // Case 1: Not enough data to analyze
+    if (insufficientData) {
+        return (
+          <div className={`${baseCardClasses} p-6 sm:p-8 lg:p-10 text-center hover:shadow-md hover:-translate-y-0.5`}>
+            <div className="relative inline-flex p-4 lg:p-5 rounded-full bg-blue-500/10 mb-4 lg:mb-5">
+              <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl" />
+              <CalendarIcon className="relative w-9 h-9 lg:w-12 lg:h-12 text-blue-500" />
+            </div>
+            <h3 className="text-xl lg:text-2xl font-poppins font-bold text-blue-600 dark:text-blue-400 mb-2">
+              Keep Journaling
+            </h3>
+            <p className={`${textSecondary} max-w-md mx-auto text-sm lg:text-base`}>
+              Anomaly insights appear once you have at least 7 days of entries.
+              You have {daysAvailable} {daysAvailable === 1 ? 'day' : 'days'} so far.
+            </p>
+          </div>
+        );
+    }
+
+    // Case 2: Real analysis ran, no anomalies detected
     return (
       <div className={`${baseCardClasses} p-6 sm:p-8 lg:p-10 text-center hover:shadow-md hover:-translate-y-0.5`}>
         <div className="relative inline-flex p-4 lg:p-5 rounded-full bg-emerald-500/10 mb-4 lg:mb-5">
@@ -118,7 +153,7 @@ if (visibleAnomalies.length === 0) {
         </p>
       </div>
     );
-  }
+}
 
 return (
     <div className={`${baseCardClasses} hover:shadow-md hover:-translate-y-0.5`}>

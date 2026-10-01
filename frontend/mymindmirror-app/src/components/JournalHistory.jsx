@@ -606,7 +606,7 @@ const handleSaveEdit = async (entryId) => {
     } catch (err) {
       setShowDeleteConfirm(false);
       setDeleteEntryId(null);
-      toast.error("Failed to delete entry."); // 🌟 UX UPGRADE: Toast Error
+//       toast.error("Failed to delete entry."); // 🌟 UX UPGRADE: Toast Error
     }
   };
   const cancelDelete = () => {

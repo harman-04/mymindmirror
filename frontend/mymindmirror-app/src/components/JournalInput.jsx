@@ -33,8 +33,8 @@ const JournalInput = forwardRef((props, ref) => {
             toast.success('Entry saved and analyzed successfully!');
             setText('');
         } catch (err) {
-            console.error('JournalInput: Error saving entry:', err.response ? err.response.data : err.message);
-            toast.error('Failed to save entry. Please ensure backend services are running.');
+//             console.error('JournalInput: Error saving entry:', err.response ? err.response.data : err.message);
+//             toast.error('Failed to save entry. Please ensure backend services are running.');
         }
     };
 

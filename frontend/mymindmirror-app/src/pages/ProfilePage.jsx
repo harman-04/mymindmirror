@@ -160,7 +160,7 @@ function ProfilePage() {
                 await updateRoadmapPreferences({ ...roadmapPrefs, hoursPerWeek: hrs });
                 toast.success('Roadmap defaults saved successfully!');
             } catch (err) {
-                toast.error(err.message || 'Failed to save roadmap preferences.');
+//                 toast.error(err.message || 'Failed to save roadmap preferences.');
             } finally {
                 setSavingRoadmapPrefs(false);
             }
@@ -206,7 +206,7 @@ function ProfilePage() {
                 setIsEditing(false);
                 toast.success('Profile updated successfully!');
             } catch (err) {
-                toast.error(err.response?.data?.message || err.message || 'Failed to update profile.');
+//                 toast.error(err.response?.data?.message || err.message || 'Failed to update profile.');
             } finally {
                 setSavingProfile(false);
             }
@@ -251,7 +251,7 @@ function ProfilePage() {
                 setConfirmNewPassword('');
             } catch (err) {
                 // System error from backend
-                toast.error(err.message || 'Failed to change password.');
+//                 toast.error(err.message || 'Failed to change password.');
             } finally {
                 setSavingPassword(false);
             }
@@ -265,7 +265,7 @@ function ProfilePage() {
             toast.success('API key saved successfully.');
             setNewApiKey('');
         } catch (err) {
-            toast.error(err.message || 'Failed to save API key.');
+//             toast.error(err.message || 'Failed to save API key.');
         } finally {
             setSavingApiKey(false);
         }
@@ -278,7 +278,7 @@ function ProfilePage() {
             toast.success('Account deleted successfully. Redirecting...');
             setTimeout(() => navigate('/'), 2000);
         } catch (err) {
-            toast.error(err.message || 'Failed to delete account.');
+//             toast.error(err.message || 'Failed to delete account.');
         } finally {
             setShowDeleteConfirm(false);
         }
@@ -301,7 +301,7 @@ function ProfilePage() {
             });
             toast.success("Lifestyle & Schedule saved successfully!");
         } catch (err) {
-            toast.error("Failed to save lifestyle preferences");
+//             toast.error("Failed to save lifestyle preferences");
         } finally {
             setSavingLifestyle(false);
         }
@@ -371,7 +371,7 @@ if (isError) {
             <div className={`min-h-[60vh] w-full flex items-center justify-center p-4`}>
                 <div className="text-center space-y-4">
                     <AlertCircle size={48} className="text-red-500 mx-auto" />
-                    <p className={`font-bold ${colors.textPrimary}`}>{error?.message || 'Failed to load profile.'}</p>
+                    <p className={`font-bold ${colors.textPrimary}`}>{error?.response?.data?.message || 'Failed to load profile.'}</p>
                     <button onClick={() => navigate('/login')} className={`px-6 py-2.5 rounded-full text-white ${colors.buttonPrimary} transition-all`}>Return to Login</button>
                 </div>
             </div>

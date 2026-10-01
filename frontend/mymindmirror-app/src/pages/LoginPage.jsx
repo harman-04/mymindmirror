@@ -39,7 +39,7 @@ function LoginPage() {
       navigate('/journal');
     } catch (err) {
       console.error('Login error:', err);
-      toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
+//       toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
   };
 

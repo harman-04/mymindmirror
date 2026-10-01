@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
@@ -16,11 +16,9 @@ import JournalInput from '../components/JournalInput';
 import AnomalyAlerts from '../components/AnomalyAlerts';
 import TodayDashboard from '../components/TodayDashboard';
 import WeeklyDashboard from '../components/WeeklyDashboard';
-import OverallDashboard from '../components/OverallDashboard';
 import JournalSearch from '../components/JournalSearch';
 import MilestoneTracker from '../components/MilestoneTracker';
 import ReflectionChat from '../components/ReflectionChat';
-import ScheduleTab from '../components/ScheduleTab';
 import {
   Calendar,
   BarChart3,
@@ -32,7 +30,11 @@ import {
   Feather,
   User,
   CalendarDays,
+  Loader
 } from 'lucide-react';
+
+const OverallDashboard = lazy(() => import('../components/OverallDashboard'));
+const ScheduleTab = lazy(() => import('../components/ScheduleTab'));
 
 const ALL_TABS = ['today', 'weekly', 'all', 'search', 'milestones', 'roadmap', 'chat', 'schedule'];
 
@@ -136,10 +138,10 @@ function JournalPage() {
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('jwtToken');
-    navigate('/login');
-  };
+//   const handleLogout = () => {
+//     localStorage.removeItem('jwtToken');
+//     navigate('/login');
+//   };
 
   // Memoized tabs
   const tabs = useMemo(() => [
@@ -169,13 +171,21 @@ function JournalPage() {
     return (
       // 🌟 Cleaned up using Master Palette
       <div className={`w-full max-w-7xl mx-auto flex-grow p-6 rounded-2xl border ${cardBg} ${cardBorder} flex flex-col items-center justify-center font-inter text-lg text-rose-500`}>
-        <p>{error?.message || 'Failed to load journal data.'}</p>
-        <button
-          onClick={handleLogout}
-          className="mt-6 py-2.5 px-6 rounded-full font-poppins font-semibold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 shadow-sm transition-all duration-200"
-        >
-          Logout
-        </button>
+{/*         <p>{error?.message || 'Failed to load journal data.'}</p> */}
+<p>{error?.response?.data?.message || 'Failed to load journal data.'}</p>
+
+{/*         <button */}
+{/*           onClick={handleLogout} */}
+{/*           className="mt-6 py-2.5 px-6 rounded-full font-poppins font-semibold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 shadow-sm transition-all duration-200" */}
+{/*         > */}
+{/*           Logout */}
+{/*         </button> */}
+<button
+  onClick={() => refetch()}
+  className="mt-6 py-2.5 px-6 rounded-full font-poppins font-semibold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 transition-all duration-200"
+>
+  Retry
+</button>
       </div>
     );
   }
@@ -251,35 +261,42 @@ function JournalPage() {
           </div>
         </FadeIn>
 
-        {/* Dashboard Content Container */}
-        <FadeIn delay={0.6} direction="up" fullWidth className="pt-2 lg:pt-4 min-h-[50vh]">
-          {activeTab === 'today' && <TodayDashboard todayEntries={todayEntries} isLoading={isLoading} />}
-          {activeTab === 'weekly' && (
-            <WeeklyDashboard
-              weeklyEntries={weeklyEntries}
-              isLoading={isLoading}
-              userId={userId}
-              startOfCurrentWeek={startOfCurrentWeek}
-              endOfCurrentWeek={endOfCurrentWeek}
-            />
-          )}
-          {activeTab === 'all' && (
-            <OverallDashboard
-              journalEntries={entriesData}
-              isLoading={isLoading}
-              userId={userId}
-              loadMore={paginatedQuery.fetchNextPage}
-              hasNextPage={paginatedQuery.hasNextPage}
-              isFetchingNextPage={paginatedQuery.isFetchingNextPage}
-              totalEntries={totalEntries}
-            />
-          )}
-          {activeTab === 'search' && <JournalSearch userId={userId} />}
-          {activeTab === 'milestones' && <MilestoneTracker userId={userId} />}
-          {activeTab === 'roadmap' && <RoadmapPlanner />}
-          {activeTab === 'chat' && <ReflectionChat />}
-          {activeTab === 'schedule' && <ScheduleTab />}
-        </FadeIn>
+       {/* Dashboard Content Container */}
+               <FadeIn delay={0.6} direction="up" fullWidth className="pt-2 lg:pt-4 min-h-[50vh]">
+                 {/* ✅ ADD SUSPENSE WRAPPER HERE */}
+                 <Suspense fallback={
+                   <div className="flex items-center justify-center w-full h-64">
+                     <Loader className="w-8 h-8 animate-spin text-purple-500" />
+                   </div>
+                 }>
+                   {activeTab === 'today' && <TodayDashboard todayEntries={todayEntries} isLoading={isLoading} />}
+                   {activeTab === 'weekly' && (
+                     <WeeklyDashboard
+                       weeklyEntries={weeklyEntries}
+                       isLoading={isLoading}
+                       userId={userId}
+                       startOfCurrentWeek={startOfCurrentWeek}
+                       endOfCurrentWeek={endOfCurrentWeek}
+                     />
+                   )}
+                   {activeTab === 'all' && (
+                     <OverallDashboard
+                       journalEntries={entriesData}
+                       isLoading={isLoading}
+                       userId={userId}
+                       loadMore={paginatedQuery.fetchNextPage}
+                       hasNextPage={paginatedQuery.hasNextPage}
+                       isFetchingNextPage={paginatedQuery.isFetchingNextPage}
+                       totalEntries={totalEntries}
+                     />
+                   )}
+                   {activeTab === 'search' && <JournalSearch userId={userId} />}
+                   {activeTab === 'milestones' && <MilestoneTracker userId={userId} />}
+                   {activeTab === 'roadmap' && <RoadmapPlanner />}
+                   {activeTab === 'chat' && <ReflectionChat />}
+                   {activeTab === 'schedule' && <ScheduleTab />}
+                 </Suspense>
+               </FadeIn>
       </main>
     </div>
   );

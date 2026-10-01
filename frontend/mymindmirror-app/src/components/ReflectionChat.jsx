@@ -266,11 +266,11 @@ function ReflectionChat() {
             timestamp: new Date(),
           }]);
         } catch (error) {
-          setMessages([{
-            id: 'welcome', role: 'assistant',
-            content: "Hi! I'm your AI reflection coach. I've read your recent journal entries. Ask me anything!",
-            timestamp: new Date(),
-          }]);
+            setMessages([{
+                id: 'welcome', role: 'assistant',
+                content: "I couldn't fetch a fresh question right now. You can still ask me anything about your journal entries.",
+                timestamp: new Date(),
+            }]);
         } finally {
           setIsInitializing(false);
         }

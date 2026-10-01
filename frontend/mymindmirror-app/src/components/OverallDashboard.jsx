@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, X } from 'lucide-react';
+import React, { useState, lazy, Suspense } from 'react';
+import { FileText, X, Loader2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import MoodChart from './MoodChart';
 import AverageEmotionChart from './AverageEmotionChart';
@@ -11,7 +11,9 @@ import MoodWordCountChart from './MoodWordCountChart';
 import InfiniteScrollTrigger from './InfiniteScrollTrigger';
 import EmotionRadarChart from './EmotionRadarChart';
 import { SkeletonCard } from './Skeleton';
-import ExportButtons from './ExportButtons';
+
+
+const ExportButtons = lazy(() => import('./ExportButtons'));
 
 function OverallDashboard({
     journalEntries,
@@ -101,8 +103,18 @@ function OverallDashboard({
                         </h3>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-5 w-full sm:w-auto justify-start sm:justify-end mt-1 sm:mt-0">
-                        <ExportButtons />
+<div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-5 w-full sm:w-auto justify-start sm:justify-end mt-1 sm:mt-0">
+
+                        {/* 🌟 SUSPENSE BOUNDARY: Shows a smooth loader while the 1MB export libraries download */}
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center gap-2 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl border border-transparent min-w-[170px] lg:min-w-[210px] h-[38px] sm:h-[42px] lg:h-[46px]">
+                                <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin text-purple-500 dark:text-teal-400" />
+                                <span className="text-xs lg:text-sm font-semibold text-slate-500 dark:text-gray-400">Loading tools...</span>
+                            </div>
+                        }>
+                            <ExportButtons />
+                        </Suspense>
+
                         {totalEntries > 0 && (
                             <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl lg:rounded-2xl shadow-sm text-emerald-700 dark:text-emerald-300 h-[38px] sm:h-[42px] lg:h-[46px]">
                                 <span className="text-[10px] lg:text-xs font-bold uppercase tracking-wider whitespace-nowrap">

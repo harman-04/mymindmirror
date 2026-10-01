@@ -47,11 +47,15 @@ function RegisterPage() {
     e.preventDefault();
     setFormErrors({});
 
-    let errors = {};
-    if (!username.trim()) errors.username = 'Username is required.';
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) errors.email = 'Valid email is required.';
-    if (password.length < 6) errors.password = 'Password must be at least 6 characters.';
-    if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match.';
+let errors = {};
+if (!username.trim()) {
+    errors.username = 'Username is required.';
+} else if (username.trim().length < 3 || username.trim().length > 50) {
+    errors.username = 'Username must be between 3 and 50 characters.';
+}
+if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) errors.email = 'Valid email is required.';
+if (password.length < 6) errors.password = 'Password must be at least 6 characters.';
+if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match.';
 
     if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
@@ -64,7 +68,7 @@ function RegisterPage() {
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       console.error('Registration error:', err);
-      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
+//       toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
     }
   };
 

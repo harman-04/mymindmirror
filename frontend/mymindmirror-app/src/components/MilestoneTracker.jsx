@@ -452,10 +452,10 @@ const handleFetchInsights = (milestoneId) => {
         setMilestoneInsights(prev => ({ ...prev, [milestoneId]: data }));
         toast.success('AI insights generated!');
       },
-      onError: (err) => {
-        // 🌟 UX UPGRADE: System errors get a red toast notification!
-        toast.error(`Failed to get insights: ${err.response?.data?.message || err.message}`);
-      }
+//       onError: (err) => {
+//         // 🌟 UX UPGRADE: System errors get a red toast notification!
+//         toast.error(`Failed to get insights: ${err.response?.data?.message || err.message}`);
+//       }
     });
   };
 
@@ -489,7 +489,10 @@ const handleFetchInsights = (milestoneId) => {
             <AlertCircle className="w-8 h-8 lg:w-10 lg:h-10 text-red-600 dark:text-red-400"/>
         </div>
 <h3 className={`text-xl lg:text-2xl font-bold ${textPrimary} mb-2`}>Error Loading Milestones</h3>
-        <p className={`text-sm lg:text-base ${textSecondary}`}>{milestonesError.message}</p>
+{/*         <p className={`text-sm lg:text-base ${textSecondary}`}>{milestonesError.message}</p> */}
+<p className={`text-sm lg:text-base ${textSecondary}`}>
+    {milestonesError?.response?.data?.message || 'Failed to load milestones. Please try again.'}
+</p>
       </div>
     );
   }

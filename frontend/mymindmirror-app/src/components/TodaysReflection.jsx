@@ -94,7 +94,7 @@ function TodaysReflection({ todayEntries, isLoading }) {
               </p>
             </div>
             <p className={`text-xs lg:text-sm ${textSecondary} pl-6`}>
-              Possible reasons: ML service offline, Gemini quota exceeded, or missing API key.
+              This usually happens when the AI service is busy,  Gemini quota exceeded or when your Gemini API key isn't set up.
             </p>
             <button
               onClick={handleRefresh}

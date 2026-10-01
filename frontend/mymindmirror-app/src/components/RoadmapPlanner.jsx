@@ -523,7 +523,7 @@ const handleGenerate = useCallback((e) => {
         setIsDeleting(false);
       },
       onError: () => {
-        toast.error('Failed to delete roadmap');
+//         toast.error('Failed to delete roadmap');
         setDeleteModal({ isOpen: false, roadmapId: null, roadmapTitle: '' });
         setIsDeleting(false);
       },
@@ -536,14 +536,14 @@ const handleGenerate = useCallback((e) => {
       await refetch();
       toast.success(enhance ? 'Task enhanced with more details!' : 'Task details regenerated!');
     } catch {
-      toast.error('Failed to generate details');
+//       toast.error('Failed to generate details');
     }
   };
 
   const importTaskToMilestone = (roadmapId, taskId, taskDescription) => {
     importTaskMutation.mutate({ roadmapId, taskId }, {
       onSuccess: () => toast.success(`✨ "${taskDescription}" added to Milestones`),
-      onError: (error) => toast.error(`Failed to add task: ${error.message}`)
+//       onError: (error) => toast.error(`Failed to add task: ${error.message}`)
     });
   };
 
@@ -749,7 +749,8 @@ const handleGenerate = useCallback((e) => {
                </form>
                {generateMutation.isError && (
                  <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 text-sm font-medium flex items-center gap-2">
-                   <AlertTriangle className="w-5 h-5"/> Error: {generateMutation.error.message}
+{/*                    <AlertTriangle className="w-5 h-5"/> Error: {generateMutation.error.message} */}
+<AlertTriangle className="w-5 h-5"/> Error: {generateMutation.error?.response?.data?.message || 'Failed to generate roadmap. Please try again.'}
                  </div>
                )}
              </div>
@@ -1066,9 +1067,9 @@ const handleGenerate = useCallback((e) => {
                                                       setVisibleWeeksMap(prev => ({ ...prev, [roadmap.id]: newVisible }));
                                                       toast.success(`Loaded weeks up to ${newVisible}`);
                                                   },
-                                              onError: (error) => {
-                                                          toast.error(`Continuation failed: ${error.response?.data?.message || error.message}`);
-                                                      },
+//                                               onError: (error) => {
+//                                                           toast.error(`Continuation failed: ${error.response?.data?.message || error.message}`);
+//                                                       },
                                                   onSettled: () => setContinuingRoadmapId(null)
                                                   }
                                               );

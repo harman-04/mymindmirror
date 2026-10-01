@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import JournalHistory from './JournalHistory';
 import { useTheme } from '../contexts/ThemeContext';
 import { format, parseISO } from 'date-fns';
@@ -13,7 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import PremiumInput from './PremiumInput';
-import { toast } from 'sonner';
+// import { toast } from 'sonner';
 import FadeIn from './FadeIn';
 
 function JournalSearch({ userId }) {
@@ -29,18 +29,17 @@ function JournalSearch({ userId }) {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
 
-  const {
-    data: searchResults,
-    isLoading,
-    isError,
-    error,
-  } = useSearchJournalEntries(activeSearchParams);
-
-  useEffect(() => {
-    if (isError && error) {
-      toast.error(error.message || 'Search failed. Please try again.');
-    }
-  }, [isError, error]);
+ const {
+     data: searchResults,
+     isLoading,
+     isError,
+     error,
+ } = useSearchJournalEntries(activeSearchParams);
+//   useEffect(() => {
+//     if (isError && error) {
+//       toast.error(error.message || 'Search failed. Please try again.');
+//     }
+//   }, [isError, error]);
 
   // ==========================================================================
   // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
@@ -291,6 +290,7 @@ function JournalSearch({ userId }) {
         </div>
       </FadeIn>
 
+{/* 1. Results */}
       {(isSearchActive && (isLoading || searchResults?.length > 0)) && (
         <FadeIn delay={0.2} direction="up" fullWidth>
           <div className={`rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} p-4 sm:p-6 lg:p-8 shadow-sm`}>
@@ -322,6 +322,7 @@ function JournalSearch({ userId }) {
         </FadeIn>
       )}
 
+{/* 2. No Results */}
       {!isLoading && !isError && searchResults?.length === 0 && isSearchActive && (
         <FadeIn delay={0.2} direction="up" fullWidth>
           <div className={`rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} p-10 lg:p-14 text-center flex flex-col items-center justify-center shadow-sm`}>
@@ -339,6 +340,29 @@ function JournalSearch({ userId }) {
           </div>
         </FadeIn>
       )}
+
+{/* 3. Search Failed */}
+  {!isLoading && isError && isSearchActive && (
+      <FadeIn delay={0.2} direction="up" fullWidth>
+          <div className={`rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} p-10 lg:p-14 text-center flex flex-col items-center justify-center shadow-sm`}>
+              <div className="w-16 h-16 lg:w-20 lg:h-20 mb-4 rounded-full bg-rose-100 dark:bg-rose-500/10 flex items-center justify-center">
+                  <Search className={`w-8 h-8 lg:w-10 lg:h-10 text-rose-500 opacity-80`} />
+              </div>
+              <h3 className={`text-xl lg:text-2xl font-poppins font-bold ${textPrimary} mb-2`}>
+                  Search Failed
+              </h3>
+              <p className={`text-sm lg:text-base ${textSecondary} max-w-md`}>
+                  {error?.response?.data?.message || 'Something went wrong while searching. Please try again.'}
+              </p>
+              <button
+                  onClick={clearSearch}
+                  className="mt-6 text-sm lg:text-base font-bold text-purple-600 hover:text-purple-700 dark:text-teal-400 dark:hover:text-teal-300 transition-colors px-6 py-2 rounded-full hover:bg-purple-50 dark:hover:bg-teal-900/20"
+              >
+                  Clear search & try again
+              </button>
+          </div>
+      </FadeIn>
+  )}
     </div>
   );
 }

@@ -20,9 +20,9 @@ export const useSuggestQuestion = () => {
       );
       return response.data?.answer || "What's one thing you've learned about yourself recently?";
     },
-    onError: () => {
-      toast.error("Failed to generate a new question.");
-    }
+//    onError: () => {
+//      toast.error("Failed to generate a new question.");
+//    }
   });
 };
 
@@ -64,8 +64,8 @@ export const useClearChatMemory = () => {
     onSuccess: () => {
       toast.success("AI memory cleared successfully.");
     },
-    onError: () => {
-      toast.error("Failed to clear AI memory.");
-    }
+//    onError: () => {
+//      toast.error("Failed to clear AI memory.");
+//    }
   });
 };
