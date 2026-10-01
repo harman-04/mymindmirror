@@ -5,6 +5,7 @@ import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.Task;
 import com.mymindmirror.backend.model.User;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -23,100 +24,205 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TaskRepositoryTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private TaskRepository repository;
 
     @Autowired
-    private TaskRepository taskRepository;
+    private MilestoneRepository milestoneRepository;
 
-    private User testUser;
-    private Milestone milestone1;
-    private Milestone milestone2;
-    private Task task1, task2, task3;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private TestEntityManager em;
+
+    private User user;
+    private User otherUser;
+    private Milestone milestone;
+    private Milestone otherMilestone;
 
     @BeforeEach
     void setUp() {
-        // Create and persist a test user
-        testUser = new User();
-        testUser.setUsername("taskuser");
-        testUser.setEmail("task@example.com");
-        testUser.setPasswordHash("hashed");
-        entityManager.persistAndFlush(testUser);
+        user = new User();
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash("hashed");
+        user = userRepository.save(user);
 
-        // Create milestones
-        milestone1 = new Milestone(testUser, "Milestone 1", "Description 1", LocalDate.now().plusDays(7));
-        milestone2 = new Milestone(testUser, "Milestone 2", "Description 2", LocalDate.now().plusDays(14));
-        entityManager.persist(milestone1);
-        entityManager.persist(milestone2);
-        entityManager.flush();
+        otherUser = new User();
+        otherUser.setUsername("otheruser");
+        otherUser.setEmail("other@example.com");
+        otherUser.setPasswordHash("hashed");
+        otherUser = userRepository.save(otherUser);
 
-        // Create tasks with different creation timestamps
-        task1 = new Task(milestone1, "Task 1", LocalDate.now());
-        task1.setCreationTimestamp(LocalDateTime.now().minusDays(2));
-        task1.setStatus(Status.PENDING);
-        task2 = new Task(milestone1, "Task 2", LocalDate.now().plusDays(1));
-        task2.setCreationTimestamp(LocalDateTime.now().minusDays(1));
-        task2.setStatus(Status.COMPLETED);
-        task3 = new Task(milestone2, "Task 3", LocalDate.now().plusDays(2));
-        task3.setCreationTimestamp(LocalDateTime.now());
-        task3.setStatus(Status.OVERDUE);
+        milestone = new Milestone();
+        milestone.setUser(user);
+        milestone.setTitle("My Milestone");
+        milestone.setCreationDate(LocalDate.now());
+        milestone.setStatus(Status.PENDING);
+        milestone = milestoneRepository.save(milestone);
 
-        entityManager.persist(task1);
-        entityManager.persist(task2);
-        entityManager.persist(task3);
-        entityManager.flush();
+        otherMilestone = new Milestone();
+        otherMilestone.setUser(otherUser);
+        otherMilestone.setTitle("Other Milestone");
+        otherMilestone.setCreationDate(LocalDate.now());
+        otherMilestone.setStatus(Status.PENDING);
+        otherMilestone = milestoneRepository.save(otherMilestone);
+    }
+
+    // ============================================================
+    // Helpers
+    // ============================================================
+
+    private Task persistTask(Milestone m, String description, Status status, LocalDateTime createdAt) {
+        Task task = new Task();
+        task.setMilestone(m);
+        task.setDescription(description);
+        task.setCreationTimestamp(createdAt);
+        task.setStatus(status);
+        task.setDueDate(LocalDate.now().plusDays(7));
+        m.getTasks().add(task);   //  CRITICAL: bidirectional link so cascade works
+        return repository.save(task);
+    }
+
+    // ============================================================
+    // findByMilestoneOrderByCreationTimestampAsc
+    // ============================================================
+
+    @Test
+    @DisplayName("findByMilestoneOrderByCreationTimestampAsc returns only tasks of the given milestone")
+    void findByMilestone_onlyThatMilestone() {
+        persistTask(milestone, "Mine 1", Status.PENDING, LocalDateTime.now());
+        persistTask(milestone, "Mine 2", Status.COMPLETED, LocalDateTime.now());
+        persistTask(otherMilestone, "Theirs", Status.PENDING, LocalDateTime.now());
+
+        List<Task> result = repository.findByMilestoneOrderByCreationTimestampAsc(milestone);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).allMatch(t -> t.getMilestone().getId().equals(milestone.getId()));
     }
 
     @Test
-    void findByMilestoneOrderByCreationTimestampAsc_ShouldReturnTasksInAscendingOrder() {
-        List<Task> tasks = taskRepository.findByMilestoneOrderByCreationTimestampAsc(milestone1);
+    @DisplayName("findByMilestoneOrderByCreationTimestampAsc returns tasks in ascending timestamp order")
+    void findByMilestone_orderedByAscTimestamp() {
+        LocalDateTime base = LocalDateTime.now().minusHours(1);
 
-        assertThat(tasks).hasSize(2);
-        assertThat(tasks.get(0).getCreationTimestamp()).isBefore(tasks.get(1).getCreationTimestamp());
-        assertThat(tasks.get(0).getDescription()).isEqualTo("Task 1");
-        assertThat(tasks.get(1).getDescription()).isEqualTo("Task 2");
+        persistTask(milestone, "Third", Status.PENDING, base.plusMinutes(30));
+        persistTask(milestone, "First", Status.PENDING, base.plusMinutes(10));
+        persistTask(milestone, "Second", Status.PENDING, base.plusMinutes(20));
+
+        List<Task> result = repository.findByMilestoneOrderByCreationTimestampAsc(milestone);
+
+        assertThat(result)
+                .extracting(Task::getDescription)
+                .containsExactly("First", "Second", "Third");
     }
 
     @Test
-    void findByIdAndMilestone_WithValidIds_ShouldReturnTask() {
-        List<Task> found = taskRepository.findByIdAndMilestone(task1.getId(), milestone1);
-        assertThat(found).hasSize(1);
-        assertThat(found.get(0).getId()).isEqualTo(task1.getId());
-        assertThat(found.get(0).getMilestone().getId()).isEqualTo(milestone1.getId());
+    @DisplayName("findByMilestoneOrderByCreationTimestampAsc returns empty list for milestone with no tasks")
+    void findByMilestone_empty() {
+        List<Task> result = repository.findByMilestoneOrderByCreationTimestampAsc(milestone);
+        assertThat(result).isEmpty();
+    }
+
+    // ============================================================
+    // findByIdAndMilestone
+    // ============================================================
+
+    @Test
+    @DisplayName("findByIdAndMilestone returns task when ID and milestone match")
+    void findByIdAndMilestone_found() {
+        Task saved = persistTask(milestone, "Task", Status.PENDING, LocalDateTime.now());
+
+        List<Task> result = repository.findByIdAndMilestone(saved.getId(), milestone);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(saved.getId());
     }
 
     @Test
-    void findByIdAndMilestone_WithWrongMilestone_ShouldReturnEmpty() {
-        // Try to find task1 (belongs to milestone1) with milestone2
-        List<Task> found = taskRepository.findByIdAndMilestone(task1.getId(), milestone2);
-        assertThat(found).isEmpty();
+    @DisplayName("findByIdAndMilestone returns empty for wrong milestone")
+    void findByIdAndMilestone_wrongMilestone() {
+        Task saved = persistTask(milestone, "Task", Status.PENDING, LocalDateTime.now());
+
+        List<Task> result = repository.findByIdAndMilestone(saved.getId(), otherMilestone);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
-    void findByIdAndMilestone_WithNonExistentId_ShouldReturnEmpty() {
-        List<Task> found = taskRepository.findByIdAndMilestone(UUID.randomUUID(), milestone1);
-        assertThat(found).isEmpty();
+    @DisplayName("findByIdAndMilestone returns empty for unknown ID")
+    void findByIdAndMilestone_unknownId() {
+        List<Task> result = repository.findByIdAndMilestone(UUID.randomUUID(), milestone);
+        assertThat(result).isEmpty();
+    }
+
+    // ============================================================
+    // findByMilestone_User
+    // ============================================================
+
+    @Test
+    @DisplayName("findByMilestone_User returns all tasks belonging to the user's milestones")
+    void findByMilestone_User_onlyOwnedTasks() {
+        persistTask(milestone, "Mine 1", Status.PENDING, LocalDateTime.now());
+        persistTask(milestone, "Mine 2", Status.COMPLETED, LocalDateTime.now());
+        persistTask(otherMilestone, "Theirs 1", Status.PENDING, LocalDateTime.now());
+        persistTask(otherMilestone, "Theirs 2", Status.PENDING, LocalDateTime.now());
+
+        List<Task> result = repository.findByMilestone_User(user);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(Task::getDescription)
+                .containsExactlyInAnyOrder("Mine 1", "Mine 2");
     }
 
     @Test
-    void saveTask_ShouldPersistCorrectly() {
-        Task newTask = new Task(milestone1, "New Task", LocalDate.now().plusDays(3));
-        newTask.setRoadmapTaskId(UUID.randomUUID());
-        Task saved = taskRepository.save(newTask);
+    @DisplayName("findByMilestone_User aggregates tasks across multiple milestones of the same user")
+    void findByMilestone_User_multipleMilestones() {
+        Milestone second = new Milestone();
+        second.setUser(user);
+        second.setTitle("Second Milestone");
+        second.setCreationDate(LocalDate.now());
+        second.setStatus(Status.PENDING);
+        second = milestoneRepository.save(second);
 
-        assertThat(saved.getId()).isNotNull();
-        assertThat(saved.getDescription()).isEqualTo("New Task");
-        assertThat(saved.getRoadmapTaskId()).isNotNull();
-        assertThat(saved.getCreationTimestamp()).isNotNull();
-        assertThat(saved.getStatus()).isEqualTo(Status.PENDING);
+        persistTask(milestone, "M1 Task 1", Status.PENDING, LocalDateTime.now());
+        persistTask(milestone, "M1 Task 2", Status.PENDING, LocalDateTime.now());
+        persistTask(second, "M2 Task 1", Status.PENDING, LocalDateTime.now());
+
+        List<Task> result = repository.findByMilestone_User(user);
+
+        assertThat(result).hasSize(3);
     }
 
     @Test
-    void deleteTask_ShouldRemoveFromDatabase() {
-        UUID taskId = task1.getId();
-        taskRepository.deleteById(taskId);
-        entityManager.flush();
+    @DisplayName("findByMilestone_User returns empty for a user with no tasks")
+    void findByMilestone_User_empty() {
+        List<Task> result = repository.findByMilestone_User(user);
+        assertThat(result).isEmpty();
+    }
 
-        Task deleted = entityManager.find(Task.class, taskId);
-        assertThat(deleted).isNull();
+    // ============================================================
+    // Cascade behaviour
+    // ============================================================
+
+    @Test
+    @DisplayName("Deleting a milestone cascades to its tasks")
+    void deleteMilestone_cascadesToTasks() {
+        persistTask(milestone, "T1", Status.PENDING, LocalDateTime.now());
+        persistTask(milestone, "T2", Status.COMPLETED, LocalDateTime.now());
+        em.flush();
+
+        UUID milestoneId = milestone.getId();
+
+        milestoneRepository.delete(milestone);
+        em.flush();
+        em.clear();
+
+        Long remaining = em.getEntityManager()
+                .createQuery("SELECT COUNT(t) FROM Task t WHERE t.milestone.id = :mid", Long.class)
+                .setParameter("mid", milestoneId)
+                .getSingleResult();
+
+        assertThat(remaining).isZero();
     }
 }

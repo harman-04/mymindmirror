@@ -2,11 +2,12 @@ package com.mymindmirror.backend.repository;
 
 import com.mymindmirror.backend.model.User;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
@@ -19,100 +20,141 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UserRepositoryTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private UserRepository repository;
 
     @Autowired
-    private UserRepository userRepository;
+    private TestEntityManager em;
 
-    private User testUser;
+    private User persisted;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setUsername("testuser");
-        testUser.setEmail("test@example.com");
-        testUser.setPasswordHash("encodedPassword");
-        testUser.setGeminiApiKeyEncrypted("encryptedKey123");
-        entityManager.persistAndFlush(testUser);
+        User u = new User();
+        u.setUsername("testuser");
+        u.setEmail("test@example.com");
+        u.setPasswordHash("hashed");
+        persisted = repository.save(u);
+    }
+
+    // ============================================================
+    // findByUsername
+    // ============================================================
+
+    @Test
+    @DisplayName("findByUsername returns user when username exists")
+    void findByUsername_found() {
+        Optional<User> result = repository.findByUsername("testuser");
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(persisted.getId());
     }
 
     @Test
-    void findByUsername_ShouldReturnUser_WhenUsernameExists() {
-        Optional<User> found = userRepository.findByUsername("testuser");
-        assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("testuser");
-        assertThat(found.get().getEmail()).isEqualTo("test@example.com");
+    @DisplayName("findByUsername returns empty for unknown username")
+    void findByUsername_notFound() {
+        assertThat(repository.findByUsername("ghost")).isEmpty();
     }
 
     @Test
-    void findByUsername_ShouldReturnEmpty_WhenUsernameDoesNotExist() {
-        Optional<User> found = userRepository.findByUsername("nonexistent");
-        assertThat(found).isEmpty();
+    @DisplayName("findByUsername is case-sensitive")
+    void findByUsername_caseSensitive() {
+        assertThat(repository.findByUsername("TESTUSER")).isEmpty();
+    }
+
+    // ============================================================
+    // existsByUsername
+    // ============================================================
+
+    @Test
+    @DisplayName("existsByUsername returns true for existing user")
+    void existsByUsername_true() {
+        assertThat(repository.existsByUsername("testuser")).isTrue();
     }
 
     @Test
-    void existsByUsername_ShouldReturnTrue_WhenUsernameExists() {
-        Boolean exists = userRepository.existsByUsername("testuser");
-        assertThat(exists).isTrue();
+    @DisplayName("existsByUsername returns false for unknown user")
+    void existsByUsername_false() {
+        assertThat(repository.existsByUsername("ghost")).isFalse();
+    }
+
+    // ============================================================
+    // findById
+    // ============================================================
+
+    @Test
+    @DisplayName("findById returns user when ID exists")
+    void findById_found() {
+        Optional<User> result = repository.findById(persisted.getId());
+        assertThat(result).isPresent();
+        assertThat(result.get().getUsername()).isEqualTo("testuser");
     }
 
     @Test
-    void existsByUsername_ShouldReturnFalse_WhenUsernameDoesNotExist() {
-        Boolean exists = userRepository.existsByUsername("nonexistent");
-        assertThat(exists).isFalse();
+    @DisplayName("findById returns empty for unknown ID")
+    void findById_notFound() {
+        assertThat(repository.findById(UUID.randomUUID())).isEmpty();
+    }
+
+    // ============================================================
+    // findByEmail
+    // ============================================================
+
+    @Test
+    @DisplayName("findByEmail returns user when email exists")
+    void findByEmail_found() {
+        Optional<User> result = repository.findByEmail("test@example.com");
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(persisted.getId());
     }
 
     @Test
-    void findById_ShouldReturnUser_WhenIdExists() {
-        UUID id = testUser.getId();
-        Optional<User> found = userRepository.findById(id);
-        assertThat(found).isPresent();
-        assertThat(found.get().getId()).isEqualTo(id);
+    @DisplayName("findByEmail returns empty for unknown email")
+    void findByEmail_notFound() {
+        assertThat(repository.findByEmail("nobody@example.com")).isEmpty();
+    }
+
+    // ============================================================
+    // existsByEmail
+    // ============================================================
+
+    @Test
+    @DisplayName("existsByEmail returns true for existing email")
+    void existsByEmail_true() {
+        assertThat(repository.existsByEmail("test@example.com")).isTrue();
     }
 
     @Test
-    void findById_ShouldReturnEmpty_WhenIdDoesNotExist() {
-        UUID fakeId = UUID.randomUUID();
-        Optional<User> found = userRepository.findById(fakeId);
-        assertThat(found).isEmpty();
+    @DisplayName("existsByEmail returns false for unknown email")
+    void existsByEmail_false() {
+        assertThat(repository.existsByEmail("nobody@example.com")).isFalse();
+    }
+
+    // ============================================================
+    // Unique constraints
+    // ============================================================
+
+    @Test
+    @DisplayName("Saving a user with duplicate username throws DataIntegrityViolationException")
+    void duplicateUsername_throws() {
+        User dup = new User();
+        dup.setUsername("testuser");
+        dup.setEmail("different@example.com");
+        dup.setPasswordHash("hashed");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+            repository.saveAndFlush(dup);
+        }).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test
-    void findByEmail_ShouldReturnUser_WhenEmailExists() {
-        Optional<User> found = userRepository.findByEmail("test@example.com");
-        assertThat(found).isPresent();
-        assertThat(found.get().getEmail()).isEqualTo("test@example.com");
-    }
+    @DisplayName("Saving a user with duplicate email throws DataIntegrityViolationException")
+    void duplicateEmail_throws() {
+        User dup = new User();
+        dup.setUsername("differentuser");
+        dup.setEmail("test@example.com");
+        dup.setPasswordHash("hashed");
 
-    @Test
-    void findByEmail_ShouldReturnEmpty_WhenEmailDoesNotExist() {
-        Optional<User> found = userRepository.findByEmail("nonexistent@example.com");
-        assertThat(found).isEmpty();
-    }
-
-    @Test
-    void existsByEmail_ShouldReturnTrue_WhenEmailExists() {
-        Boolean exists = userRepository.existsByEmail("test@example.com");
-        assertThat(exists).isTrue();
-    }
-
-    @Test
-    void existsByEmail_ShouldReturnFalse_WhenEmailDoesNotExist() {
-        Boolean exists = userRepository.existsByEmail("nonexistent@example.com");
-        assertThat(exists).isFalse();
-    }
-
-    @Test
-    void saveUser_ShouldPersistAndGenerateId() {
-        User newUser = new User();
-        newUser.setUsername("newuser");
-        newUser.setEmail("new@example.com");
-        newUser.setPasswordHash("hashed");
-        newUser.setGeminiApiKeyEncrypted("key");
-
-        User saved = userRepository.save(newUser);
-        assertThat(saved.getId()).isNotNull();
-        assertThat(saved.getUsername()).isEqualTo("newuser");
-        assertThat(saved.getEmail()).isEqualTo("new@example.com");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+            repository.saveAndFlush(dup);
+        }).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 }
