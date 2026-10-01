@@ -32,6 +32,7 @@ public class CustomTask {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "due_date")
     private LocalDate dueDate;
 
     @Column(name = "estimated_hours")
