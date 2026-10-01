@@ -1,5 +1,7 @@
 package com.mymindmirror.backend.service;
 
+import com.mymindmirror.backend.BackendApplication;
+import com.mymindmirror.backend.config.TestVectorStoreConfig;
 import com.mymindmirror.backend.model.JournalEntry;
 import com.mymindmirror.backend.model.KeyPhrase;
 import com.mymindmirror.backend.model.User;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDate;
@@ -20,16 +23,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-// THIS IS THE BULLETPROOF SHIELD! It forces Spring to use H2, completely ignoring Aiven.
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect"
-})
+@SpringBootTest(classes = {BackendApplication.class, TestVectorStoreConfig.class})
+@ActiveProfiles("test")
+@TestPropertySource(locations = "classpath:application-test.properties")
 public class JournalServiceSearchIntegrationTest {
 
     @Autowired

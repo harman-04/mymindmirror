@@ -1,139 +1,225 @@
 package com.mymindmirror.backend.service;
 
+import com.mymindmirror.backend.enums.AITask;
+import com.mymindmirror.backend.enums.GamificationAction;
 import com.mymindmirror.backend.enums.InsightStatus;
 import com.mymindmirror.backend.enums.Status;
 import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.Task;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.response.MilestoneInsightResponse;
+import com.mymindmirror.backend.service.ai.DynamicAiClientService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MilestoneInsightServiceTest {
 
     @Mock
-    private ApiKeyService apiKeyService;
+    private DynamicAiClientService aiClientService;
 
     @Mock
-    private MLServiceClient mlServiceClient;
+    private GamificationService gamificationService;
 
     @InjectMocks
     private MilestoneInsightService milestoneInsightService;
 
-    private User testUser;
-    private Milestone testMilestone;
-    private Task testTask;
+    private User user;
+    private UUID userId;
+    private Milestone milestone;
+    private Task task1;
+    private Task task2;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(java.util.UUID.randomUUID());
-        testUser.setUsername("testuser");
+        userId = UUID.randomUUID();
+        user = new User();
+        user.setId(userId);
+        user.setUsername("testuser");
 
-        testMilestone = new Milestone();
-        testMilestone.setId(java.util.UUID.randomUUID());
-        testMilestone.setTitle("Test Milestone");
-        testMilestone.setDescription("Test description");
-        testMilestone.setDueDate(LocalDate.now().plusDays(7));
-        testMilestone.setStatus(Status.IN_PROGRESS);
-        testMilestone.setUser(testUser);
-        testMilestone.setCreationDate(LocalDate.now());
+        milestone = new Milestone();
+        milestone.setId(UUID.randomUUID());
+        milestone.setTitle("Learn Spring Boot");
+        milestone.setDescription("Complete the Spring Boot masterclass");
+        milestone.setUser(user);
+        milestone.setStatus(Status.IN_PROGRESS);
+        milestone.setDueDate(LocalDate.now().plusDays(7));
 
-        testTask = new Task();
-        testTask.setId(java.util.UUID.randomUUID());
-        testTask.setDescription("Test task");
-        testTask.setDueDate(LocalDate.now().plusDays(3));
-        testTask.setStatus(Status.PENDING);
-        testMilestone.setTasks(List.of(testTask));
+        task1 = new Task();
+        task1.setId(UUID.randomUUID());
+        task1.setDescription("Setup project");
+        task1.setDueDate(LocalDate.now().plusDays(2));
+        task1.setStatus(Status.COMPLETED);
+
+        task2 = new Task();
+        task2.setId(UUID.randomUUID());
+        task2.setDescription("Create REST endpoints");
+        task2.setDueDate(LocalDate.now().plusDays(5));
+        task2.setStatus(Status.PENDING);
+
+        milestone.setTasks(List.of(task1, task2));
     }
 
-    @Test
-    void getMilestoneInsights_Success_ReturnsInsights() {
-        // Given
-        String apiKey = "test-api-key";
-        when(apiKeyService.getDecryptedApiKey(testUser)).thenReturn(apiKey);
+    // ========== Success Path ==========
 
+    @Test
+    void getMilestoneInsights_shouldReturnInsightsAndAwardGamification() {
+        // Given
         MilestoneInsightResponse expectedResponse = new MilestoneInsightResponse(
-                "Remaining work summary",
-                "Performance assessment",
-                List.of("Tip 1", "Tip 2"),
-                "Encouragement message",
-                List.of("New task suggestion"),
+                "Remaining work: create REST endpoints",
+                "Good progress, but some tasks pending",
+                List.of("Focus on completing REST endpoints"),
+                "Keep going!",
+                List.of("Add security layer"),
                 InsightStatus.SUCCESS
         );
 
-        when(mlServiceClient.getMilestoneInsights(any(), any()))
-                .thenReturn(Mono.just(expectedResponse));
+        when(aiClientService.generateStructured(
+                anyString(),
+                eq(MilestoneInsightResponse.class),
+                eq(userId),
+                eq(AITask.MILESTONE_INSIGHTS)
+        )).thenReturn(expectedResponse);
 
         // When
-        Mono<MilestoneInsightResponse> result = milestoneInsightService.getMilestoneInsights(testMilestone);
+        MilestoneInsightResponse result = milestoneInsightService.getMilestoneInsights(milestone);
 
         // Then
-        StepVerifier.create(result)
-                .expectNext(expectedResponse)
-                .verifyComplete();
+        assertThat(result).isSameAs(expectedResponse);
+        verify(gamificationService).recordActivity(user, GamificationAction.AI_INSIGHT);
+        verify(aiClientService).generateStructured(anyString(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS));
     }
 
     @Test
-    void getMilestoneInsights_WhenApiKeyNull_UsesEmptyKey() {
+    void getMilestoneInsights_shouldBuildPromptWithCorrectDetails() {
         // Given
-        when(apiKeyService.getDecryptedApiKey(testUser)).thenReturn(null);
+        MilestoneInsightResponse expectedResponse = new MilestoneInsightResponse(
+                "", "", List.of(), "", List.of(), InsightStatus.SUCCESS
+        );
+        when(aiClientService.generateStructured(anyString(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS)))
+                .thenReturn(expectedResponse);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+
+        // When
+        milestoneInsightService.getMilestoneInsights(milestone);
+
+        // Then
+        verify(aiClientService).generateStructured(promptCaptor.capture(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS));
+        String prompt = promptCaptor.getValue();
+        assertThat(prompt).contains("Learn Spring Boot");
+        assertThat(prompt).contains("Complete the Spring Boot masterclass");
+        assertThat(prompt).contains("Setup project");
+        assertThat(prompt).contains("Create REST endpoints");
+        assertThat(prompt).contains("IN_PROGRESS");
+        assertThat(prompt).contains(milestone.getDueDate().toString());
+    }
+
+    // ========== AI Failure ==========
+
+    @Test
+    void getMilestoneInsights_shouldReturnFallback_whenAIFails() {
+        // Given
+        when(aiClientService.generateStructured(
+                anyString(),
+                eq(MilestoneInsightResponse.class),
+                eq(userId),
+                eq(AITask.MILESTONE_INSIGHTS)
+        )).thenThrow(new RuntimeException("AI service unavailable"));
+
+        // When
+        MilestoneInsightResponse result = milestoneInsightService.getMilestoneInsights(milestone);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo(InsightStatus.ERROR);
+        assertThat(result.tips()).contains("Check your Gemini API key and quota.");
+        verify(gamificationService, never()).recordActivity(any(), any());
+    }
+
+    // ========== Edge Cases ==========
+
+    @Test
+    void getMilestoneInsights_shouldHandleNullDueDate() {
+        // Given
+        milestone.setDueDate(null);
+        MilestoneInsightResponse expectedResponse = new MilestoneInsightResponse(
+                "", "", List.of(), "", List.of(), InsightStatus.SUCCESS
+        );
+        when(aiClientService.generateStructured(anyString(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS)))
+                .thenReturn(expectedResponse);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+
+        // When
+        milestoneInsightService.getMilestoneInsights(milestone);
+
+        // Then
+        verify(aiClientService).generateStructured(promptCaptor.capture(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS));
+        assertThat(promptCaptor.getValue()).contains("Due Date: Not set");
+    }
+
+    @Test
+    void getMilestoneInsights_shouldHandleEmptyTasks() {
+        // Given
+        milestone.setTasks(List.of());
+        MilestoneInsightResponse expectedResponse = new MilestoneInsightResponse(
+                "", "", List.of(), "", List.of(), InsightStatus.SUCCESS
+        );
+        when(aiClientService.generateStructured(anyString(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS)))
+                .thenReturn(expectedResponse);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+
+        // When
+        milestoneInsightService.getMilestoneInsights(milestone);
+
+        // Then
+        verify(aiClientService).generateStructured(promptCaptor.capture(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS));
+        String prompt = promptCaptor.getValue();
+        assertThat(prompt).contains("No specific tasks defined for this milestone.");
+        // No tasks listed
+        assertThat(prompt).doesNotContain("Setup project");
+    }
+
+    @Test
+    void getMilestoneInsights_shouldHandleNullTaskStatusOrDueDate() {
+        // Given
+        Task taskWithNulls = new Task();
+        taskWithNulls.setDescription("Task with nulls");
+        taskWithNulls.setStatus(null);
+        taskWithNulls.setDueDate(null);
+        milestone.setTasks(List.of(taskWithNulls));
 
         MilestoneInsightResponse expectedResponse = new MilestoneInsightResponse(
-                "Fallback remaining work",
-                "Fallback assessment",
-                List.of("Fallback tip"),
-                "Fallback encouragement",
-                List.of("Fallback task"),
-                InsightStatus.ERROR
+                "", "", List.of(), "", List.of(), InsightStatus.SUCCESS
         );
+        when(aiClientService.generateStructured(anyString(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS)))
+                .thenReturn(expectedResponse);
 
-        when(mlServiceClient.getMilestoneInsights(any(), any()))
-                .thenReturn(Mono.just(expectedResponse));
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
 
         // When
-        Mono<MilestoneInsightResponse> result = milestoneInsightService.getMilestoneInsights(testMilestone);
+        milestoneInsightService.getMilestoneInsights(milestone);
 
         // Then
-        StepVerifier.create(result)
-                .expectNext(expectedResponse)
-                .verifyComplete();
-    }
-
-    @Test
-    void getMilestoneInsights_WhenMlServiceFails_ReturnsFallback() {
-        // Given
-        String apiKey = "test-api-key";
-        when(apiKeyService.getDecryptedApiKey(testUser)).thenReturn(apiKey);
-
-        // ML service returns error mono (the circuit breaker fallback will handle it, but we simulate error)
-        when(mlServiceClient.getMilestoneInsights(any(), any()))
-                .thenReturn(Mono.error(new RuntimeException("ML service error")));
-
-        // The circuit breaker fallback should return a default response.
-        // However, we need to ensure the fallback is invoked. In the actual MLServiceClient,
-        // there is a fallback method. But in this unit test, we mock the client to return error,
-        // and the service will propagate it. To test the fallback, we would need to test the client separately.
-        // Here we just verify that the error is propagated.
-        Mono<MilestoneInsightResponse> result = milestoneInsightService.getMilestoneInsights(testMilestone);
-
-        // Then
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException &&
-                        throwable.getMessage().equals("ML service error"))
-                .verify();
+        verify(aiClientService).generateStructured(promptCaptor.capture(), eq(MilestoneInsightResponse.class), eq(userId), eq(AITask.MILESTONE_INSIGHTS));
+        String prompt = promptCaptor.getValue();
+        assertThat(prompt).contains("Task with nulls");
+        assertThat(prompt).contains("Status: PENDING"); // default
+        assertThat(prompt).contains("Due: No due date");
     }
 }
