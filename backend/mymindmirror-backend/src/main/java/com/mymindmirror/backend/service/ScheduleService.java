@@ -603,10 +603,13 @@ public class ScheduleService {
         Map<String, List<TimeSlot>> result = new HashMap<>();
         if (json == null || json.trim().isEmpty()) return getDefaultSlots();
         try {
-            Map<String, Object> hoursMap = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
-            for (Map.Entry<String, Object> entry : hoursMap.entrySet()) {
+            Map<String, List<List<String>>> hoursMap = objectMapper.readValue(
+                    json,
+                    new TypeReference<Map<String, List<List<String>>>>() {}
+            );
+            for (Map.Entry<String, List<List<String>>> entry : hoursMap.entrySet()) {
                 List<TimeSlot> slots = new ArrayList<>();
-                for (List<String> slot : (List<List<String>>) entry.getValue()) {
+                for (List<String> slot : entry.getValue()) {
                     slots.add(new TimeSlot(LocalTime.parse(slot.get(0)), LocalTime.parse(slot.get(1))));
                 }
                 result.put(entry.getKey().toLowerCase(), slots);
