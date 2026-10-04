@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.ScheduleApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.MoveScheduledTaskRequest;
 import com.mymindmirror.backend.payload.request.ScheduleCustomTaskRequest;
@@ -19,10 +20,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/schedule")
 @RequiredArgsConstructor
-public class ScheduleController {
+public class ScheduleController implements ScheduleApi {
 
     private final ScheduleService scheduleService;
 
+    @Override
     @PostMapping("/generate")
     public ResponseEntity<String> generateSchedule(
             @CurrentUser User currentUser,
@@ -31,6 +33,7 @@ public class ScheduleController {
         return ResponseEntity.ok("Schedule generated");
     }
 
+    @Override
     @GetMapping("/tasks")
     public ResponseEntity<List<ScheduledTaskResponse>> getScheduledTasks(
             @CurrentUser User currentUser,
@@ -46,7 +49,7 @@ public class ScheduleController {
     }
 
 
-
+    @Override
     @PutMapping("/task/{taskId}/move")
     public ResponseEntity<Void> moveScheduledTask(
             @CurrentUser User currentUser,
@@ -58,7 +61,7 @@ public class ScheduleController {
         return ResponseEntity.ok().build();
     }
 
-
+    @Override
     @PatchMapping("/task/{taskId}/complete")
     public ResponseEntity<Void> completeTask(
             @CurrentUser User currentUser,
@@ -67,7 +70,7 @@ public class ScheduleController {
         return ResponseEntity.ok().build();
     }
 
-
+    @Override
     @PostMapping("/task/custom")
     public ResponseEntity<Void> scheduleCustomTaskManually(
             @CurrentUser User currentUser,
@@ -86,6 +89,7 @@ public class ScheduleController {
         return ResponseEntity.ok().build();
     }
 
+    @Override
     @PostMapping("/reoptimize")
     public ResponseEntity<String> reoptimizeToday(@CurrentUser User currentUser) {
         scheduleService.reoptimizeToday(currentUser);

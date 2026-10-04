@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.MilestoneApi;
 import com.mymindmirror.backend.mapper.MilestoneMapper;
 import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.Task;
@@ -10,7 +11,8 @@ import com.mymindmirror.backend.payload.request.MilestoneRequest;
 import com.mymindmirror.backend.payload.response.MessageResponse;
 import com.mymindmirror.backend.payload.response.MilestoneInsightResponse;
 import com.mymindmirror.backend.payload.response.MilestoneResponse;
-import com.mymindmirror.backend.service.*;
+import com.mymindmirror.backend.service.MilestoneInsightService;
+import com.mymindmirror.backend.service.MilestoneService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +29,13 @@ import java.util.UUID;
 @RequestMapping("/api/milestones")
 @RequiredArgsConstructor
 @Slf4j
-public class MilestoneController {
+public class MilestoneController implements MilestoneApi {
 
     private final MilestoneService milestoneService;
     private final MilestoneInsightService milestoneInsightService;
     private final MilestoneMapper milestoneMapper;
 
+    @Override
     @PostMapping
     public ResponseEntity<MilestoneResponse> createMilestone(
             @CurrentUser User currentUser,
@@ -47,26 +50,28 @@ public class MilestoneController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<List<MilestoneResponse>> getAllMilestones(@CurrentUser User currentUser) {
         List<MilestoneResponse> milestones = milestoneService.getAllMilestonesForUserAsDTO(currentUser);
         return ResponseEntity.ok(milestones);
     }
 
-
+    @Override
     @GetMapping("/{id}")
     public ResponseEntity<MilestoneResponse> getMilestoneById(
             @CurrentUser User currentUser,
             @PathVariable UUID id) {
 
-        //  No try-catch – use Optional and ResponseStatusException
         MilestoneResponse response = milestoneService.getMilestoneByIdForUser(id, currentUser)
                 .map(milestoneMapper::toResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
 
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<MilestoneResponse> updateMilestone(
             @CurrentUser User currentUser,
@@ -83,6 +88,7 @@ public class MilestoneController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse> deleteMilestone(
             @CurrentUser User currentUser,
@@ -92,25 +98,21 @@ public class MilestoneController {
         return ResponseEntity.ok(new MessageResponse("Milestone deleted successfully!"));
     }
 
+    @Override
     @GetMapping("/{id}/insights")
     public ResponseEntity<MilestoneInsightResponse> getMilestoneInsights(
             @CurrentUser User currentUser,
             @PathVariable UUID id) {
 
         Milestone milestone = milestoneService.getMilestoneByIdForUser(id, currentUser)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
 
-        try {
-            MilestoneInsightResponse insights = milestoneInsightService.getMilestoneInsights(milestone);
-            return ResponseEntity.ok(insights);
-        } catch (Exception e) {
-            log.error("Error fetching insights: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate milestone insights.");
-        }
+        MilestoneInsightResponse insights = milestoneInsightService.getMilestoneInsights(milestone);
+        return ResponseEntity.ok(insights);
     }
 
-
-
+    @Override
     @PostMapping("/import-growth-tip")
     public ResponseEntity<MessageResponse> importGrowthTip(
             @CurrentUser User currentUser,

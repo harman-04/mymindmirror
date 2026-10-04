@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.AnalyticsApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.AnomalyDetectionRequest;
 import com.mymindmirror.backend.payload.response.AnomalyDetectionResponse;
@@ -8,6 +9,7 @@ import com.mymindmirror.backend.payload.response.DailyAggregatedDataResponse;
 import com.mymindmirror.backend.service.JournalService;
 import com.mymindmirror.backend.util.DateRange;
 import com.mymindmirror.backend.util.DateUtil;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +22,11 @@ import java.util.List;
 @RequestMapping("/api/ml")
 @RequiredArgsConstructor
 @Slf4j
-public class AnalyticsController {
+public class AnalyticsController implements AnalyticsApi {
 
     private final JournalService journalService;
 
+    @Override
     @GetMapping("/daily-aggregated-data")
     public ResponseEntity<List<DailyAggregatedDataResponse>> getDailyAggregatedData(
             @CurrentUser User currentUser,
@@ -41,7 +44,7 @@ public class AnalyticsController {
         return ResponseEntity.ok(data);
     }
 
-
+    @Override
     @PostMapping("/anomaly-detection")
     public ResponseEntity<AnomalyDetectionResponse> runAnomalyDetection(
             @CurrentUser User currentUser,

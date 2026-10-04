@@ -6,6 +6,7 @@ import com.mymindmirror.backend.security.services.UserDetailsImpl;
 import com.mymindmirror.backend.service.JournalService;
 import com.mymindmirror.backend.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -92,5 +93,43 @@ class ReflectionControllerTest {
 
         mockMvc.perform(post("/api/reflection/generate"))
                 .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("generateDailyReflection → 503 when DB is unreachable")
+    void generateDailyReflection_shouldReturn503_whenDatabaseUnavailable() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("DB down"));
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message")
+                        .value("A backend service is temporarily unavailable. Please try again in a moment."));
+    }
+
+    @Test
+    @DisplayName("generateDailyReflection → 503 when Redis is unreachable")
+    void generateDailyReflection_shouldReturn503_whenRedisUnavailable() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenThrow(new org.springframework.data.redis.RedisConnectionFailureException("Redis down"));
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message")
+                        .value("Cache service is temporarily unavailable. Please try again in a moment."));
+    }
+
+    @Test
+    @DisplayName("generateDailyReflection → 200 with fallback when the service catches Redis internally")
+    void generateDailyReflection_returns200WithFallback_whenServiceReturnsFallbackString() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenReturn("Failed to generate reflection due to an internal error.");
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reflection")
+                        .value("Failed to generate reflection due to an internal error."));
     }
 }

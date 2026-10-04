@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.JournalApi;
 import com.mymindmirror.backend.mapper.JournalMapper;
 import com.mymindmirror.backend.model.JournalEntry;
 import com.mymindmirror.backend.model.User;
@@ -29,11 +30,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/journal")
 @RequiredArgsConstructor
 @Slf4j
-public class JournalController {
+public class JournalController implements JournalApi {
 
     private final JournalService journalService;
     private final JournalMapper journalMapper;
 
+    @Override
     @PostMapping
     public ResponseEntity<JournalEntryResponse> createJournalEntry(
             @CurrentUser User currentUser,
@@ -45,6 +47,7 @@ public class JournalController {
         return ResponseEntity.status(HttpStatus.CREATED).body(journalMapper.toResponse(savedEntry));
     }
 
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<JournalEntryResponse> updateJournalEntry(
             @CurrentUser User currentUser,
@@ -57,6 +60,7 @@ public class JournalController {
         return ResponseEntity.ok(journalMapper.toResponse(updatedEntry));
     }
 
+    @Override
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJournalEntry(
             @CurrentUser User currentUser,
@@ -68,6 +72,7 @@ public class JournalController {
         return ResponseEntity.noContent().build();
     }
 
+    @Override
     @GetMapping("/history")
     public ResponseEntity<List<JournalEntryResponse>> getJournalHistory(
             @CurrentUser User currentUser,
@@ -88,6 +93,7 @@ public class JournalController {
         return ResponseEntity.ok(responses);
     }
 
+    @Override
     @GetMapping("/mood-data")
     public ResponseEntity<List<MoodDataResponse>> getMoodData(
             @CurrentUser User currentUser,
@@ -105,6 +111,7 @@ public class JournalController {
         return ResponseEntity.ok(moodData);
     }
 
+    @Override
     @GetMapping("/{id}")
     public ResponseEntity<JournalEntryResponse> getJournalEntry(
             @CurrentUser User currentUser,
@@ -118,6 +125,7 @@ public class JournalController {
         return ResponseEntity.ok(journalMapper.toResponse(entry));
     }
 
+    @Override
     @GetMapping("/trends")
     public ResponseEntity<Map<String, Long>> getJournalTrends(
             @CurrentUser User currentUser,
@@ -137,6 +145,7 @@ public class JournalController {
         return ResponseEntity.ok(trends);
     }
 
+    @Override
     @GetMapping("/search/keyword")
     public ResponseEntity<List<JournalEntryResponse>> searchJournalEntriesByKeyword(
             @CurrentUser User currentUser,
@@ -151,6 +160,7 @@ public class JournalController {
         return ResponseEntity.ok(responses);
     }
 
+    @Override
     @GetMapping("/search/mood")
     public ResponseEntity<List<JournalEntryResponse>> searchJournalEntriesByMood(
             @CurrentUser User currentUser,
@@ -173,6 +183,7 @@ public class JournalController {
         return ResponseEntity.ok(responses);
     }
 
+    @Override
     @GetMapping("/search/semantic")
     public ResponseEntity<List<JournalEntryResponse>> searchJournalEntriesSemantically(
             @CurrentUser User currentUser,
@@ -187,12 +198,14 @@ public class JournalController {
         return ResponseEntity.ok(responses);
     }
 
+    @Override
     @GetMapping("/key-phrases")
     public ResponseEntity<Map<String, Long>> getKeyPhraseFrequencies(@CurrentUser User currentUser) {
         Map<String, Long> freq = journalService.getKeyPhraseFrequencies(currentUser);
         return ResponseEntity.ok(freq);
     }
 
+    @Override
     @GetMapping("/history/paginated")
     public ResponseEntity<PageResponse<JournalEntryResponse>> getJournalHistoryPaginated(
             @CurrentUser User currentUser,

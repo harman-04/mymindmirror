@@ -21,6 +21,7 @@
         <java.version>25</java.version>
         <spring-ai.version>2.0.0-M8</spring-ai.version>
         <testcontainers.version>2.0.5</testcontainers.version>
+        <springdoc.version>3.1.1</springdoc.version>
     </properties>
 
     <!-- 2. MAINTAINED: Manages Spring AI dependencies cleanly -->
@@ -133,6 +134,14 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <!-- The SpringDoc Starter  -->
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <!-- Testing Scope -->

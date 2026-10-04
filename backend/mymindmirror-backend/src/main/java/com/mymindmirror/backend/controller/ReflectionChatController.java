@@ -1,11 +1,13 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.ReflectionChatApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.ChatRequest;
 import com.mymindmirror.backend.payload.response.ChatResponse;
 import com.mymindmirror.backend.service.ChatMemoryService;
 import com.mymindmirror.backend.service.JournalService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,11 +16,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
-public class ReflectionChatController {
+public class ReflectionChatController implements ReflectionChatApi {
 
     private final JournalService journalService;
     private final ChatMemoryService chatMemoryService;
 
+    @Override
     @PostMapping("/reflect")
     public ResponseEntity<ChatResponse> reflect(
             @CurrentUser User currentUser,
@@ -34,12 +37,14 @@ public class ReflectionChatController {
         return ResponseEntity.ok(new ChatResponse(answer));
     }
 
+    @Override
     @PostMapping("/suggest-question")
     public ResponseEntity<ChatResponse> suggestQuestion(@CurrentUser User currentUser) {
         String question = journalService.generateReflectiveQuestion(currentUser);
         return ResponseEntity.ok(new ChatResponse(question));
     }
 
+    @Override
     @DeleteMapping("/clear-memory")
     public ResponseEntity<Void> clearMemory(
             @CurrentUser User currentUser,

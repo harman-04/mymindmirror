@@ -48,8 +48,15 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Strict: Only permit health and info endpoints
+                        //  Strict: Only permit health and info endpoints
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+
+                        //  Swagger / OpenAPI
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         // Public auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         // All other /api endpoints require authentication

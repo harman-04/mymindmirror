@@ -1,13 +1,14 @@
 package com.mymindmirror.backend.controller;
 
-
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.RoadmapApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.ImportTaskRequest;
 import com.mymindmirror.backend.payload.request.RoadmapGenerateRequest;
 import com.mymindmirror.backend.payload.response.ElaborationResponseDto;
 import com.mymindmirror.backend.payload.response.RoadmapResponse;
 import com.mymindmirror.backend.service.RoadmapService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,14 +22,15 @@ import java.util.UUID;
 @RequestMapping("/api/roadmap")
 @RequiredArgsConstructor
 @Slf4j
-public class RoadmapController {
+public class RoadmapController implements RoadmapApi {
 
     private final RoadmapService roadmapService;
 
+    @Override
     @PostMapping("/generate")
     public ResponseEntity<RoadmapResponse> generateRoadmap(
             @CurrentUser User currentUser,
-            @Valid @RequestBody RoadmapGenerateRequest request)  {
+            @Valid @RequestBody RoadmapGenerateRequest request) {
 
         RoadmapResponse response = roadmapService.generateRoadmapAsDTO(
                 currentUser,
@@ -40,12 +42,14 @@ public class RoadmapController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<List<RoadmapResponse>> getUserRoadmaps(@CurrentUser User currentUser) {
         List<RoadmapResponse> roadmaps = roadmapService.getUserRoadmaps(currentUser);
         return ResponseEntity.ok(roadmaps);
     }
 
+    @Override
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoadmap(
             @CurrentUser User currentUser,
@@ -54,6 +58,7 @@ public class RoadmapController {
         return ResponseEntity.ok().build();
     }
 
+    @Override
     @PostMapping("/import-task")
     public ResponseEntity<String> importTaskToMilestone(
             @CurrentUser User currentUser,
@@ -62,6 +67,7 @@ public class RoadmapController {
         return ResponseEntity.ok("Task imported successfully");
     }
 
+    @Override
     @PatchMapping("/task/{taskId}/toggle")
     public ResponseEntity<Void> toggleTaskCompletion(
             @CurrentUser User currentUser,
@@ -70,6 +76,7 @@ public class RoadmapController {
         return ResponseEntity.ok().build();
     }
 
+    @Override
     @PostMapping("/{id}/continue")
     public ResponseEntity<RoadmapResponse> continueRoadmap(
             @CurrentUser User currentUser,
@@ -78,7 +85,7 @@ public class RoadmapController {
         return ResponseEntity.ok(response);
     }
 
-
+    @Override
     @PostMapping("/task/{taskId}/elaborate")
     public ResponseEntity<ElaborationResponseDto> elaborateTask(
             @CurrentUser User currentUser,
@@ -89,6 +96,7 @@ public class RoadmapController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @PostMapping("/{id}/reschedule")
     public ResponseEntity<RoadmapResponse> rescheduleRoadmap(
             @CurrentUser User currentUser,
@@ -97,6 +105,7 @@ public class RoadmapController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @PostMapping("/{id}/continue-batch")
     public ResponseEntity<RoadmapResponse> continueRoadmapBatch(
             @CurrentUser User currentUser,

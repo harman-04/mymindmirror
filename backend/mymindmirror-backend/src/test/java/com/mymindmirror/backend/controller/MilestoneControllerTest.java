@@ -16,6 +16,7 @@ import com.mymindmirror.backend.service.MilestoneInsightService;
 import com.mymindmirror.backend.service.MilestoneService;
 import com.mymindmirror.backend.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -279,5 +280,27 @@ class MilestoneControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getMilestoneInsights_shouldReturn503_whenDatabaseUnavailable() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("DB down"));
+
+        mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    @DisplayName("getMilestoneInsights → 200 with fallback when AI service fails")
+    void getMilestoneInsights_returnsFallbackWhenAiFails() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenReturn(Optional.of(mockMilestone));
+        when(milestoneInsightService.getMilestoneInsights(any(Milestone.class)))
+                .thenReturn(MilestoneInsightResponse.createFallback());
+
+        mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ERROR"));
     }
 }

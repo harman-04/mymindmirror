@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.controller;
 
 import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.ApiKeyApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.ApiKeyRequest;
 import com.mymindmirror.backend.payload.response.ApiKeyStatusResponse;
@@ -15,11 +16,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Slf4j
-public class ApiKeyController {
+public class ApiKeyController implements ApiKeyApi {
 
     private final ApiKeyService apiKeyService;
     private final DynamicAiClientService dynamicAiClientService;
 
+    @Override
     @PutMapping("/api-key")
     public ResponseEntity<Void> updateApiKey(
             @CurrentUser User currentUser,
@@ -35,12 +37,13 @@ public class ApiKeyController {
             log.info("Updated API key for user {}", currentUser.getUsername());
         }
 
-        // ✅ ADDED BACK: Controller safely orchestrates the cache clear!
+        //  Controller safely orchestrates the cache clear!
         dynamicAiClientService.evictUserModel(currentUser.getId());
 
         return ResponseEntity.noContent().build();
     }
 
+    @Override
     @GetMapping("/api-key/status")
     public ResponseEntity<ApiKeyStatusResponse> getApiKeyStatus(@CurrentUser User currentUser) {
         ApiKeyStatusResponse response = apiKeyService.getApiKeyStatus(currentUser);
