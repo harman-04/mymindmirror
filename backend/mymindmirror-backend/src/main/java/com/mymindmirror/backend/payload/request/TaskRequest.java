@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.payload.request;
 
 import com.mymindmirror.backend.enums.Status;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
@@ -12,6 +13,10 @@ public record TaskRequest(
 
         LocalDate dueDate,
 
+        @Schema(
+                description = "Optional new status.",
+                allowableValues = {"PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE", "CANCELLED"},
+                nullable = true)
         Status status,
 
         String details,

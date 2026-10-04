@@ -1,5 +1,6 @@
 package com.mymindmirror.backend.payload.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
@@ -22,5 +23,9 @@ public record ScheduleCustomTaskRequest(
         @NotNull(message = "End time is required")
         LocalTime endTime,
 
+        @Schema(
+                description = "Task priority. Defaults to MEDIUM when omitted.",
+                allowableValues = {"LOW", "MEDIUM", "HIGH"},
+                nullable = true)
         String priority // optional, will default to MEDIUM
 ) {}
