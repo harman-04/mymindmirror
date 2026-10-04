@@ -70,11 +70,14 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       # Spring AI Gemini API key (global fallback)
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      # Other Spring Boot properties (optional overrides)
-      # If you have other env vars like ENCRYPTION_MASTER_KEY, add them here.
+      # Encryption master key for AES field encryption
       ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
-
+      # CORS
       CORS_ALLOWED_ORIGINS: "http://localhost"
+      # Swagger / OpenAPI — enable in dev, set to "false" in production
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED}
+      # Error response — never enable in production
+      app.error.expose-debug: "false"
     ports:
       - "8080:8080"
 
