@@ -2,6 +2,7 @@ package com.mymindmirror.backend;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mymindmirror.backend.service.JournalService;
+import com.mymindmirror.backend.service.MilestoneService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,7 @@ class ErrorContractIT extends AbstractIntegrationTest {
     @MockitoSpyBean private UserDetailsService userDetailsService;
     @MockitoSpyBean private JournalService journalService;
     @MockitoSpyBean private CacheManager cacheManager;
-
+    @MockitoSpyBean private MilestoneService milestoneService;
     private String aliceJwt;
 
     @BeforeEach
@@ -258,5 +259,95 @@ class ErrorContractIT extends AbstractIntegrationTest {
         assertUnifiedShape(result, 503, "Service Unavailable");
         assertThat(messageOf(result)).contains("shared AI service");
         assertThat(messageOf(result)).contains("add your own API key");
+    }
+
+    @Test
+    @DisplayName("400 — missing required @RequestParam (keyword)")
+    void missingRequestParam_returns400() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/journal/search/keyword")
+                        .header("Authorization", "Bearer " + aliceJwt))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+        assertUnifiedShape(result, 400, "Bad Request");
+        assertThat(messageOf(result)).contains("Missing required parameter");
+        assertThat(messageOf(result)).contains("keyword");
+    }
+
+    @Test
+    @DisplayName("400 — non-UUID path variable on /api/journal/{id}")
+    void typeMismatch_returns400() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/journal/not-a-uuid")
+                        .header("Authorization", "Bearer " + aliceJwt))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+        assertUnifiedShape(result, 400, "Bad Request");
+        assertThat(messageOf(result)).contains("id");
+    }
+
+    @Test
+    @DisplayName("415 — wrong Content-Type on a JSON endpoint")
+    void unsupportedMediaType_returns415() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("plain text instead of json"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andReturn();
+
+        assertUnifiedShape(result, 415, "Unsupported Media Type");
+    }
+
+    @Test
+    @DisplayName("405 — wrong HTTP verb on an existing path")
+    void methodNotAllowed_returns405() throws Exception {
+        // /api/auth/register exists as POST; call it with PUT
+        MvcResult result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isMethodNotAllowed())
+                .andReturn();
+
+        assertUnifiedShape(result, 405, "Method Not Allowed");
+    }
+
+    @Test
+    @DisplayName("406 — client Accept header cannot be satisfied (empty body by HTTP semantics)")
+    void notAcceptable_returns406() throws Exception {
+        mockMvc.perform(get("/api/journal/history")
+                        .header("Authorization", "Bearer " + aliceJwt)
+                        .accept(MediaType.APPLICATION_XML))
+                .andExpect(status().isNotAcceptable());
+    }
+
+    @Test
+    @DisplayName("503 — Reflection: DB failure surfaces as 503, not 500")
+    void reflectionDbFailure_returns503() throws Exception {
+        doThrow(new DataAccessResourceFailureException("DB down"))
+                .when(journalService).generateDailyReflection(any());
+
+        MvcResult result = mockMvc.perform(post("/api/reflection/generate")
+                        .header("Authorization", "Bearer " + aliceJwt))
+                .andExpect(status().isServiceUnavailable())
+                .andReturn();
+
+        assertUnifiedShape(result, 503, "Service Unavailable");
+        assertThat(messageOf(result))
+                .isEqualTo("A backend service is temporarily unavailable. Please try again in a moment.");
+    }
+
+    @Test
+    @DisplayName("503 — Milestone insights: DB failure surfaces as 503, not 500")
+    void milestoneInsightsDbFailure_returns503() throws Exception {
+        doThrow(new DataAccessResourceFailureException("DB down"))
+                .when(milestoneService).getMilestoneByIdForUser(any(), any());
+
+        MvcResult result = mockMvc.perform(get("/api/milestones/{id}/insights", UUID.randomUUID())
+                        .header("Authorization", "Bearer " + aliceJwt))
+                .andExpect(status().isServiceUnavailable())
+                .andReturn();
+
+        assertUnifiedShape(result, 503, "Service Unavailable");
     }
 }

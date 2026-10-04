@@ -13,8 +13,16 @@ import org.springframework.security.authentication.InternalAuthenticationService
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.beans.TypeMismatchException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.core.MethodParameter;
+import java.lang.reflect.Method;
+import java.util.UUID;
 
 class RestExceptionHandlerTest {
 
@@ -364,5 +372,116 @@ class RestExceptionHandlerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(503);
         assertThat(response.getBody().message())
                 .isEqualTo("Authentication service is temporarily unavailable. Please try again in a moment.");
+    }
+
+    // ------------------------------------------------------------------
+// MissingServletRequestParameterException → 400
+// ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("MissingServletRequestParameterException → 400 with param name in message")
+    void missingRequestParam_returns400() {
+        MissingServletRequestParameterException ex =
+                new MissingServletRequestParameterException("keyword", "String");
+
+        ResponseEntity<Object> response = handler.handleMissingServletRequestParameter(
+                ex, new HttpHeaders(), HttpStatusCode.valueOf(400), webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        ErrorResponse body = (ErrorResponse) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.status()).isEqualTo(400);
+        assertThat(body.error()).isEqualTo("Bad Request");
+        assertThat(body.message()).contains("Missing required parameter");
+        assertThat(body.message()).contains("keyword");
+        assertThat(body.path()).isEqualTo("/api/test/endpoint");
+    }
+
+// ------------------------------------------------------------------
+// MethodArgumentTypeMismatchException → 400 (covers handleTypeMismatch)
+// ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("MethodArgumentTypeMismatchException → 400 with param name and value")
+    void typeMismatch_returns400() throws NoSuchMethodException {
+        Method method = DummyController.class.getMethod("dummy", String.class);
+        MethodParameter methodParameter = new MethodParameter(method, 0);
+
+        MethodArgumentTypeMismatchException ex = new MethodArgumentTypeMismatchException(
+                "not-a-uuid",          // the value that failed
+                UUID.class,            // required type
+                "id",                  // parameter name
+                methodParameter,       // MethodParameter
+                new IllegalArgumentException("bad uuid"));
+
+        ResponseEntity<Object> response = handler.handleTypeMismatch(
+                ex, new HttpHeaders(), HttpStatusCode.valueOf(400), webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        ErrorResponse body = (ErrorResponse) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.status()).isEqualTo(400);
+        assertThat(body.message()).contains("id");
+        assertThat(body.message()).contains("not-a-uuid");
+        assertThat(body.path()).isEqualTo("/api/test/endpoint");
+    }
+
+    @Test
+    @DisplayName("Plain TypeMismatchException (non-MethodArgument) → 400 with 'unknown' fallback")
+    void plainTypeMismatch_returns400_withUnknownFallback() {
+        // Not a MethodArgumentTypeMismatchException → exercises the false branch
+        TypeMismatchException ex = new TypeMismatchException("someValue", Integer.class);
+
+        ResponseEntity<Object> response = handler.handleTypeMismatch(
+                ex, new HttpHeaders(), HttpStatusCode.valueOf(400), webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        ErrorResponse body = (ErrorResponse) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.status()).isEqualTo(400);
+        assertThat(body.message()).contains("unknown");
+        assertThat(body.path()).isEqualTo("/api/test/endpoint");
+    }
+
+    @Test
+    @DisplayName("HttpMediaTypeNotSupportedException → 415 with unified body")
+    void unsupportedMediaType_returns415() {
+        org.springframework.web.HttpMediaTypeNotSupportedException ex =
+                new org.springframework.web.HttpMediaTypeNotSupportedException(
+                        org.springframework.http.MediaType.TEXT_PLAIN,
+                        java.util.List.of(org.springframework.http.MediaType.APPLICATION_JSON));
+
+        ResponseEntity<Object> response = handler.handleHttpMediaTypeNotSupported(
+                ex, new HttpHeaders(), HttpStatusCode.valueOf(415), webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(415);
+        ErrorResponse body = (ErrorResponse) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.status()).isEqualTo(415);
+        assertThat(body.message()).contains("Unsupported media type");
+        assertThat(body.path()).isEqualTo("/api/test/endpoint");
+    }
+
+    @Test
+    @DisplayName("HttpRequestMethodNotSupportedException → 405 with unified body")
+    void methodNotAllowed_returns405() {
+        org.springframework.web.HttpRequestMethodNotSupportedException ex =
+                new org.springframework.web.HttpRequestMethodNotSupportedException("DELETE");
+
+        ResponseEntity<Object> response = handler.handleHttpRequestMethodNotSupported(
+                ex, new HttpHeaders(), HttpStatusCode.valueOf(405), webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(405);
+        ErrorResponse body = (ErrorResponse) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.status()).isEqualTo(405);
+        assertThat(body.message()).contains("DELETE");
+        assertThat(body.path()).isEqualTo("/api/test/endpoint");
+    }
+
+    // ---- helper class used only by the type-mismatch test ----
+    @SuppressWarnings("unused")
+    private static class DummyController {
+        public void dummy(String value) { /* not called */ }
     }
 }

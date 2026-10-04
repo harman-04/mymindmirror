@@ -3,6 +3,7 @@ package com.mymindmirror.backend.exception;
 import com.mymindmirror.backend.payload.response.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -15,13 +16,16 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import java.util.stream.Collectors;
 
 
@@ -50,7 +54,89 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
         return null;
     }
 
+
+
     // ------------------------------------------------------------------
+// Missing required @RequestParam
+// ------------------------------------------------------------------
+
+    @Override
+    protected ResponseEntity<Object> handleMissingServletRequestParameter(
+            MissingServletRequestParameterException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+
+        log.warn("Missing required parameter: {}", ex.getParameterName());
+
+        ErrorResponse body = buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "Missing required parameter: " + ex.getParameterName(),
+                request, ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // ------------------------------------------------------------------
+// Type mismatch on @PathVariable / @RequestParam
+// (replaces handleMethodArgumentTypeMismatch)
+// ------------------------------------------------------------------
+
+    @Override
+    protected ResponseEntity<Object> handleTypeMismatch(
+            TypeMismatchException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+
+        String paramName = "unknown";
+        String value = "unknown";
+
+        if (ex instanceof MethodArgumentTypeMismatchException mismatch) {
+            paramName = mismatch.getName();
+            value = String.valueOf(mismatch.getValue());
+        }
+
+        log.warn("Type mismatch for parameter '{}': value '{}'", paramName, value);
+
+        ErrorResponse body = buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "Invalid value for parameter '" + paramName + "': " + value,
+                request, ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+    @Override
+    protected ResponseEntity<Object> handleHttpMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+
+        log.warn("Unsupported media type: {}", ex.getContentType());
+        ErrorResponse body = buildResponse(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Unsupported media type: " + ex.getContentType(),
+                request, ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpRequestMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+
+        log.warn("Method not allowed: {}", ex.getMethod());
+        ErrorResponse body = buildResponse(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "HTTP method '" + ex.getMethod() + "' is not supported for this endpoint.",
+                request, ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+// ------------------------------------------------------------------
     // 1. Bean validation on @RequestBody
     // ------------------------------------------------------------------
 
