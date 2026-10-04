@@ -22,7 +22,8 @@ public class AnomalyDetectionService {
     @Value("${app.anomaly.words-threshold-std:0.8}")
     private double wordsThresholdStd;
 
-    @Value("${app.anomaly.min-days:5}")
+    @Value("${app.anomaly.min-days:7}"
+    )
     private int minDaysForAnomaly;
 
     public AnomalyDetectionResponse detectAnomalies(List<DailyAggregatedDataResponse> dailyData) {
