@@ -2,7 +2,8 @@ package com.mymindmirror.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mymindmirror.backend.config.TestVectorStoreConfig;
-import com.mymindmirror.backend.payload.request.AuthRequest;
+import com.mymindmirror.backend.payload.request.LoginRequest;
+import com.mymindmirror.backend.payload.request.RegisterRequest;
 import com.mymindmirror.backend.repository.JournalEntryRepository;
 import com.mymindmirror.backend.repository.UserRepository;
 import com.mymindmirror.backend.repository.UserStatsRepository;
@@ -41,7 +42,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "spring.jpa.hibernate.ddl-auto=create-drop",
                 "spring.jpa.show-sql=false",
                 "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect",
-                // Crucial Hikari fixes to prevent "Communications link failure"
                 "spring.datasource.hikari.maximum-pool-size=5",
                 "spring.datasource.hikari.max-lifetime=60000"
         }
@@ -59,7 +59,6 @@ public abstract class AbstractIntegrationTest {
             .withExposedPorts(6379);
 
     static {
-        // Start concurrently
         Startables.deepStart(MYSQL, REDIS).join();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -112,13 +111,14 @@ public abstract class AbstractIntegrationTest {
             entityManager.createQuery("DELETE FROM UserStats").executeUpdate();
             entityManager.createQuery("DELETE FROM UserPreferences").executeUpdate();
             entityManager.createQuery("DELETE FROM UserRoadmapPreferences").executeUpdate();
-            entityManager.createQuery("DELETE FROM User").executeUpdate(); // Fixed call
+            entityManager.createQuery("DELETE FROM User").executeUpdate();
 
             entityManager.flush();
             entityManager.clear();
             return null;
         });
     }
+
     @BeforeEach
     void resetCaches() {
         if (cacheManager == null) {
@@ -149,13 +149,13 @@ public abstract class AbstractIntegrationTest {
     protected String registerAndLogin(String username, String password) throws Exception {
         String email = username + "@test.com";
 
-        AuthRequest reg = new AuthRequest(username, email, password);
+        RegisterRequest reg = new RegisterRequest(username, email, password);
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reg)))
                 .andExpect(status().isCreated());
 
-        AuthRequest login = new AuthRequest(username, null, password);
+        LoginRequest login = new LoginRequest(username, password);
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(login)))

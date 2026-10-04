@@ -1,6 +1,7 @@
 package com.mymindmirror.backend;
 
-import com.mymindmirror.backend.payload.request.AuthRequest;
+import com.mymindmirror.backend.payload.request.LoginRequest;
+import com.mymindmirror.backend.payload.request.RegisterRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -18,22 +19,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("Auth flow — end-to-end")
 class AuthFlowIT extends AbstractIntegrationTest {
 
-    /**
-     * Spy (not mock) — real behavior preserved by default.
-     * Mockito resets it before each test, so stubbing in one test
-     * doesn't leak into the next.
-     */
     @MockitoSpyBean
     private UserDetailsService userDetailsService;
 
     // =================================================================
-    // Happy path (already existed)
+    // Happy path
     // =================================================================
 
     @Test
     @DisplayName("register new user → 201 with success message")
     void register_newUser_returns201() throws Exception {
-        AuthRequest request = new AuthRequest("alice", "alice@test.com", "password123");
+        RegisterRequest request = new RegisterRequest("alice", "alice@test.com", "password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -49,13 +45,13 @@ class AuthFlowIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AuthRequest("bob", "bob@test.com", "password123"))))
+                                new RegisterRequest("bob", "bob@test.com", "password123"))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AuthRequest("bob", null, "password123"))))
+                                new LoginRequest("bob", "password123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.message").value("Login successful."));
@@ -88,7 +84,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("register duplicate username → 400 with specific message")
     void register_duplicateUsername_returns400() throws Exception {
-        AuthRequest request = new AuthRequest("dup", "dup@test.com", "password123");
+        RegisterRequest request = new RegisterRequest("dup", "dup@test.com", "password123");
 
         // First registration succeeds
         mockMvc.perform(post("/api/auth/register")
@@ -108,7 +104,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("register invalid email → 400 with field-level validation message")
     void register_invalidEmail_returns400() throws Exception {
-        AuthRequest request = new AuthRequest("emailuser", "not-an-email", "password123");
+        RegisterRequest request = new RegisterRequest("emailuser", "not-an-email", "password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -119,9 +115,22 @@ class AuthFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("register missing email → 400 with 'Email is required'")
+    void register_missingEmail_returns400() throws Exception {
+        RegisterRequest request = new RegisterRequest("noemail", null, "password123");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString("Email is required")));
+    }
+
+    @Test
     @DisplayName("register short password → 400 with size validation message")
     void register_shortPassword_returns400() throws Exception {
-        AuthRequest request = new AuthRequest("shortpw", "shortpw@test.com", "abc");
+        RegisterRequest request = new RegisterRequest("shortpw", "shortpw@test.com", "abc");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -142,13 +151,13 @@ class AuthFlowIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AuthRequest("wrongpw", "wrongpw@test.com", "correctpass"))))
+                                new RegisterRequest("wrongpw", "wrongpw@test.com", "correctpass"))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AuthRequest("wrongpw", null, "wrongpass"))))
+                                new LoginRequest("wrongpw", "wrongpass"))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.message").value("Invalid credentials"));
@@ -179,10 +188,8 @@ class AuthFlowIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("JWT of deleted user → 401 (UsernameNotFoundException path)")
     void protectedEndpoint_deletedUser_returns401() throws Exception {
-        // Register + get valid JWT
         String jwt = registerAndLogin("ghost", "password123");
 
-        // Delete the user out from under the token
         userRepository.deleteAll();
 
         mockMvc.perform(get("/api/journal/history")
@@ -191,16 +198,14 @@ class AuthFlowIT extends AbstractIntegrationTest {
     }
 
     // =================================================================
-    // Infrastructure failure — the two bugs we fixed this session
+    // Infrastructure failure
     // =================================================================
 
     @Test
     @DisplayName("DB down during JWT validation → 503 (not 401)")
     void protectedEndpoint_dbDownDuringFilter_returns503() throws Exception {
-        // Valid JWT so the filter reaches the user lookup
         String jwt = registerAndLogin("dbdown", "password123");
 
-        // Now make the user lookup throw as if the DB is unreachable
         doThrow(new DataAccessResourceFailureException("DB down"))
                 .when(userDetailsService).loadUserByUsername(anyString());
 
@@ -216,21 +221,19 @@ class AuthFlowIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("DB down during login → 503 (not 401)")
     void login_dbDownDuringAuthentication_returns503() throws Exception {
-        // Register normally first (real DB)
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AuthRequest("loginuser", "loginuser@test.com", "password123"))))
+                                new RegisterRequest("loginuser", "loginuser@test.com", "password123"))))
                 .andExpect(status().isCreated());
 
-        // Now make the user lookup throw during login
         doThrow(new DataAccessResourceFailureException("DB down"))
                 .when(userDetailsService).loadUserByUsername(anyString());
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AuthRequest("loginuser", null, "password123"))))
+                                new LoginRequest("loginuser", "password123"))))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value(503))
                 .andExpect(jsonPath("$.message").value(

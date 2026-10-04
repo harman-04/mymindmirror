@@ -1,7 +1,8 @@
 package com.mymindmirror.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mymindmirror.backend.payload.request.AuthRequest;
+import com.mymindmirror.backend.payload.request.LoginRequest;
+import com.mymindmirror.backend.payload.request.RegisterRequest;
 import com.mymindmirror.backend.payload.response.AuthResponse;
 import com.mymindmirror.backend.security.JwtUtil;
 import com.mymindmirror.backend.security.services.UserDetailsImpl;
@@ -51,10 +52,10 @@ class AuthControllerTest {
 
     @Test
     void registerUser_shouldReturn201_whenValidRequest() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", "test@example.com", "password123");
+        RegisterRequest request = new RegisterRequest("testuser", "test@example.com", "password123");
 
         when(userService.registerNewUser("testuser", "test@example.com", "password123"))
-                .thenReturn(null); // We don't need the returned User for this test
+                .thenReturn(null);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,7 +67,7 @@ class AuthControllerTest {
 
     @Test
     void registerUser_shouldReturn400_whenUsernameMissing() throws Exception {
-        AuthRequest request = new AuthRequest(null, "test@example.com", "password123");
+        RegisterRequest request = new RegisterRequest(null, "test@example.com", "password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +77,7 @@ class AuthControllerTest {
 
     @Test
     void registerUser_shouldReturn400_whenEmailInvalid() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", "invalid-email", "password123");
+        RegisterRequest request = new RegisterRequest("testuser", "invalid-email", "password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,8 +86,20 @@ class AuthControllerTest {
     }
 
     @Test
+    void registerUser_shouldReturn400_whenEmailMissing() throws Exception {
+        RegisterRequest request = new RegisterRequest("testuser", null, "password123");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString("Email is required")));
+    }
+
+    @Test
     void registerUser_shouldReturn400_whenPasswordMissing() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", "test@example.com", null);
+        RegisterRequest request = new RegisterRequest("testuser", "test@example.com", null);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,7 +109,7 @@ class AuthControllerTest {
 
     @Test
     void registerUser_shouldReturn400_whenUserAlreadyExists() throws Exception {
-        AuthRequest request = new AuthRequest("existinguser", "test@example.com", "password123");
+        RegisterRequest request = new RegisterRequest("existinguser", "test@example.com", "password123");
 
         when(userService.registerNewUser("existinguser", "test@example.com", "password123"))
                 .thenThrow(new IllegalArgumentException("Username already exists."));
@@ -108,11 +121,68 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value("Username already exists."));
     }
 
+    @Test
+    void registerUser_shouldReturn400_whenPasswordTooShort() throws Exception {
+        RegisterRequest request = new RegisterRequest("testuser", "test@example.com", "abc");
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registerUser_shouldReturn400_whenUsernameTooShort() throws Exception {
+        RegisterRequest request = new RegisterRequest("ab", "test@example.com", "password123");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registerUser_shouldReturn400_whenUsernameTooLong() throws Exception {
+        String tooLong = "a".repeat(51);
+        RegisterRequest request = new RegisterRequest(tooLong, "test@example.com", "password123");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registerUser_shouldReturn201_whenUsernameIsExactly3Chars() throws Exception {
+        RegisterRequest request = new RegisterRequest("abc", "test@example.com", "password123");
+
+        when(userService.registerNewUser("abc", "test@example.com", "password123"))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void registerUser_shouldReturn201_whenUsernameIsExactly50Chars() throws Exception {
+        String fiftyChars = "a".repeat(50);
+        RegisterRequest request = new RegisterRequest(fiftyChars, "test@example.com", "password123");
+
+        when(userService.registerNewUser(fiftyChars, "test@example.com", "password123"))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }
+
     // ========== Login Tests ==========
 
     @Test
     void loginUser_shouldReturn200_whenValidCredentials() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", null, "password123");
+        LoginRequest request = new LoginRequest("testuser", "password123");
         UUID userId = UUID.randomUUID();
         UserDetailsImpl userDetails = new UserDetailsImpl(
                 userId, "testuser", "test@example.com", "password", null);
@@ -139,7 +209,7 @@ class AuthControllerTest {
 
     @Test
     void loginUser_shouldReturn400_whenUsernameMissing() throws Exception {
-        AuthRequest request = new AuthRequest(null, null, "password123");
+        LoginRequest request = new LoginRequest(null, "password123");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -149,7 +219,7 @@ class AuthControllerTest {
 
     @Test
     void loginUser_shouldReturn400_whenPasswordMissing() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", null, null);
+        LoginRequest request = new LoginRequest("testuser", null);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -159,7 +229,7 @@ class AuthControllerTest {
 
     @Test
     void loginUser_shouldReturn401_whenInvalidCredentials() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", null, "wrongpassword");
+        LoginRequest request = new LoginRequest("testuser", "wrongpassword");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new org.springframework.security.authentication.BadCredentialsException("Invalid credentials"));
@@ -171,59 +241,23 @@ class AuthControllerTest {
     }
 
     @Test
-    void registerUser_shouldReturn400_whenPasswordTooShort() throws Exception {
-        AuthRequest request = new AuthRequest("testuser", "test@example.com", "abc");
-        mockMvc.perform(post("/api/auth/register")
+    void loginUser_shouldReturn200_withoutEmailField() throws Exception {
+        // LoginRequest has no email field at all — proves login works without one
+        LoginRequest request = new LoginRequest("testuser", "password123");
+        UUID userId = UUID.randomUUID();
+        UserDetailsImpl userDetails = new UserDetailsImpl(
+                userId, "testuser", "test@example.com", "password", null);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(jwtUtil.generateToken(userDetails, userId)).thenReturn("mock-jwt-token");
+
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void registerUser_shouldReturn400_whenUsernameTooShort() throws Exception {
-        AuthRequest request = new AuthRequest("ab", "test@example.com", "password123");
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void registerUser_shouldReturn400_whenUsernameTooLong() throws Exception {
-        String tooLong = "a".repeat(51);
-        AuthRequest request = new AuthRequest(tooLong, "test@example.com", "password123");
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void registerUser_shouldReturn201_whenUsernameIsExactly3Chars() throws Exception {
-        AuthRequest request = new AuthRequest("abc", "test@example.com", "password123");
-
-        when(userService.registerNewUser("abc", "test@example.com", "password123"))
-                .thenReturn(null);
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    void registerUser_shouldReturn201_whenUsernameIsExactly50Chars() throws Exception {
-        String fiftyChars = "a".repeat(50);
-        AuthRequest request = new AuthRequest(fiftyChars, "test@example.com", "password123");
-
-        when(userService.registerNewUser(fiftyChars, "test@example.com", "password123"))
-                .thenReturn(null);
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("mock-jwt-token"));
     }
 }
