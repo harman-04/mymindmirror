@@ -138,7 +138,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value(org.hamcrest.Matchers.containsString(
-                                "Password must be at least 6 characters")));
+                                "Password must be between 6 and 72 characters")));
     }
 
     // =================================================================

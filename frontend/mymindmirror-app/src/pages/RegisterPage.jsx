@@ -53,8 +53,16 @@ if (!username.trim()) {
 } else if (username.trim().length < 3 || username.trim().length > 50) {
     errors.username = 'Username must be between 3 and 50 characters.';
 }
-if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) errors.email = 'Valid email is required.';
-if (password.length < 6) errors.password = 'Password must be at least 6 characters.';
+if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+    errors.email = 'Valid email is required.';
+} else if (email.trim().length > 100) {
+    errors.email = 'Email must not exceed 100 characters.';
+}
+if (password.length < 6) {
+    errors.password = 'Password must be at least 6 characters.';
+} else if (password.length > 72) {
+    errors.password = 'Password must not exceed 72 characters.';
+}
 if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match.';
 
     if (Object.keys(errors).length > 0) {

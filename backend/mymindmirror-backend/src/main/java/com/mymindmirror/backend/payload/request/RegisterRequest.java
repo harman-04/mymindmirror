@@ -13,9 +13,10 @@ public record RegisterRequest(
         @Schema(description = "User's email. Required and must be unique across users.")
         @NotBlank(message = "Email is required")
         @Email(message = "Email should be valid")
+        @Size(max = 100, message = "Email must not exceed 100 characters")
         String email,
 
         @NotBlank(message = "Password is required")
-        @Size(min = 6, message = "Password must be at least 6 characters")
+        @Size(min = 6, max = 72, message = "Password must be between 6 and 72 characters")
         String password
 ) {}

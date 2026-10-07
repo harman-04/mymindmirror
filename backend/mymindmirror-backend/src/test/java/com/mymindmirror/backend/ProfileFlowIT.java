@@ -162,7 +162,7 @@ class ProfileFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
                         .value(org.hamcrest.Matchers.containsString(
-                                "must be at least 6 characters")));
+                                "New password must be between 6 and 72 characters")));
     }
 
     @Test

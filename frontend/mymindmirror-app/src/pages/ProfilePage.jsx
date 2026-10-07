@@ -192,6 +192,8 @@ function ProfilePage() {
                 errors.email = 'Email cannot be empty.';
             } else if (!emailRegex.test(editedEmail.trim())) {
                 errors.email = 'Please enter a valid email address.';
+            } else if (editedEmail.trim().length > 100) {
+                errors.email = 'Email must not exceed 100 characters.';
             }
 
             // If any error exists, show them on the inputs and stop submission
@@ -231,6 +233,10 @@ function ProfilePage() {
             // 2. Deep validation
             if (newPassword.length < 6) {
                 setPasswordErrors({ newPassword: 'Must be at least 6 characters.' });
+                return;
+            }
+            if (newPassword.length > 72) {
+                setPasswordErrors({ newPassword: 'Must not exceed 72 characters.' });
                 return;
             }
             if (newPassword !== confirmNewPassword) {
