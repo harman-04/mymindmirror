@@ -53,7 +53,9 @@ public abstract class AbstractIntegrationTest {
     static final MySQLContainer MYSQL = new MySQLContainer(DockerImageName.parse("mysql:8.0"))
             .withDatabaseName("mymindmirror")
             .withUsername("test")
-            .withPassword("test");
+            .withPassword("test")
+            .withCommand("mysqld", "--log-bin-trust-function-creators=1");
+
 
 
     static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
