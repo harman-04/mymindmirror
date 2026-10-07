@@ -8,7 +8,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import java.sql.Connection;
 
@@ -43,8 +43,8 @@ import java.sql.Connection;
  * the entity model. The procedures and triggers can therefore safely reference tables
  * that Hibernate owns.
  *
- * <p>Idempotency: each procedure and trigger is created only if it does not already
- * exist. Safe to run on every startup.
+ * <p>"Idempotency: each object is created if the best-effort existence check reports it missing.
+ * Concurrent-startup races are handled by catching MySQL error codes 1304 / 1359.
  *
  * <p>Failure behavior: if any object fails to create, the exception propagates and the
  * application refuses to start. A missing trigger means silent data corruption in the
@@ -58,6 +58,8 @@ public class DatabaseBootstrap implements ApplicationRunner {
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
     private final boolean skip;
+    private static final int MYSQL_ER_SP_ALREADY_EXISTS  = 1304;
+    private static final int MYSQL_ER_TRG_ALREADY_EXISTS = 1359;
 
     public DatabaseBootstrap(
             @Qualifier("mysqlDataSource") ObjectProvider<DataSource> mysqlDataSourceProvider,
@@ -209,12 +211,10 @@ public class DatabaseBootstrap implements ApplicationRunner {
     }
 
     private void ensureProcedure(String name, String createSql) {
-        Integer count = jdbcTemplate.queryForObject(
+        if (objectExists(
                 "SELECT COUNT(*) FROM information_schema.ROUTINES " +
                         "WHERE ROUTINE_NAME = ? AND ROUTINE_SCHEMA = DATABASE()",
-                Integer.class, name);
-
-        if (count != null && count > 0) {
+                name)) {
             log.info("  procedure {}: already exists", name);
             return;
         }
@@ -223,18 +223,20 @@ public class DatabaseBootstrap implements ApplicationRunner {
             jdbcTemplate.execute(createSql);
             log.info("  procedure {}: created", name);
         } catch (Exception e) {
+            if (isAlreadyExists(e)) {
+                log.info("  procedure {}: already exists (created by concurrent startup)", name);
+                return;
+            }
             log.error("  procedure {} FAILED", name, e);
             throw new IllegalStateException("Failed to create procedure: " + name, e);
         }
     }
 
     private void ensureTrigger(String name, String createSql) {
-        Integer count = jdbcTemplate.queryForObject(
+        if (objectExists(
                 "SELECT COUNT(*) FROM information_schema.TRIGGERS " +
                         "WHERE TRIGGER_NAME = ? AND TRIGGER_SCHEMA = DATABASE()",
-                Integer.class, name);
-
-        if (count != null && count > 0) {
+                name)) {
             log.info("  trigger {}: already exists", name);
             return;
         }
@@ -243,6 +245,10 @@ public class DatabaseBootstrap implements ApplicationRunner {
             jdbcTemplate.execute(createSql);
             log.info("  trigger {}: created", name);
         } catch (Exception e) {
+            if (isAlreadyExists(e)) {
+                log.info("  trigger {}: already exists (or existence check was privilege-gated)", name);
+                return;
+            }
             log.error("  trigger {} FAILED", name, e);
             throw new IllegalStateException("Failed to create trigger: " + name, e);
         }
@@ -255,5 +261,33 @@ public class DatabaseBootstrap implements ApplicationRunner {
             log.error("DatabaseBootstrap: could not detect database product", e);
             return null;
         }
+    }
+
+    private boolean objectExists(String query, String name) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(query, Integer.class, name);
+            return count != null && count > 0;
+        } catch (Exception e) {
+            // Managed MySQL may deny information_schema access (SHOW_ROUTINE
+            // privilege required on Aiven, RDS, Azure Database, PlanetScale).
+            // Fall through to CREATE and let the 1304/1359 path handle it.
+            log.debug("  information_schema lookup for {} failed — attempting CREATE directly: {}",
+                    name, e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isAlreadyExists(Throwable t) {
+        while (t != null) {
+            if (t instanceof SQLException sqlEx) {
+                int code = sqlEx.getErrorCode();
+                // 1304 = ER_SP_ALREADY_EXISTS, 1359 = ER_TRG_ALREADY_EXISTS
+                if (code == MYSQL_ER_SP_ALREADY_EXISTS || code == MYSQL_ER_TRG_ALREADY_EXISTS) {
+                    return true;
+                }
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 }
