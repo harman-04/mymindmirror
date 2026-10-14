@@ -12,7 +12,8 @@ import {
   ChevronDown, ChevronUp, Activity, Smile, Frown, CircleDot, FileSpreadsheet,
   FileText, Sparkle, Star, Award, CalendarDays, ListTree, Sigma, ScatterChart,
   Menu, X, Video, GraduationCap, Languages, Settings, Clock as ClockIcon,
-  Loader, Calendar as CalendarIcon, Check, Database, Cpu, Server, LockKeyhole
+  Loader, Calendar as CalendarIcon, Check, Database, Cpu, Server, LockKeyhole,
+  TestTube, MonitorSmartphone
 } from 'lucide-react';
 import FadeIn from '../components/FadeIn';
 
@@ -93,32 +94,32 @@ const FeatureSectionCard = React.memo(React.forwardRef(({ section, isOpen, onTog
       ref={ref}
       className={`rounded-2xl lg:rounded-3xl ${colors.cardBg} border ${colors.cardBorder} overflow-hidden transition duration-300 hover:shadow-md hover:-translate-y-1 hover:border-purple-500/30 dark:hover:border-teal-500/30 group scroll-mt-24 lg:scroll-mt-32`}
     >
-           <button
-             onClick={() => onToggle(section.id)}
-             aria-expanded={isOpen}
-             className="w-full flex justify-between items-center p-5 lg:p-8 text-left hover:bg-slate-50/50 dark:hover:bg-white/5 active:bg-slate-100 dark:active:bg-white/10 active:scale-[0.99] transition-all duration-200 focus:outline-none"
-           >
-             <div className="flex items-center gap-4 lg:gap-6 pr-4">
-               {/* 🌟 FIX: Applied Layer 3 Backgrounds to the icons! */}
-              {/* 🌟 FIX: Switched to Layer 2 (sectionBg) so the icon box perfectly contrasts against the Layer 1 Card! */}
-                             <div className={`p-3 lg:p-4 rounded-xl lg:rounded-2xl ${colors.sectionBg} shadow-sm border ${colors.sectionBorder} ${section.color}`}>
-                               {React.cloneElement(section.icon, { className: "w-6 h-6 lg:w-8 lg:h-8" })}
-                             </div>
-               <h2 className={`text-lg sm:text-xl lg:text-2xl font-poppins font-extrabold tracking-tight ${colors.textPrimary} leading-tight`}>
-                 {section.title}
-               </h2>
-             </div>
+      <button
+        onClick={() => onToggle(section.id)}
+        aria-expanded={isOpen}
+        className="w-full flex justify-between items-center p-5 lg:p-8 text-left hover:bg-slate-50/50 dark:hover:bg-white/5 active:bg-slate-100 dark:active:bg-white/10 active:scale-[0.99] transition-all duration-200 focus:outline-none"
+      >
+        <div className="flex items-center gap-4 lg:gap-6 pr-4">
+          {/* Applied Layer 3 Backgrounds to the icons! */}
+          {/* Switched to Layer 2 (sectionBg) so the icon box perfectly contrasts against the Layer 1 Card! */}
+          <div className={`p-3 lg:p-4 rounded-xl lg:rounded-2xl ${colors.sectionBg} shadow-sm border ${colors.sectionBorder} ${section.color}`}>
+            {React.cloneElement(section.icon, { className: "w-6 h-6 lg:w-8 lg:h-8" })}
+          </div>
+          <h2 className={`text-lg sm:text-xl lg:text-2xl font-poppins font-extrabold tracking-tight ${colors.textPrimary} leading-tight`}>
+            {section.title}
+          </h2>
+        </div>
         <div className={`shrink-0 p-2 lg:p-2.5 rounded-full transition-all duration-300 shadow-sm ${isOpen ? 'bg-purple-500 dark:bg-teal-500 text-white rotate-180' : `bg-slate-100 dark:bg-white/5 ${colors.textSecondary} group-hover:bg-slate-200 dark:group-hover:bg-white/10`}`}>
           <ChevronDown className="w-5 h-5 lg:w-6 lg:h-6" />
         </div>
       </button>
 
-     {isOpen && (
-             <div className={`p-5 lg:p-8 pt-0 lg:pt-0 border-t ${colors.sectionBorder} animate-in slide-in-from-top-4 fade-in duration-300`}>
-               {/* 🌟 FIX: Added 'prose-slate' so Tailwind's typography engine perfectly aligns with our Master Palette! */}
-               <div className={`guide-content prose prose-slate prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none mt-6 lg:mt-8 ${colors.textPrimary}`}>
-                 <div dangerouslySetInnerHTML={{ __html: formatText(section.content) }} />
-               </div>
+      {isOpen && (
+        <div className={`p-5 lg:p-8 pt-0 lg:pt-0 border-t ${colors.sectionBorder} animate-in slide-in-from-top-4 fade-in duration-300`}>
+          {/*  Added 'prose-slate' so Tailwind's typography engine perfectly aligns with our Master Palette! */}
+          <div className={`guide-content prose prose-slate prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none mt-6 lg:mt-8 ${colors.textPrimary}`}>
+            <div dangerouslySetInnerHTML={{ __html: formatText(section.content) }} />
+          </div>
           <div className={`mt-8 lg:mt-10 text-right border-t ${colors.sectionBorder} pt-4 lg:pt-6`}>
             <button
               onClick={() => onToggle(section.id)}
@@ -141,7 +142,7 @@ function FeaturesGuide() {
   const [openSection, setOpenSection] = useState('journal-and-analysis');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sectionRefs = useRef({});
-const isAuthenticated = !!localStorage.getItem('jwtToken');
+  const isAuthenticated = !!localStorage.getItem('jwtToken');
 
   const toggleSection = useCallback((sectionId) => {
     setOpenSection((prevSection) => {
@@ -160,8 +161,8 @@ const isAuthenticated = !!localStorage.getItem('jwtToken');
     setMobileMenuOpen(false);
   }, []);
 
-// ==========================================================================
-  // 🌟 MASTER ELEVATION PALETTE (3-Layer Architecture)
+  // ==========================================================================
+  //  MASTER ELEVATION PALETTE (3-Layer Architecture)
   // ==========================================================================
   const colors = useMemo(() => ({
     cardBg: isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm',
@@ -171,22 +172,22 @@ const isAuthenticated = !!localStorage.getItem('jwtToken');
     innerContentBg: isDarkMode ? 'bg-black/20' : 'bg-white',
     textPrimary: isDarkMode ? 'text-gray-100' : 'text-slate-900',
     textSecondary: isDarkMode ? 'text-gray-400' : 'text-slate-500',
-    // 🌟 FIX: Stripped backdrop blurs from sidebars for max performance
-   // 🌟 FIX: Sidebar is now officially Layer 1 (matching cardBg)
-       sidebarBg: isDarkMode ? 'bg-[#1A162F]/95 shadow-lg' : 'bg-white/95 shadow-lg',
-       // 🌟 FIX: Active button becomes Layer 2 (slate-50) so it contrasts against the white sidebar
-       sidebarActiveBg: isDarkMode ? 'bg-white/10 border border-transparent' : 'bg-slate-50 shadow-sm border border-slate-200/80',
-        sidebarActiveText: isDarkMode ? 'text-teal-400 font-bold' : 'text-purple-700 font-bold',
+    //  Stripped backdrop blurs from sidebars for max performance
+    //  Sidebar is now officially Layer 1 (matching cardBg)
+    sidebarBg: isDarkMode ? 'bg-[#1A162F]/95 shadow-lg' : 'bg-white/95 shadow-lg',
+    // Active button becomes Layer 2 (slate-50) so it contrasts against the white sidebar
+    sidebarActiveBg: isDarkMode ? 'bg-white/10 border border-transparent' : 'bg-slate-50 shadow-sm border border-slate-200/80',
+    sidebarActiveText: isDarkMode ? 'text-teal-400 font-bold' : 'text-purple-700 font-bold',
     drawerBg: isDarkMode ? 'bg-[#1A162F]/95' : 'bg-white/95',
   }), [isDarkMode]);
 
   const sections = useMemo(() => [
-      {
-              id: 'journal-and-analysis',
-              title: 'Journaling, Real-Time Polling & Smart DOM Virtualization',
-              icon: <Database />,
-              color: 'text-purple-500 dark:text-purple-400',
-content: `
+    {
+      id: 'journal-and-analysis',
+      title: 'Journaling, Real-Time Polling & Smart DOM Virtualization',
+      icon: <Database />,
+      color: 'text-purple-500 dark:text-purple-400',
+      content: `
           **How to use:**
           - Write your deepest thoughts in the heavily optimized \`PremiumInput\` textarea on the Journal page.
           - **Overcoming Writer's Block:** A dedicated "Daily Inspiration" widget sits above your journal input. It utilizes a randomized, stateful array to surface therapeutic questions (e.g., "What made you smile today?"). It stores your recently seen questions in \`localStorage\` to ensure you never see the same question twice in a row when clicking the refresh button.
@@ -207,23 +208,23 @@ content: `
           **Enterprise Architecture (How it works):**
           - **Smart DOM Virtualization Engine:** Rendering thousands of rich historical entries with embedded charts will instantly crash a mobile browser's RAM. The \`JournalHistory\` component features a dynamic rendering router. If the payload is under 20 items (e.g., the Today tab), it uses standard DOM mapping to prevent mathematical absolute-positioning bugs. If the payload exceeds 20 items (e.g., the History tab), it seamlessly routes to \`@tanstack/react-virtual\`, calculating scroll-offsets and painting *only* the visible rows onto the GPU.
           - **Two-Tone Layering System:** The history feed employs a strictly enforced 3-Layer CSS architectural palette. The outer card rests on Layer 1 (\`bg-[#1A162F]\`), the row headers sit on Layer 2 (\`bg-black/30\`), and the parsed AI markdown content is punched into Layer 3 (\`bg-black/20\`), creating a flawless, mathematically precise depth of field.
-          - **Zero-Knowledge Encryption:** Your raw text is encrypted immediately on the backend before ever touching a disk. We use AES-CBC with a 256-bit cryptographic key derived via PBKDF2 from your BCrypt password hash.
+          - **Server-Side Encryption at Rest:** Your raw text is encrypted immediately on the backend before ever touching a disk. We use AES-CBC with a 256-bit cryptographic key derived via PBKDF2 from your BCrypt password hash. The key never leaves the server, and the ciphertext is unreadable without it — even if the disk or database is compromised.
           - **Asynchronous Spring AI & Polling:** The \`AsyncJournalAnalysisService\` takes over post-commit, offloading the heavy HTTP request to the native Spring AI client (no intermediate Flask layer). The frontend uses a reactive polling hook to check for \`moodScore != null\`; when it appears, the analysis is complete.
-          - **Virtual Threads & Non-Blocking I/O:** All AI calls are executed on **virtual threads** (Spring Boot 3+), allowing thousands of concurrent long-running requests without exhausting OS threads. The analysis runs entirely outside any database transaction (using \`TransactionTemplate\`), so the database connection is released during the AI wait.
+          - **Virtual Threads & Non-Blocking I/O:** All AI calls are executed on **virtual threads** (Spring Boot 4 / Java 25), allowing thousands of concurrent long-running requests without exhausting OS threads. The analysis runs entirely outside any database transaction (using \`TransactionTemplate\`), so the database connection is released during the AI wait.
           - **Model Cascade Resilience:** The backend uses a dynamic model cascade (multiple Gemini models) with intelligent cooldown logic. If one model hits a rate limit, the system automatically falls back to the next available model without user-visible interruption.
           - **pgvector Integration:** Once analyzed, the \`EmbeddingGenerationService\` automatically generates a 3072-dimensional vector embedding of your entry's summary and key phrases, storing it in a secondary PostgreSQL database for ultra-fast semantic similarity searches.
           - **Pre-Aggregated Performance:** A MySQL table (\`daily_journal_summary\`) is maintained via stored procedures and triggers, calculating daily mood and word averages on the fly as entries are inserted. This allows analytics charts to render in <10ms even with thousands of rows.
         `,
-            },
+    },
 
-//           - **O(1) Chart Performance:** A pre-aggregated MySQL table (\`daily_journal_summary\`) is maintained via database triggers. It calculates your daily mood and word averages on the fly as entries are inserted, allowing analytics charts to render in <10ms even with thousands of rows.
+    //           - **O(1) Chart Performance:** A pre-aggregated MySQL table (\`daily_journal_summary\`) is maintained via database triggers. It calculates your daily mood and word averages on the fly as entries are inserted, allowing analytics charts to render in <10ms even with thousands of rows.
 
-      {
-              id: 'rag-ai-coach',
-              title: 'AI Reflection Coach (RAG & Redis Session Memory)',
-              icon: <Brain />,
-              color: 'text-pink-500 dark:text-pink-400',
-            content: `
+    {
+      id: 'rag-ai-coach',
+      title: 'AI Reflection Coach (RAG & Redis Session Memory)',
+      icon: <Brain />,
+      color: 'text-pink-500 dark:text-pink-400',
+      content: `
             **How to use:**
 
             - Navigate to the **AI Coach** tab on your Journal page.
@@ -250,17 +251,17 @@ content: `
               - **60 seconds** for rate limits / parsing errors.
               - **24 hours** for 404 Not Found (deprecated endpoints).
               This ensures dead models are not retried and quota is preserved.
-            - **Virtual Threads:** All AI calls execute on virtual threads (Spring Boot 3+), enabling thousands of concurrent chat sessions without exhausting OS threads.
+            - **Virtual Threads:** All AI calls execute on virtual threads (Spring Boot 4 / Java 25), enabling thousands of concurrent chat sessions without exhausting OS threads.
             - **Smart Client-Side Caching:** To preserve backend quotas, your initial AI-generated reflection question is serialized into the browser's \`sessionStorage\` with a strict 1-hour Time-To-Live (TTL). If you navigate away and come back, the UI rehydrates instantly without firing a redundant HTTP request.
             `,
-            },
+    },
 
-        {
-                id: 'roadmap-and-milestones',
-                title: 'AI Roadmap Planner, Dual-Views & Chunked Generation',
-                icon: <MapPin />,
-                color: 'text-teal-500 dark:text-teal-400',
-              content: `
+    {
+      id: 'roadmap-planner',
+      title: 'AI Roadmap Planner, Dual-Views & Chunked Generation',
+      icon: <MapPin />,
+      color: 'text-teal-500 dark:text-teal-400',
+      content: `
               **How to use:**
 
               - Navigate to the **Roadmap** tab and click **"+ New Roadmap"** to launch the initialization engine.
@@ -289,13 +290,13 @@ content: `
               - **Optimistic UI Updates:** The \`useToggleTaskCompletion\` hook utilizes TanStack Query's \`onMutate\` lifecycle method. When you check off a task, the UI updates instantly (Optimistic UI), while the actual \`PATCH\` request fires in the background. If the network request fails, the cache automatically rolls back to its previous state.
               - **Transactional Synchronization Listener:** A dedicated database-level mapping links \`milestone_tasks\` to their respective \`roadmap_tasks\`. When a PATCH request alters a status flag, an asynchronous application event triggers, forcing an atomic dual-write operation across your schemas to maintain 100% accurate system consistency.
               `,
-              },
-{
-        id: 'milestone-tracker-insights',
-        title: 'Milestone Tracking, Circular Progress & AI Strategic Insights',
-        icon: <Target />,
-        color: 'text-amber-500 dark:text-amber-400',
-       content: `
+    },
+    {
+      id: 'milestone-tracker-insights',
+      title: 'Milestone Tracking, Circular Progress & AI Strategic Insights',
+      icon: <Target />,
+      color: 'text-amber-500 dark:text-amber-400',
+      content: `
        **How to use:**
 
        - Navigate to the **Milestones** tab to manage your active, high-level objectives.
@@ -318,13 +319,13 @@ content: `
        - **Gamification Event Triggers:** The Milestone ecosystem is heavily wired into the Gamification engine. Creating milestones, adding tasks, completing items, and generating insights all fire automated \`queryClient.invalidateQueries(['gamificationStats'])\` triggers, instantly rewarding the user with XP in the background.
        - **Virtual Threads & Model Cascade:** The insight generation and growth tip parsing both leverage virtual threads and the dynamic model cascade, ensuring reliability even during high‑load periods.
        `
-      },
-  {
-          id: 'smart-timetable-scheduling',
-          title: 'Smart Timetable Engine, Drag-and-Drop & Re-optimization',
-          icon: <CalendarIcon />,
-          color: 'text-orange-500 dark:text-orange-400',
-  content: `
+    },
+    {
+      id: 'smart-timetable-scheduling',
+      title: 'Smart Timetable Engine, Drag-and-Drop & Re-optimization',
+      icon: <CalendarIcon />,
+      color: 'text-orange-500 dark:text-orange-400',
+      content: `
   **How to use:**
 
   - Access the interactive **Schedule & Calendar** ecosystem directly from your Dashboard navigation.
@@ -350,14 +351,37 @@ content: `
   - **Headless Calendar DOM Manipulation:** We utilize \`react-big-calendar\` for the mathematical grid layout, but we completely disabled its default, clunky toolbars via CSS overrides. Instead, we drive the calendar state via headless React state variables (\`currentView\`, \`currentDate\`), mapping them to our custom, Master Palette-compliant buttons for a seamless, native feel.
   - **Real-Time Synchronous Mutation:** The underlying \`scheduled_tasks\` relational table maintains loose-coupling references to source tasks. This enables a single mutations class to execute cascade event dispatches, updating state across custom tasks, roadmap structures, or milestone components cleanly.
   `,
-        },
+    },
 
-  {
-          id: 'lifestyle-personalization-engine',
-          title: 'Lifestyle Engine & Global AI Personalization',
-          icon: <Settings />,
-          color: 'text-cyan-500 dark:text-cyan-400',
-  content: `
+    {
+      id: 'custom-tasks-adhoc-scheduling',
+      title: 'Custom Tasks & Ad-Hoc Scheduling',
+      icon: <ListChecks />,
+      color: 'text-indigo-500 dark:text-indigo-400',
+      content: `
+      **How to use:**
+      - Navigate to the **Schedule** tab and click **"Add Task"** to create a task that isn't tied to any milestone or roadmap.
+      - Custom tasks are perfect for one-off items: "Call dentist", "Renew passport", "30-min deep work sprint."
+      - Every custom task has a title, optional description, due date, estimated hours, and priority (HIGH / MEDIUM / LOW).
+      - Once created, custom tasks appear in the **Unscheduled Custom Tasks** pool below the calendar.
+      - **Two ways to schedule:** Drag any custom task directly onto the calendar grid, or click **"+ Add"** to open a manual scheduling dialog.
+      - Completing a custom task from the calendar propagates the completion to the master record and any other scheduled entries pointing to the same custom task ID.
+
+      **Enterprise Architecture (How it works):**
+      - **Independent Lifecycle:** Custom tasks have their own table (\`custom_tasks\`), their own CRUD endpoints, and their own gamification hook. They're not nested under milestones the way regular tasks are — this makes them the right tool for ad-hoc work that doesn't fit a broader goal structure.
+      - **Cross-Entity Completion Sync:** When you check off a scheduled block linked to a custom task, the backend cascades the completion to the parent \`custom_tasks\` row AND to every other scheduled entry with the same \`customTaskId\`. This guarantees you can't have a completed calendar block pointing to an incomplete task.
+      - **Cascade Delete:** Deleting a custom task deletes every scheduled entry linked to it. No orphaned calendar blocks.
+      - **Priority-Driven Sorting:** The unscheduled pool sorts custom tasks by priority (HIGH → MEDIUM → LOW), then by due date. The AI scheduler applies the same ordering when auto-scheduling custom tasks in "custom-only" mode.
+      - **Gamification Hook:** Every custom task creation fires a \`TASK_CREATE\` event, awarding 5 XP and potentially unlocking the \`VISIONARY\` badge chain on first use.
+      `,
+    },
+
+    {
+      id: 'lifestyle-personalization-engine',
+      title: 'Lifestyle Engine & Global AI Personalization',
+      icon: <Settings />,
+      color: 'text-cyan-500 dark:text-cyan-400',
+      content: `
   **How to use:**
 
   - Navigate to your **Account Settings** to configure your core AI generation parameters. The system is divided into two deeply integrated personalization engines:
@@ -387,13 +411,13 @@ content: `
   - **Polymorphic JSON Storage:** Your daily habits and availability blocks are stored directly inside the MySQL database as raw JSON strings. This eliminates the overhead of processing multi-table relational joins for simple arrays, heavily optimizing database read operations during intensive scheduling sequences.
   - **Virtual Threads Ready:** All preference operations are non‑blocking and leverage virtual threads for optimal concurrency.
   `,
-        },
+    },
     {
-            id: 'dynamic-gamification',
-            title: 'Dynamic Gamification, Animated Progress & Badge System',
-            icon: <Trophy />,
-            color: 'text-amber-500 dark:text-amber-400',
-       content: `
+      id: 'dynamic-gamification',
+      title: 'Dynamic Gamification, Animated Progress & Badge System',
+      icon: <Trophy />,
+      color: 'text-amber-500 dark:text-amber-400',
+      content: `
        **How to use:**
 
        - **Earn Experience (XP):** Every meaningful action you take (journaling, completing tasks, generating roadmaps, chatting with the AI) rewards you with XP. As you accumulate XP, your global **Mental Mastery Level** increases (every 500 XP = 1 Level).
@@ -429,14 +453,14 @@ content: `
        - **High-Speed Redis Caching:** Because Gamification Stats are displayed constantly across the dashboard header and sidebars, the \`/api/gamification/stats\` endpoint is heavily cached in Redis under the \`gamificationStats\` namespace (using \`CacheConstants.GAMIFICATION_STATS\`). Cache eviction policies are surgically applied so the UI updates instantly, but database read-load remains virtually zero.
        - **Clean Controllers with \`@CurrentUser\`:** The gamification endpoints use the \`@CurrentUser\` annotation resolver – controllers no longer manually fetch users, making the web layer thin and eliminating duplicate user‑lookup code.
        `,
-          },
+    },
 
-{
-        id: 'high-res-visual-analytics',
-        title: 'High-Resolution Visual Analytics & Chart.js Architecture',
-        icon: <LineChart />,
-        color: 'text-blue-500 dark:text-blue-400',
-    content: `
+    {
+      id: 'high-res-visual-analytics',
+      title: 'High-Resolution Visual Analytics & Chart.js Architecture',
+      icon: <LineChart />,
+      color: 'text-blue-500 dark:text-blue-400',
+      content: `
     **How to use:**
 
     - Navigate to the **Journal** analytics environment and switch cleanly between three presentation layers:
@@ -467,13 +491,13 @@ content: `
     - **Dynamic DOM Isolations (html-to-image):** Chart exports don't rely on unoptimized server-side rendering. We use advanced client-side DOM capturing that actively checks your current user interface theme (Light/Dark). The script isolates the target chart, temporarily strips out the UI interactive buttons, and renders a pristine, transparent-background PNG directly to your local device.
     - **Virtual Threads Ready:** All analytics read operations are non‑blocking and leverage virtual threads for optimal concurrency.
     `,
-      },
-       {
-                id: 'early-burnout-anomaly-alerts',
-                title: 'Early Burnout Alerts & EWMA Anomaly Detection',
-                icon: <HeartPulse />,
-                color: 'text-rose-600 dark:text-rose-400',
-content: `
+    },
+    {
+      id: 'early-burnout-anomaly-alerts',
+      title: 'Early Burnout Alerts & EWMA Anomaly Detection',
+      icon: <HeartPulse />,
+      color: 'text-rose-600 dark:text-rose-400',
+      content: `
 **How to use:**
 
 - **Ambient Dashboard Banner:** MyMindMirror operates proactively rather than reactively. The \`<AnomalyAlerts/>\` widget sits above the dynamic center dock on your Journal dashboard. If your emotional or writing patterns shift unexpectedly, an alert card surfaces before you open your analytics charts.
@@ -493,7 +517,7 @@ content: `
   - \`app.anomaly.ewma-span=7\` – number of days used for the baseline window.
   - \`app.anomaly.mood-threshold-std=0.6\` – Z‑score threshold for mood anomalies.
   - \`app.anomaly.words-threshold-std=0.8\` – Z‑score threshold for word‑count anomalies.
-  - \`app.anomaly.min-days=5\` – minimum data points required before detection begins.
+  - \`app.anomaly.min-days=7\` – minimum data points required before detection begins.
 - **Strict O(1) Memory Complexity:** Calculating moving variance across historical datasets can produce memory spikes. Because the EWMA algorithm only requires the previous day's moving average to compute the current day's average, the Java loop executes in strict O(1) auxiliary memory complexity without loading full multi-year history arrays into JVM heap space.
 - **Z-Score Statistical Triggers:** The service computes running variance (\`moodVar\`, \`wordsVar\`) and derives standard deviations (\`moodStd\`, \`wordsStd\`). It calculates exact Z‑scores:
   \`zScore = (currentValue - currentEma) / currentStd\`
@@ -501,13 +525,13 @@ content: `
 - **Pre-Aggregated Database Acceleration:** Rather than running aggregate functions (\`AVG\`, \`SUM\`) across raw journal entries at runtime, the service queries pre‑aggregated rows from the \`daily_journal_summary\` table populated via database triggers and stored procedures. Burnout evaluations complete in under 5 milliseconds, avoiding blocking on Tomcat worker threads.
 - **Virtual Threads Enabled:** All anomaly detection computations run on virtual threads, ensuring that even large historical recalculations do not block the Tomcat worker pool.
 `,
-              },
-       {
-                id: 'search-and-filtering',
-                title: 'Advanced Search & Semantic Filtering (3072-Dim pgvector)',
-                icon: <Search />,
-                color: 'text-cyan-500 dark:text-cyan-400',
-    content: `
+    },
+    {
+      id: 'search-and-filtering',
+      title: 'Advanced Search & Semantic Filtering (3072-Dim pgvector)',
+      icon: <Search />,
+      color: 'text-cyan-500 dark:text-cyan-400',
+      content: `
     **How to use:**
 
     - Navigate to the **Search** tab within your Journal history. The UI presents four distinct, interactive query modes:
@@ -531,14 +555,14 @@ content: `
     - **In-Memory Decryption Filtering:** Because your journal content is stored encrypted via AES-CBC at rest to protect user privacy, standard SQL \`LIKE\` queries cannot read the data. The backend \`JournalService\` queries the targeted primary rows, rapidly decrypts the text streams in active memory using your active session key, and applies keyword matching filters entirely on the fly.
     - **Virtual Threads Ready:** All search operations are non‑blocking and leverage virtual threads for optimal concurrency, ensuring responsiveness even during heavy simultaneous search loads.
     `,
-              },
+    },
 
-{
-        id: 'universal-data-export',
-        title: 'Universal Data Export & Client-Side Document Compilation',
-        icon: <Download />,
-        color: 'text-emerald-500 dark:text-emerald-400',
-        content: `
+    {
+      id: 'universal-data-export',
+      title: 'Universal Data Export & Client-Side Document Compilation',
+      icon: <Download />,
+      color: 'text-emerald-500 dark:text-emerald-400',
+      content: `
           **How to use:**
           - Navigate to the **Journal History** view. At the top right, you will find the dedicated \`<ExportButtons/>\` module featuring theme-aware "Jewel" buttons.
           - **Retina-Quality Document Generation (PDF):** Click the Rose/Purple PDF button to instantly generate a highly professional, paginated A4 document containing your complete journaling history. Every entry maps out its exact timestamp, mood score, AI summary, core concerns, and complex multi-line growth tips.
@@ -552,13 +576,13 @@ content: `
           - **Asynchronous UI Event Loop Unblocking:** Generating massive PDFs locks up the single-threaded JavaScript engine. The export logic is intentionally wrapped in a \`setTimeout\` block. This forces the browser to prioritize painting the React \`Loader2\` spinners to the screen *before* executing the heavy compilation loop, preventing the UI from feeling frozen.
           - **Dynamic DOM Isolations (html-to-image):** Chart exports don't rely on static server-side rendering. We use advanced client-side DOM capturing that actively checks your current user interface theme (Light or Dark mode). The script isolates the target chart container, rendering a pristine, transparent-background PNG directly from the active Canvas elements.
         `,
-      },
+    },
 
-                {
-                        id: 'enterprise-security-byok',
-                        title: 'Enterprise-Grade Security & BYOK Vault',
-                        icon: <LockKeyhole />,
-                        color: 'text-indigo-500 dark:text-indigo-400',
+    {
+      id: 'enterprise-security-byok',
+      title: 'Enterprise-Grade Security & BYOK Vault',
+      icon: <LockKeyhole />,
+      color: 'text-indigo-500 dark:text-indigo-400',
       content: `
       **How to use:**
 
@@ -581,133 +605,187 @@ content: `
       - **Hard Cascading Account Teardown:** Triggering an account deletion fires an atomic, transactional method. The system purges your Redis chat history, wipes out your PostgreSQL vectors, executes cross-table cascade deletes across your MySQL tasks and roadmaps, and finally obliterates your primary user record.
       - **Virtual Threads Ready:** All security operations are non‑blocking and leverage virtual threads for optimal concurrency.
       `,
-                      },
-            {
-                         id: 'ai-engine-orchestration-routing',
-                         title: 'AI Engine Ensemble & Strategic Quota Orchestration',
-                         icon: <Cpu />,
-                         color: 'text-amber-500 dark:text-amber-400',
-                         content: `
-                                   **The User & System Experience:**
-                                   - **Zero‑Throttle Reliability:** By implementing a dynamic model cascade, you never experience total system blackout if a single AI model hits its Google AI Studio rate limit. The system automatically rotates through a pool of available models.
-                                   - **Intelligent Traffic Routing:** Each task is assigned a prioritized list of models. The system tries the primary model first; if it fails (due to rate limits, 404 errors, or JSON parsing issues), it instantly cascades to the next model in the list without any user‑visible interruption.
-                                   - **Resilient Fallback Protection:** When a model returns a \`429 Rate Limit\` or \`404 Not Found\`, the backend applies a **smart cooldown**:
-                                     - \`429\` / parsing errors → locked for **60 seconds**.
-                                     - \`404\` (deprecated model) → locked for **24 hours**.
-                                     This prevents retrying dead endpoints and preserves quota.
+    },
+    {
+      id: 'ai-engine-orchestration-routing',
+      title: 'AI Engine Ensemble & Strategic Quota Orchestration',
+      icon: <Cpu />,
+      color: 'text-amber-500 dark:text-amber-400',
+      content: `
+              **The User & System Experience:**
+              - **Zero‑Throttle Reliability:** By implementing a dynamic model cascade, you never experience total system blackout if a single AI model hits its Google AI Studio rate limit. The system automatically rotates through a pool of available models.
+              - **Intelligent Traffic Routing:** Each task is assigned a prioritized list of models. The system tries the primary model first; if it fails (due to rate limits, 404 errors, or JSON parsing issues), it instantly cascades to the next model in the list without any user‑visible interruption.
+              - **Resilient Fallback Protection:** When a model returns a \`429 Rate Limit\` or \`404 Not Found\`, the backend applies a **smart cooldown**:
+                - \`429\` / parsing errors → locked for **60 seconds**.
+                - \`404\` (deprecated model) → locked for **24 hours**.
+                This prevents retrying dead endpoints and preserves quota.
 
-                                   **The AITask Cascade & Cooldown Architecture Matrix:**
-                                   - **1. Plain Text Generation (High‑Volume Prose Pools):**
-                                     - *TODAY_REFLECTION:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\` → \`gemini-3.5-flash-lite\`
-                                     - *REFLECTIVE_QUESTION:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-3.1-flash-lite\` → \`gemini-2.5-flash\`
-                                     - *REFLECTION_CHAT:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-3.1-pro-preview\` → \`gemini-2.5-pro\`
-                                   - **2. Structured JSON Generation (Strict Schema Enforcement):**
-                                     - All structured operations are routed through the Google Gemini family to guarantee perfect JSON compliance with Spring AI's \`BeanOutputConverter\`.
-                                     - *JOURNAL_ANALYSIS:* Cascade: \`gemini-3.5-flash-lite\` → \`gemini-3.1-flash-lite\` → \`gemini-2.5-flash-lite\` → \`gemini-3.6-flash\`
-                                     - *ROADMAP_INITIAL / EXTENSION / RESCHEDULE:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\` → \`gemini-3.5-flash-lite\`
-                                     - *ROADMAP_NEXT_STEPS:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\` → \`gemini-3.5-flash-lite\`
-                                     - *ROADMAP_ELABORATION & COGNITIVE_PARSING:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\` → \`gemini-3.5-flash-lite\`
-                                     - *SCHEDULE_GENERATION & REOPTIMIZATION:* Cascade: \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\` → \`gemini-3.5-flash-lite\`
+              **The AITask Cascade & Cooldown Architecture Matrix:**
 
-                                   **Enterprise Architecture & Quota Guardrails (How it works):**
-                                   - **Model Cascade Loop:** Instead of using external retry frameworks (like Resilience4j or Spring Retry), we implemented a **lightweight, internal Java loop** that iterates through the \`modelCascade\` list. The loop checks a thread-safe \`ConcurrentHashMap\` cooldown map before attempting each model – if the model is on cooldown, it is skipped instantly.
-                                   - **Intelligent Cooldown Mapping:**
-                                     - *Rate Limit / Parsing Error:* Cooldown = **60 seconds**.
-                                     - *404 Not Found (Deprecated):* Cooldown = **24 hours**.
-                                     - *Success:* Cooldown is cleared.
-                                   - **Thinking Model Safety:** For models that return internal reasoning tokens (e.g., \`gemini-3.6-flash\` with thinking mode), the client selects the **last result index**, ensuring the final synthesized answer is surfaced rather than intermediate thought blocks.
-                                   - **JSON Cleanup Pipeline:** The \`extractJson()\` method aggressively strips markdown fences (\`\`\`json\`\`\`), removes invalid escape sequences, and extracts the outermost JSON structure, ensuring that malformed LLM responses never crash downstream converters.
-                                   - **Zero External Retry Frameworks:** Circuit breaker and retry dependencies for AI calls were replaced with a self‑contained, deterministic cascade loop, eliminating proxy type‑erasure and reflection overhead.
-                                   - **Virtual Threads Enabled:** All AI calls execute on **Java Virtual Threads** (Spring Boot 3+ / Java 25), enabling thousands of concurrent long‑running AI operations without consuming underlying OS platform threads.
+              - **1. Plain Text Generation (High-Volume Prose Pools):**
+                - *TODAY_REFLECTION:* Cascade: \`gemma-4-31b-it\` → \`gemma-4-26b-a4b-it\` → \`gemini-3.6-flash\` → \`gemini-3.5-flash\`
+                - *REFLECTIVE_QUESTION:* Cascade: \`gemini-3.1-flash-lite\` → \`gemma-4-26b-a4b-it\` → \`gemini-3.6-flash\` → \`gemini-3.5-flash\`
+                - *REFLECTION_CHAT:* Cascade: \`gemini-3.5-flash\` → \`gemini-3.6-flash\` → \`gemini-3.1-pro\` → \`gemini-2.5-pro\`
+              - **2. Structured JSON Generation (Strict Schema Enforcement):**
+                - All structured operations are routed through the Google Gemini family to guarantee perfect JSON compliance with Spring AI's \`BeanOutputConverter\`.
+                - *JOURNAL_ANALYSIS:* Cascade: \`gemini-3.5-flash-lite\` → \`gemini-3.1-flash-lite\` → \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\` → \`gemini-2.5-flash-lite\`
+                - *ROADMAP_INITIAL / EXTENSION / NEXT_STEPS / ELABORATION / RESCHEDULE:* Cascade: \`gemini-3.5-flash-lite\` → \`gemini-3.1-flash-lite\` → \`gemini-3.6-flash\` → \`gemini-3.5-flash\` → \`gemini-2.5-flash\`
+                - *MILESTONE_INSIGHTS / PARSE_GROWTH_TIP:* Same 5-model cascade as ROADMAP_*
+                - *SCHEDULE_GENERATION / REOPTIMIZATION:* Same 5-model cascade as ROADMAP_*
+
+              **Enterprise Architecture & Quota Guardrails (How it works):**
+              - **Model Cascade Loop:** Instead of using external retry frameworks (like Resilience4j or Spring Retry), we implemented a **lightweight, internal Java loop** that iterates through the \`modelCascade\` list. The loop checks a thread-safe \`ConcurrentHashMap\` cooldown map before attempting each model – if the model is on cooldown, it is skipped instantly.
+              - **Intelligent Cooldown Mapping:**
+                - *Rate Limit / Parsing Error:* Cooldown = **60 seconds**.
+                - *404 Not Found (Deprecated):* Cooldown = **24 hours**.
+                - *Success:* Cooldown is cleared.
+              - **Thinking Model Safety:** For models that return internal reasoning tokens (e.g., \`gemini-3.6-flash\` with thinking mode), the client selects the **last result index**, ensuring the final synthesized answer is surfaced rather than intermediate thought blocks.
+              - **JSON Cleanup Pipeline:** The \`extractJson()\` method aggressively strips markdown fences (\`\`\`json\`\`\`), removes invalid escape sequences, and extracts the outermost JSON structure, ensuring that malformed LLM responses never crash downstream converters.
+              - **Zero External Retry Frameworks:** Circuit breaker and retry dependencies for AI calls were replaced with a self‑contained, deterministic cascade loop, eliminating proxy type‑erasure and reflection overhead.
+              - **Virtual Threads Enabled:** All AI calls execute on **Java Virtual Threads** (Spring Boot 4 / Java 25), enabling thousands of concurrent long‑running AI operations without consuming underlying OS platform threads.
+              `,
+    },
+
+    {
+      id: 'ai-technology-stack',
+      title: 'AI Technology Stack & Polyglot Data Architecture',
+      icon: <Layers />,
+      color: 'text-fuchsia-500 dark:text-fuchsia-400',
+      content: `
+                     **The Ecosystem (What powers your experience):**
+
+                     - **The Generative AI Ensemble (Model Cascade):** The application moves past brittle single-model paradigms, implementing a dynamic routing network across Google's absolute latest LLM architectures:
+                       - *Gemma 4 Family (\`gemma-4-31b-it\`, \`gemma-4-26b-a4b-it\`):* Cost-efficient prose generation for reflections and reflective questions.
+                       - *Gemini 3.5 Flash Lite:* High-quota structured generation (journal analysis, schedule generation, roadmap tasks).
+                       - *Gemini 3.1 Flash Lite:* Alternate high-quota structured fallback.
+                       - *Gemini 3.6 Flash:* Mid-cascade fallback for structured tasks; primary for reflection chat.
+                       - *Gemini 3.5 Flash:* Reasoning fallback; primary for reflection chat's first attempt.
+                       - *Gemini 3.1 Pro / 2.5 Pro:* High-reasoning last resorts for chat.
+                     - **Intelligent Fallback & Cooldown:** The system maintains a dynamic cooldown map – if a model hits a rate limit, it is locked for 60 seconds. If a model returns a 404 (deprecated), it is locked for 24 hours. This ensures zero downtime and optimal quota utilization.
+                     - **High-Fidelity Embeddings:** Your journal summaries are mathematically translated into 3072-dimensional vector embeddings using Spring AI's native Google embedding model.
+
+                     **Enterprise Architecture (How it works):**
+
+                     - **The Native Spring AI Migration:** We completely deprecated our legacy, intermediate Python/Flask middleware layer for core AI routines. All generative communications are now handled directly inside the core Spring Boot application using the native **Spring AI** framework. This completely eliminated an unoptimized secondary network hop, cutting overall AI processing and serialization latency by approximately ~40%.
+                     - **AI Call Outside Transaction (\`TransactionTemplate\`):** All AI calls run entirely outside any database transaction. The backend uses \`TransactionTemplate\` to wrap only the final DB writes (e.g., saving a roadmap, updating a task) in a short, atomic transaction. This prevents database connection pool starvation during the 5‑10 second AI wait.
+                     - **Mathematical JSON Schema Guarantees:** Instead of relying on unreliable, fragile Regex expressions to parse stringified JSON out of raw model responses, MyMindMirror leverages Spring AI's native \`BeanOutputConverter<T>\`. This dynamically injects explicit JSON schema boundaries straight into the system-level prompts, mathematically forcing the LLM engine to structure its outputs to bind with our target Java Records and DTOs.
+                     - **Clean Controller Layer with \`@CurrentUser\`:** All endpoints use the \`@CurrentUser\` annotation resolver – controllers no longer manually fetch users, making the web layer thin and eliminating duplicate user‑lookup code.
+                     - **Efficient Data Fetching (\`@EntityGraph\` + \`@BatchSize\`):** Complex object graphs are loaded using \`@EntityGraph\` to fetch the primary collection (e.g., \`tasks\`) in a single optimized SQL query. Secondary collections (e.g., \`resources\`, \`milestones\`) are fetched lazily with \`@BatchSize\` to prevent N+1 query problems. This completely eliminates the Cartesian product (duplicate task rows) that previously caused massive data duplication in the UI.
+                     - **True Polyglot Persistence Layer:** We separate data structures across three uniquely distinct database engines, matching data types to their optimal transactional engines:
+                       - *MySQL (Primary Relational Engine):* Manages atomic transactional integrity, user profiles, relational milestone tables, and AES-encrypted text.
+                       - *PostgreSQL + pgvector (Semantic Store):* A secondary datasource dedicated entirely to processing 3072-dimensional vector embedding queries with deep GIN and B-tree vector indices.
+                       - *Redis (Distributed Memory):* An ultra-fast, in-memory cache layer managing ephemeral state, active chat history sessions, and gamification metrics.
+                     - **Virtual Threads:** All AI calls and database operations are executed on virtual threads (Spring Boot 4 / Java 25), enabling thousands of concurrent requests without exhausting OS threads.
+                     `,
+    },
+    {
+      id: 'complete-polyglot-dependency-manifest',
+      title: 'Enterprise Infrastructure & Polyglot Dependency Manifest',
+      icon: <Server />,
+      color: 'text-sky-500 dark:text-sky-400',
+      content: `
+                                 **The Architecture Spectrum (Full-Stack Alignment):**
+
+                                 - **Modern Runtime Ecosystem:** Driven entirely by a bleeding-edge infrastructure layer utilizing **Java 25 (LTS)** on the backend and **React 19.2** paired with **Vite 7** on the frontend, establishing compile-time security, modern garbage collection optimization, and high-speed Hot Module Replacement (HMR).
+                                 - **Virtual Threads Enabled:** Spring Boot 4 virtual threads are activated via \`spring.threads.virtual.enabled=true\`. Tomcat now assigns a lightweight virtual thread per request instead of a heavy OS thread. When the code hits a blocking AI call, the virtual thread "unmounts" from the CPU, allowing the server to handle thousands of concurrent users without exhausting the OS thread pool.
+
+                                 **Production Backend Technical Stack Frameworks (pom.xml Analysis):**
+                                 - **1. Native Spring AI Foundation (v2.0.0-M8 Stable BOM):**
+                                   - \`spring-ai-starter-model-google-genai\`: Direct interface integration managing native API transactions with Google GenAI infrastructure.
+                                   - \`spring-ai-google-genai-embedding\`: Orchestrates vectorized formatting for raw data processing.
+                                   - \`spring-ai-starter-vector-store-pgvector\`: High-performance relational vector layer mapping embedding indices securely.
+
+                                 - **2. Core Multi-Tenant Storage Layer:**
+                                   - Driven by \`spring-boot-starter-data-jpa\` handling strict transactional operations over **MySQL** (via \`mysql-connector-j\`) for relational user records, combined with a secondary **PostgreSQL** runtime engine to process 3072-dimensional vector datasets.
+
+                                 - **3. Stateful Security, Session Memory & Cache Core:**
+                                   - Encrypted token boundaries managed using JSON Web Tokens (\`jjwt-api\` 0.11.5) integrated with \`spring-boot-starter-security\`.
+                                   - Multi-tier performance acceleration driven by \`spring-boot-starter-data-redis\` for active session caching and ephemeral state management.
+                                   - **\`@CurrentUser\` Argument Resolver:** A custom \`HandlerMethodArgumentResolver\` injects the authenticated \`User\` entity directly into controller methods. This eliminates manual user lookup in every controller, making the web layer thin and DRY.
+                                   - **Centralised Cache Keys (\`CacheConstants\`):** All cache names are defined once in \`CacheConstants\` and used throughout the codebase. This eliminates typos and ensures consistent cache eviction strategies.
+
+                                 - **4. Enterprise Quality Assurance:**
+                                   - Full structural verification executed via automated \`jacoco-maven-plugin\` coverage boundaries, bypassing non-functional tool packages.
+                                   - **No external retry frameworks:** We replaced Resilience4j retry and circuit breaker dependencies with an internal model cascade loop. This eliminates proxy type‑erasure issues and keeps AI resilience self‑contained.
+
+                                 - **5. Utility & Development Enhancements:**
+                                   - **\`DateUtil\`:** A centralised static utility for parsing date strings, handling \`DateTimeParseException\` consistently, and validating date ranges across all controllers and services.
+                                   - **Lombok & MapStruct:** Reduces boilerplate and ensures type‑safe DTO mapping.
+                                   - **Spring Boot Actuator:** Exposes \`/actuator/health\` (public) and \`/actuator/info\` (public) endpoints for production monitoring. Detailed health is disabled in production.
+
+                                 **Production Frontend Interface Stack (package.json Analysis):**
+                                 - **1. Rendering, State, and Style Core:** Built on top of **React 19**. Global look-and-feel variables are compiled directly through **Tailwind CSS v4** utilizing the performant \`@tailwindcss/vite\` bundling engine. Asynchronous server synchronization, structural retries, and browser cache queries are automated via **TanStack React Query v5**.
+
+                                 - **2. High-Performance Canvas Analytics:** Data tracking is rendered exclusively via **Chart.js v4** and \`react-chartjs-2\`, backed by \`chartjs-plugin-zoom\` to natively capture rich horizontal user scrolling and pinch-to-zoom matrix adjustments.
+
+                                 - **3. Smart DOM Virtualization:** Massive journal histories bypass standard React rendering and are routed through **TanStack Virtualizer**, computing absolute DOM positioning on the fly to prevent browser RAM exhaustion on mobile devices.
+
+                                 - **4. Productivity Layout Engines:** Interactive calendars are drawn via \`react-big-calendar\`. Daily contribution patterns leverage \`react-calendar-heatmap\`. Visual phrase clustering executes via \`react-tagcloud\` powered by customized CSS keyframe animations.
+
+                                 - **5. Secure Client-Side Data Export Pipeline:** Tabular extractions use \`xlsx\` and \`file-saver\`. Beautiful PDF reporting leverages \`jspdf\` integrated with custom table boundaries via \`jspdf-autotable\`. Crisp canvas captures bypass server load completely by utilizing \`html-to-image\` directly within the client sandbox.
                                  `,
-                       },
+    },
+    {
+      id: 'testing-quality-assurance',
+      title: 'Testing, CI/CD & Quality Assurance',
+      icon: <TestTube />,
+      color: 'text-emerald-500 dark:text-emerald-400',
+      content: `
+  **The Numbers:**
+  - **1,159 tests** — 1,043 unit + 116 integration
+  - **99% instruction coverage**
+  - **99% branch coverage**
+  - **100% method coverage**
+  - **100% class coverage**
+  - **Zero skipped tests** in CI
 
-                   {
-                                     id: 'ai-technology-stack',
-                                     title: 'AI Technology Stack & Polyglot Data Architecture',
-                                     icon: <Layers />,
-                                     color: 'text-fuchsia-500 dark:text-fuchsia-400',
-                             content: `
-                             **The Ecosystem (What powers your experience):**
+  **How to run them:**
+  - \`./mvnw verify\` runs unit (Surefire) and integration (Failsafe) tests together.
+  - \`./mvnw test\` runs unit only — fast, no Docker needed.
+  - Coverage report at \`target/site/jacoco/index.html\`.
 
-                             - **The Generative AI Ensemble (Model Cascade):** The application moves past brittle single-model paradigms, implementing a dynamic routing network across Google's absolute latest LLM architectures:
-                               - *Gemini 3.6 Flash:* Our cutting-edge primary engine for high-speed, structural JSON payload assembly (e.g., Roadmap Blueprints, Timetable Constraints, Entry Parsing).
-                               - *Gemini 3.5 Flash:* A premium reasoning engine deployed exclusively for complex context interpretation during multi-turn AI Reflection Coaching sessions.
-                               - *Gemini 3.5 Flash Lite:* A high-capacity workhorse (500 RPD) for structured generation tasks like journal analysis and schedule generation.
-                               - *Gemini 2.5 Flash:* A robust fallback for rate‑limited scenarios.
-                             - **Intelligent Fallback & Cooldown:** The system maintains a dynamic cooldown map – if a model hits a rate limit, it is locked for 60 seconds. If a model returns a 404 (deprecated), it is locked for 24 hours. This ensures zero downtime and optimal quota utilization.
-                             - **High-Fidelity Embeddings:** Your journal summaries are mathematically translated into deep spatial relationships using the \`text-embedding-004\` engine (3072-dimensional vectors).
+  **Test tier breakdown:**
+  - **Unit tests** (\`*Test.java\`): isolated services, mappers, utilities, controllers. Mocked dependencies via Mockito.
+  - **Slice tests** (\`@WebMvcTest\`, \`@DataJpaTest\`): single-layer integration with H2.
+  - **Integration tests** (\`*IT.java\`): full Spring context + real MySQL 8 + real Redis 7 via Testcontainers.
 
-                             **Enterprise Architecture (How it works):**
+  **Enterprise Architecture (How it works):**
+  - **Real Datastores, Not Mocks:** Integration tests spin up real MySQL and Redis containers via Testcontainers 2.0.5. No mock-DB drift, no "works in test but fails in prod."
+  - **Container Lifecycle Optimization:** Containers start once per JVM via a static initializer and stop via shutdown hook. Test classes share them, so the full IT suite runs in a fraction of the time a naive per-class setup would take.
+  - **Production Guardrail:** \`AbstractIntegrationTest\` asserts the datasource URL does NOT contain \`aivencloud.com\` before every test. If a misconfiguration ever points tests at production, the suite aborts before running a single query.
+  - **Cache State Isolation:** \`resetCaches()\` clears every Spring cache between test methods. No stale Redis state bleeding across tests.
+  - **Mocked AI Gateway:** The AI client (\`DynamicAiClientService\`) is mocked via \`@MockitoBean\`, so integration tests never hit real Gemini endpoints. Tests are deterministic and cost nothing.
+  - **CI Pipeline:** GitHub Actions runs on every push and PR: JDK 25 setup, Maven cache, \`mvn -B verify\`, artifact upload for Surefire reports, Failsafe reports, and JaCoCo coverage HTML. Runs in under 5 minutes.
+  - **Coverage Exclusions (with reason):** \`runner/\` (Spring Boot startup beans — exercised implicitly by every IT context boot), \`tools/\` (dev-only utilities), and \`BackendApplication\` (the main method). Everything else is measured. The only package below 99% is \`util/\`, driven by unreachable JCE catch blocks in the encryption utilities.
+  `,
+    },
 
-                             - **The Native Spring AI Migration:** We completely deprecated our legacy, intermediate Python/Flask middleware layer for core AI routines. All generative communications are now handled directly inside the core Spring Boot application using the native **Spring AI** framework. This completely eliminated an unoptimized secondary network hop, cutting overall AI processing and serialization latency by approximately ~40%.
-                             - **AI Call Outside Transaction (\`TransactionTemplate\`):** All AI calls run entirely outside any database transaction. The backend uses \`TransactionTemplate\` to wrap only the final DB writes (e.g., saving a roadmap, updating a task) in a short, atomic transaction. This prevents database connection pool starvation during the 5‑10 second AI wait.
-                             - **Mathematical JSON Schema Guarantees:** Instead of relying on unreliable, fragile Regex expressions to parse stringified JSON out of raw model responses, MyMindMirror leverages Spring AI's native \`BeanOutputConverter<T>\`. This dynamically injects explicit JSON schema boundaries straight into the system-level prompts, mathematically forcing the LLM engine to structure its outputs to bind with our target Java Records and DTOs.
-                             - **Clean Controller Layer with \`@CurrentUser\`:** All endpoints use the \`@CurrentUser\` annotation resolver – controllers no longer manually fetch users, making the web layer thin and eliminating duplicate user‑lookup code.
-                             - **Efficient Data Fetching (\`@EntityGraph\` + \`@BatchSize\`):** Complex object graphs are loaded using \`@EntityGraph\` to fetch the primary collection (e.g., \`tasks\`) in a single optimized SQL query. Secondary collections (e.g., \`resources\`, \`milestones\`) are fetched lazily with \`@BatchSize\` to prevent N+1 query problems. This completely eliminates the Cartesian product (duplicate task rows) that previously caused massive data duplication in the UI.
-                             - **True Polyglot Persistence Layer:** We separate data structures across three uniquely distinct database engines, matching data types to their optimal transactional engines:
-                               - *MySQL (Primary Relational Engine):* Manages atomic transactional integrity, user profiles, relational milestone tables, and AES-encrypted text.
-                               - *PostgreSQL + pgvector (Semantic Store):* A secondary datasource dedicated entirely to processing 3072-dimensional vector embedding queries with deep GIN and B-tree vector indices.
-                               - *Redis (Distributed Memory):* An ultra-fast, in-memory cache layer managing ephemeral state, active chat history sessions, and gamification metrics.
-                             - **Virtual Threads:** All AI calls and database operations are executed on virtual threads (Spring Boot 3+), enabling thousands of concurrent requests without exhausting OS threads.
-                             `,
-                                   },
+    {
+      id: 'pwa-offline-support',
+      title: 'PWA, Offline Support & Native App Behavior',
+      icon: <MonitorSmartphone />,
+      color: 'text-sky-500 dark:text-sky-400',
+      content: `
+  **What you get:**
+  - **Install to Home Screen:** A slide-in banner offers to install MyMindMirror as a standalone app on desktop or mobile. Once installed, it launches in its own window — no browser chrome, no address bar.
+  - **Offline Resilience:** A persistent banner appears at the top of the screen when the browser detects no network. When the connection returns, an inline toast confirms the app is back online.
+  - **App-Like Experience:** The installed PWA runs in a full-screen window with its own icon, theme color, and startup screen — indistinguishable from a native app on iOS and Android.
+  - **Cached Assets:** Google Fonts and static assets are cached with a first-load-wins strategy, so repeat visits load instantly even on slow connections.
 
-                               {
-                                         id: 'complete-polyglot-dependency-manifest',
-                                         title: 'Enterprise Infrastructure & Polyglot Dependency Manifest',
-                                         icon: <Server />,
-                                         color: 'text-sky-500 dark:text-sky-400',
-                                         content: `
-                                         **The Architecture Spectrum (Full-Stack Alignment):**
-
-                                         - **Modern Runtime Ecosystem:** Driven entirely by a bleeding-edge infrastructure layer utilizing **Java 25 (LTS)** on the backend and **React 19.2** paired with **Vite 7** on the frontend, establishing compile-time security, modern garbage collection optimization, and high-speed Hot Module Replacement (HMR).
-                                         - **Virtual Threads Enabled:** Spring Boot 3+ virtual threads are activated via \`spring.threads.virtual.enabled=true\`. Tomcat now assigns a lightweight virtual thread per request instead of a heavy OS thread. When the code hits a blocking AI call, the virtual thread "unmounts" from the CPU, allowing the server to handle thousands of concurrent users without exhausting the OS thread pool.
-
-                                         **Production Backend Technical Stack Frameworks (pom.xml Analysis):**
-                                         - **1. Native Spring AI Foundation (v2.0.0-M8 Stable BOM):**
-                                           - \`spring-ai-starter-model-google-genai\`: Direct interface integration managing native API transactions with Google GenAI infrastructure.
-                                           - \`spring-ai-google-genai-embedding\`: Orchestrates vectorized formatting for raw data processing.
-                                           - \`spring-ai-starter-vector-store-pgvector\`: High-performance relational vector layer mapping embedding indices securely.
-
-                                         - **2. Core Multi-Tenant Storage Layer:**
-                                           - Driven by \`spring-boot-starter-data-jpa\` handling strict transactional operations over **MySQL** (via \`mysql-connector-j\`) for relational user records, combined with a secondary **PostgreSQL** runtime engine to process 3072-dimensional vector datasets.
-
-                                         - **3. Stateful Security, Session Memory & Cache Core:**
-                                           - Encrypted token boundaries managed using JSON Web Tokens (\`jjwt-api\` 0.11.5) integrated with \`spring-boot-starter-security\`.
-                                           - Multi-tier performance acceleration driven by \`spring-boot-starter-data-redis\` for active session caching and ephemeral state management.
-                                           - **\`@CurrentUser\` Argument Resolver:** A custom \`HandlerMethodArgumentResolver\` injects the authenticated \`User\` entity directly into controller methods. This eliminates manual user lookup in every controller, making the web layer thin and DRY.
-                                           - **Centralised Cache Keys (\`CacheConstants\`):** All cache names are defined once in \`CacheConstants\` and used throughout the codebase. This eliminates typos and ensures consistent cache eviction strategies.
-
-                                         - **4. Enterprise Quality Assurance:**
-                                           - Full structural verification executed via automated \`jacoco-maven-plugin\` coverage boundaries, bypassing non-functional tool packages.
-                                           - **No external retry frameworks:** We replaced Resilience4j retry and circuit breaker dependencies with an internal model cascade loop. This eliminates proxy type‑erasure issues and keeps AI resilience self‑contained.
-
-                                         - **5. Utility & Development Enhancements:**
-                                           - **\`DateUtil\`:** A centralised static utility for parsing date strings, handling \`DateTimeParseException\` consistently, and validating date ranges across all controllers and services.
-                                           - **Lombok & MapStruct:** Reduces boilerplate and ensures type‑safe DTO mapping.
-                                           - **Spring Boot Actuator:** Exposes \`/actuator/health\` and \`/actuator/info\` endpoints for production monitoring (strictly secured).
-
-                                         **Production Frontend Interface Stack (package.json Analysis):**
-                                         - **1. Rendering, State, and Style Core:** Built on top of **React 19**. Global look-and-feel variables are compiled directly through **Tailwind CSS v4** utilizing the performant \`@tailwindcss/vite\` bundling engine. Asynchronous server synchronization, structural retries, and browser cache queries are automated via **TanStack React Query v5**.
-
-                                         - **2. High-Performance Canvas Analytics:** Data tracking is rendered exclusively via **Chart.js v4** and \`react-chartjs-2\`, backed by \`chartjs-plugin-zoom\` to natively capture rich horizontal user scrolling and pinch-to-zoom matrix adjustments.
-
-                                         - **3. Smart DOM Virtualization:** Massive journal histories bypass standard React rendering and are routed through **TanStack Virtualizer**, computing absolute DOM positioning on the fly to prevent browser RAM exhaustion on mobile devices.
-
-                                         - **4. Productivity Layout Engines:** Interactive calendars are drawn via \`react-big-calendar\`. Daily contribution patterns leverage \`react-calendar-heatmap\`. Visual phrase clustering executes via \`react-tagcloud\` powered by customized CSS keyframe animations.
-
-                                         - **5. Secure Client-Side Data Export Pipeline:** Tabular extractions use \`xlsx\` and \`file-saver\`. Beautiful PDF reporting leverages \`jspdf\` integrated with custom table boundaries via \`jspdf-autotable\`. Crisp canvas captures bypass server load completely by utilizing \`html-to-image\` directly within the client sandbox.
-                                         `,
-                                       },
-
-
-                {
-                  id: 'enterprise-performance',
-                  title: 'Enterprise Performance & System Optimizations',
-                  icon: <Zap />,
-                  color: 'text-yellow-500 dark:text-yellow-400',
- content: `
+  **Enterprise Architecture (How it works):**
+  - **vite-plugin-pwa + Workbox:** The PWA is built via \`vite-plugin-pwa\` using Workbox under the hood. Service worker registration is automatic (\`registerType: 'autoUpdate'\`), so users always get the latest build on next load without manual refresh.
+  - **Explicit Runtime Caching:** Font requests to \`fonts.googleapis.com\` and \`fonts.gstatic.com\` use a \`CacheFirst\` strategy with a 1-year expiration. Static build assets (\`.js\`, \`.css\`, \`.html\`, \`.woff2\`) are precached on install.
+  - **PWA Manifest:** The manifest is served at \`/manifest.json\` with proper icons (192×192 and 512×512), theme color (\`#131127\`), background color, and \`display: standalone\` — meeting the installability criteria for both Chrome and Safari.
+  - **Offline Detection:** \`OfflineBanner.jsx\` listens to native \`online\` / \`offline\` events and uses \`sonner\` toasts for smooth transition messages.
+  - **Install Prompt Handling:** \`InstallPrompt.jsx\` defers to the browser's native \`beforeinstallprompt\` event, only showing the install banner when the browser signals installability. No nagging.
+  `,
+    },
+    {
+      id: 'enterprise-performance',
+      title: 'Enterprise Performance & System Optimizations',
+      icon: <Zap />,
+      color: 'text-yellow-500 dark:text-yellow-400',
+      content: `
  **What you experience:**
 
  - **Sub-Second Dashboard Rendering:** Dashboards render instantly. There is zero lag when hopping between the calendar layout, your complete historical timeline, or heavy analytics.
@@ -733,31 +811,31 @@ content: `
    - *Network Gzip Compression:* Backend JSON response streams are compressed using Gzip, shrinking data payloads over the wire by up to 80% for rapid mobile operations.
    - *Debounced Input Streams:* Search inputs and text entry updates are heavily debounced to prevent redundant API thrashing while typing.
  `,
-                },
-              ], []);
+    },
+  ], []);
 
-return (
-      <div className={`min-h-screen w-full ${isAuthenticated ? '' : 'pt-12 lg:pt-12'} transition-colors duration-300 relative bg-transparent text-slate-900 dark:text-gray-100`}>
-        {/* Hero Section */}
-        <section className="relative w-full py-16 lg:py-24 px-4 sm:px-6 lg:px-8 text-center z-10">
-          <FadeIn direction="down" delay={0.1}>
-            <div className="max-w-4xl mx-auto">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-teal-500/10 border border-purple-500/20 dark:border-purple-500/30 mb-6 lg:mb-8 shadow-sm">
-                <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400 mr-2" />
-                <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${colors.textPrimary}`}>Enterprise Architecture & Features</span>
-              </div>
-              <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-poppins font-extrabold mb-6 lg:mb-8 leading-tight tracking-tight ${colors.textPrimary}`}>
-                Comprehensive Platform <br className="hidden sm:block" />
-                <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-teal-500 dark:from-purple-400 dark:via-pink-400 dark:to-teal-400 bg-clip-text text-transparent">
-                  Deep Dive
-                </span>
-              </h1>
-              <p className={`text-base sm:text-lg lg:text-xl font-medium ${colors.textSecondary} max-w-3xl mx-auto leading-relaxed`}>
-                Explore every operational feature in detail—from RAG AI analysis and gamification, to smart scheduling and polyglot persistence.
-              </p>
+  return (
+    <div className={`min-h-screen w-full ${isAuthenticated ? '' : 'pt-12 lg:pt-12'} transition-colors duration-300 relative bg-transparent text-slate-900 dark:text-gray-100`}>
+      {/* Hero Section */}
+      <section className="relative w-full py-16 lg:py-24 px-4 sm:px-6 lg:px-8 text-center z-10">
+        <FadeIn direction="down" delay={0.1}>
+          <div className="max-w-4xl mx-auto">
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-teal-500/10 border border-purple-500/20 dark:border-purple-500/30 mb-6 lg:mb-8 shadow-sm">
+              <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400 mr-2" />
+              <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${colors.textPrimary}`}>Enterprise Architecture & Features</span>
+            </div>
+            <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-poppins font-extrabold mb-6 lg:mb-8 leading-tight tracking-tight ${colors.textPrimary}`}>
+              Comprehensive Platform <br className="hidden sm:block" />
+              <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-teal-500 dark:from-purple-400 dark:via-pink-400 dark:to-teal-400 bg-clip-text text-transparent">
+                Deep Dive
+              </span>
+            </h1>
+            <p className={`text-base sm:text-lg lg:text-xl font-medium ${colors.textSecondary} max-w-3xl mx-auto leading-relaxed`}>
+              Explore every operational feature in detail—from RAG AI analysis and gamification, to smart scheduling and polyglot persistence.
+            </p>
 
-              {/* Floating Background Icons */}
-              <FadeIn direction="none" delay={0.6}>
+            {/* Floating Background Icons */}
+            <FadeIn direction="none" delay={0.6}>
               <div className="absolute top-20 left-10 opacity-20 animate-float hidden lg:block pointer-events-none">
                 <Layers className="w-10 h-10 text-purple-400" />
               </div>
@@ -767,147 +845,144 @@ return (
               <div className="absolute bottom-10 left-1/4 opacity-20 animate-float-slow hidden lg:block pointer-events-none">
                 <Database className="w-10 h-10 text-amber-400" />
               </div>
-               </FadeIn>
+            </FadeIn>
+          </div>
+        </FadeIn>
+      </section>
+
+      {/* Main Content with Sidebar + Accordion */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative z-10">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 xl:gap-10">
+
+          {/* Desktop Sidebar */}
+          <aside className="hidden lg:block w-80 xl:w-96 shrink-0 relative">
+            <div className="sticky top-32 z-20">
+              <FadeIn direction="right" delay={0.2}>
+                {/*  Utilizing the newly fixed sidebarBg which now perfectly acts as Layer 1 */}
+                <div className={`rounded-2xl lg:rounded-3xl ${colors.sidebarBg} border ${colors.cardBorder} p-5 lg:p-6`}>
+                  <h3 className={`text-lg lg:text-xl font-poppins font-bold mb-4 lg:mb-6 flex items-center gap-2 ${colors.textPrimary} tracking-tight`}>
+                    <Menu className="w-5 h-5 lg:w-6 lg:h-6 text-purple-500 dark:text-teal-400" /> Architecture Index
+                  </h3>
+                  <nav className="space-y-1.5 lg:space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar pr-2">
+                    {sections.map((section) => (
+                      <button
+                        key={section.id}
+                        onClick={() => toggleSection(section.id)}
+                        className={`w-full text-left px-4 py-3 rounded-xl lg:rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-3 lg:gap-4 text-xs lg:text-sm font-bold tracking-wide group ${openSection === section.id
+                            ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}`
+                            : `${colors.textSecondary} hover:text-purple-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
+                          }`}
+                      >
+                        <span className={`shrink-0 transition-transform ${openSection === section.id ? 'scale-110' : 'group-hover:scale-110'}`}>
+                          {React.cloneElement(section.icon, { className: "w-4 h-4 lg:w-5 lg:h-5" })}
+                        </span>
+                        <span className="truncate">{section.title}</span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </FadeIn>
             </div>
-          </FadeIn>
-        </section>
+          </aside>
 
-        {/* Main Content with Sidebar + Accordion */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative z-10">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 xl:gap-10">
+          {ReactDOM.createPortal(
+            <>
+              {/* Floating Toggle Button */}
+              <div className="lg:hidden fixed bottom-6 right-6 z-[9999]">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-4 rounded-full bg-gradient-to-r from-purple-600 to-teal-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all"
+                  aria-label="Toggle Table of Contents"
+                >
+                  {mobileMenuOpen ? <X size={24} /> : <ListTree size={24} />}
+                </button>
+              </div>
 
-            {/* Desktop Sidebar */}
-            <aside className="hidden lg:block w-80 xl:w-96 shrink-0 relative">
-              <div className="sticky top-32 z-20">
-                <FadeIn direction="right" delay={0.2}>
-{/* 🌟 FIX: Utilizing the newly fixed sidebarBg which now perfectly acts as Layer 1 */}
-<div className={`rounded-2xl lg:rounded-3xl ${colors.sidebarBg} border ${colors.cardBorder} p-5 lg:p-6`}>
-    <h3 className={`text-lg lg:text-xl font-poppins font-bold mb-4 lg:mb-6 flex items-center gap-2 ${colors.textPrimary} tracking-tight`}>
-                      <Menu className="w-5 h-5 lg:w-6 lg:h-6 text-purple-500 dark:text-teal-400" /> Architecture Index
-                    </h3>
-                    <nav className="space-y-1.5 lg:space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar pr-2">
+              {/* Mobile Drawer (overlay + content) */}
+              {mobileMenuOpen && (
+                <div
+                  //  Stripped backdrop-blur-sm to match our global mobile performance rule
+                  className="fixed inset-0 z-[9998] bg-black/60 lg:hidden"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div
+                    className={`absolute right-0 top-0 bottom-0 w-80 sm:w-96 ${colors.drawerBg} border-l ${colors.sectionBorder} shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className={`flex justify-between items-center mb-8 border-b ${colors.sectionBorder} pb-4`}>
+                      <h3 className={`text-xl font-poppins font-bold tracking-tight ${colors.textPrimary}`}>Index</h3>
+                      <button onClick={() => setMobileMenuOpen(false)} className={`p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 transition ${colors.textSecondary}`}>
+                        <X size={20} />
+                      </button>
+                    </div>
+                    <nav className="space-y-2">
                       {sections.map((section) => (
                         <button
                           key={section.id}
                           onClick={() => toggleSection(section.id)}
-                          className={`w-full text-left px-4 py-3 rounded-xl lg:rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-3 lg:gap-4 text-xs lg:text-sm font-bold tracking-wide group ${
-                            openSection === section.id
-                              ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}`
-                              : `${colors.textSecondary} hover:text-purple-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
-                          }`}
+                          className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 active:scale-95 flex items-center gap-3 text-sm font-bold ${openSection === section.id
+                              ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}` // Stripped the duplicated border!
+                              : `${colors.textSecondary} hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
+                            }`}
                         >
-                          <span className={`shrink-0 transition-transform ${openSection === section.id ? 'scale-110' : 'group-hover:scale-110'}`}>
-                            {React.cloneElement(section.icon, { className: "w-4 h-4 lg:w-5 lg:h-5" })}
-                          </span>
+                          <span className="shrink-0">{React.cloneElement(section.icon, { className: "w-5 h-5" })}</span>
                           <span className="truncate">{section.title}</span>
                         </button>
                       ))}
                     </nav>
                   </div>
-                </FadeIn>
-              </div>
-            </aside>
-
-            {ReactDOM.createPortal(
-              <>
-                {/* Floating Toggle Button */}
-                <div className="lg:hidden fixed bottom-6 right-6 z-[9999]">
-                  <button
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                    className="p-4 rounded-full bg-gradient-to-r from-purple-600 to-teal-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all"
-                    aria-label="Toggle Table of Contents"
-                  >
-                    {mobileMenuOpen ? <X size={24} /> : <ListTree size={24} />}
-                  </button>
                 </div>
+              )}
+            </>,
+            document.body
+          )}
 
-                {/* Mobile Drawer (overlay + content) */}
-               {/* Mobile Drawer (overlay + content) */}
-                               {mobileMenuOpen && (
-                                 <div
-                                   // 🌟 FIX: Stripped backdrop-blur-sm to match our global mobile performance rule
-                                   className="fixed inset-0 z-[9998] bg-black/60 lg:hidden"
-                                   onClick={() => setMobileMenuOpen(false)}
-                                 >
-                    <div
-                      className={`absolute right-0 top-0 bottom-0 w-80 sm:w-96 ${colors.drawerBg} border-l ${colors.sectionBorder} shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className={`flex justify-between items-center mb-8 border-b ${colors.sectionBorder} pb-4`}>
-                        <h3 className={`text-xl font-poppins font-bold tracking-tight ${colors.textPrimary}`}>Index</h3>
-                        <button onClick={() => setMobileMenuOpen(false)} className={`p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 transition ${colors.textSecondary}`}>
-                          <X size={20} />
-                        </button>
-                      </div>
-                      <nav className="space-y-2">
-                  {sections.map((section) => (
-                                            <button
-                                              key={section.id}
-                                              onClick={() => toggleSection(section.id)}
-                                              className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 active:scale-95 flex items-center gap-3 text-sm font-bold ${
-                                                openSection === section.id
-                                                  ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}` // 🌟 FIX: Stripped the duplicated border!
-                                                  : `${colors.textSecondary} hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
-                                              }`}
-                                            >
-                                              <span className="shrink-0">{React.cloneElement(section.icon, { className: "w-5 h-5" })}</span>
-                                              <span className="truncate">{section.title}</span>
-                                            </button>
-                                          ))}
-                      </nav>
-                    </div>
-                  </div>
-                )}
-              </>,
-              document.body
-            )}
-
-            {/* Accordion Content Area */}
-            <div className="flex-1 space-y-6 lg:space-y-8">
-              {sections.map((section, index) => (
-                <FadeIn key={section.id} delay={0.1 * (index % 3)} direction="up" fullWidth>
-                  <FeatureSectionCard
-                    ref={(el) => (sectionRefs.current[section.id] = el)}
-                    section={section}
-                    isOpen={openSection === section.id}
-                    onToggle={toggleSection}
-                    colors={colors}
-                  />
-                </FadeIn>
-              ))}
-            </div>
+          {/* Accordion Content Area */}
+          <div className="flex-1 space-y-6 lg:space-y-8">
+            {sections.map((section, index) => (
+              <FadeIn key={section.id} delay={0.1 * (index % 3)} direction="up" fullWidth>
+                <FeatureSectionCard
+                  ref={(el) => (sectionRefs.current[section.id] = el)}
+                  section={section}
+                  isOpen={openSection === section.id}
+                  onToggle={toggleSection}
+                  colors={colors}
+                />
+              </FadeIn>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Call to Action */}
-        <section className="relative w-full py-16 lg:py-24 px-4 sm:px-6 lg:px-8 z-10">
-          <FadeIn direction="up" delay={0.2} fullWidth>
-            <div className="max-w-5xl mx-auto text-center">
-              <div className={`rounded-[2rem] lg:rounded-[3rem] ${colors.cardBg} border ${colors.cardBorder} p-10 lg:p-16 relative overflow-hidden group shadow-2xl`}>
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-teal-500/10 opacity-0 group-hover:opacity-100 transition duration-700 ease-in-out pointer-events-none" />
+      {/* Call to Action */}
+      <section className="relative w-full py-16 lg:py-24 px-4 sm:px-6 lg:px-8 z-10">
+        <FadeIn direction="up" delay={0.2} fullWidth>
+          <div className="max-w-5xl mx-auto text-center">
+            <div className={`rounded-[2rem] lg:rounded-[3rem] ${colors.cardBg} border ${colors.cardBorder} p-10 lg:p-16 relative overflow-hidden group shadow-2xl`}>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-teal-500/10 opacity-0 group-hover:opacity-100 transition duration-700 ease-in-out pointer-events-none" />
 
-                <div className="relative z-10">
-                  <div className={`inline-flex p-4 lg:p-5 rounded-2xl lg:rounded-3xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 dark:from-purple-900/30 dark:to-teal-900/30 mb-6 lg:mb-8 shadow-inner border border-purple-200/50 dark:border-teal-700/30`}>
-                    <Shield className="w-8 h-8 lg:w-10 lg:h-10 text-purple-600 dark:text-teal-400" />
-                  </div>
-                  <h2 className={`text-3xl lg:text-5xl font-poppins font-extrabold mb-4 lg:mb-6 tracking-tight ${colors.textPrimary}`}>Ready to experience it yourself?</h2>
-                  <p className={`text-base lg:text-lg mb-8 lg:mb-10 ${colors.textSecondary} max-w-3xl mx-auto font-medium leading-relaxed`}>
-                    Start tracking, learning, and optimizing your personal and professional growth with our private, AI-driven architecture.
-                  </p>
-                  <Link
-                    to={localStorage.getItem('jwtToken') ? "/journal" : "/register"}
-                    className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 text-white px-8 py-3.5 lg:px-10 lg:py-4 rounded-full font-bold text-sm lg:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
-                  >
-                    {localStorage.getItem('jwtToken') ? "Enter Application" : "Create Free Account"}
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
+              <div className="relative z-10">
+                <div className={`inline-flex p-4 lg:p-5 rounded-2xl lg:rounded-3xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 dark:from-purple-900/30 dark:to-teal-900/30 mb-6 lg:mb-8 shadow-inner border border-purple-200/50 dark:border-teal-700/30`}>
+                  <Shield className="w-8 h-8 lg:w-10 lg:h-10 text-purple-600 dark:text-teal-400" />
                 </div>
+                <h2 className={`text-3xl lg:text-5xl font-poppins font-extrabold mb-4 lg:mb-6 tracking-tight ${colors.textPrimary}`}>Ready to experience it yourself?</h2>
+                <p className={`text-base lg:text-lg mb-8 lg:mb-10 ${colors.textSecondary} max-w-3xl mx-auto font-medium leading-relaxed`}>
+                  Start tracking, learning, and optimizing your personal and professional growth with our private, AI-driven architecture.
+                </p>
+                <Link
+                  to={localStorage.getItem('jwtToken') ? "/journal" : "/register"}
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 text-white px-8 py-3.5 lg:px-10 lg:py-4 rounded-full font-bold text-sm lg:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
+                >
+                  {localStorage.getItem('jwtToken') ? "Enter Application" : "Create Free Account"}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </div>
             </div>
-          </FadeIn>
-        </section>
-      </div>
-    );
+          </div>
+        </FadeIn>
+      </section>
+    </div>
+  );
 }
 
 export default FeaturesGuide;
