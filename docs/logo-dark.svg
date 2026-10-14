@@ -1,0 +1,43 @@
+<svg viewBox="0 0 200 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#D8B4FE" />
+            <stop offset="50%" stop-color="#F9A8D4" />
+            <stop offset="100%" stop-color="#5EEAD4" />
+        </linearGradient>
+        <linearGradient id="text-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#D8B4FE" />
+            <stop offset="50%" stop-color="#F9A8D4" />
+            <stop offset="100%" stop-color="#5EEAD4" />
+        </linearGradient>
+    </defs>
+
+    <path
+            d="M4 12V8C4 5.8 5.8 4 8 4C9.7 4 11.1 5.1 11.7 6.6L12 7.5L12.3 6.6C12.9 5.1 14.3 4 16 4C18.2 4 20 5.8 20 8V12"
+            stroke="url(#logo-grad)"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+    />
+    <path
+            d="M4 12V16C4 18.2 5.8 20 8 20C9.7 20 11.1 18.9 11.7 17.4L12 16.5L12.3 17.4C12.9 18.9 14.3 20 16 20C18.2 20 20 18.2 20 16V12"
+            stroke="url(#logo-grad)"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.4"
+    />
+    <circle cx="12" cy="12" r="2.2" fill="url(#logo-grad)" />
+
+    <text
+            x="32"
+            y="12"
+            dominant-baseline="central"
+            font-family="Poppins, sans-serif"
+            font-weight="800"
+            font-size="20"
+            fill="url(#text-grad)"
+            letter-spacing="-0.4">
+        MyMindMirror
+    </text>
+</svg>
