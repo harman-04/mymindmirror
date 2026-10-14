@@ -1,0 +1,114 @@
+name: Frontend E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/mymindmirror-app/**'
+      - 'backend/mymindmirror-backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/mymindmirror-app/**'
+      - 'backend/mymindmirror-backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  e2e:
+    name: Playwright Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        working-directory: frontend/mymindmirror-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/mymindmirror-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Docker Compose stack
+        working-directory: .
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET || '404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970' }}
+          JWT_EXPIRATION: '86400000'
+          ENCRYPTION_MASTER_KEY: ${{ secrets.ENCRYPTION_MASTER_KEY || 'MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'dummy-key-for-ci-not-used' }}
+          CORS_ALLOWED_ORIGINS: 'http://localhost'
+          SWAGGER_ENABLED: 'false'
+        run: |
+          docker compose up -d --wait --wait-timeout 180
+          docker compose ps
+
+      - name: Wait for frontend to respond
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost > /dev/null; then
+              echo "Frontend is up"
+              exit 0
+            fi
+            echo "Waiting for frontend... attempt $i"
+            sleep 2
+          done
+          echo "Frontend did not respond within 60 seconds"
+          docker compose logs frontend
+          exit 1
+
+      - name: Wait for backend to respond
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080/api/auth/register -X POST -H 'Content-Type: application/json' -d '{}' -o /dev/null -w '%{http_code}' | grep -qE '400|415'; then
+              echo "Backend is up"
+              exit 0
+            fi
+            echo "Waiting for backend... attempt $i"
+            sleep 2
+          done
+          echo "Backend did not respond within 60 seconds"
+          docker compose logs backend
+          exit 1
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/mymindmirror-app/playwright-report/**
+          retention-days: 7
+
+      - name: Upload Docker logs on failure
+        if: failure()
+        working-directory: .
+        run: docker compose logs > docker-logs.txt
+
+      - name: Upload Docker logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-logs
+          path: docker-logs.txt
+          retention-days: 7
+
+      - name: Tear down Docker Compose stack
+        if: always()
+        working-directory: .
+        run: docker compose down -v
