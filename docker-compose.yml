@@ -3,6 +3,7 @@ services:
     image: mysql:8.0
     container_name: mymindmirror-mysql
     restart: unless-stopped
+    command: ["mysqld", "--log-bin-trust-function-creators=1"]
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: mymindmirror_db
@@ -29,6 +30,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vector -d vectordb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -38,6 +44,11 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -49,9 +60,9 @@ services:
       mysql:
         condition: service_healthy
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       # Primary MySQL (transactional data)
       app.datasource.mysql.url: jdbc:mysql://mysql:3306/mymindmirror_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
@@ -72,8 +83,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       # Encryption master key for AES field encryption
       ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
-      # CORS
-      CORS_ALLOWED_ORIGINS: "http://localhost"
+      # CORS — override via environment for non-local deployments
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost}
       # Swagger / OpenAPI — enable in dev, set to "false" in production
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
       # Error response — never enable in production
