@@ -53,8 +53,8 @@ function JournalPage() {
 
   // Date ranges for queries
   const todayDate = new Date();
-  const startOfCurrentWeek = startOfWeek(todayDate, { weekStartsOn: 0 });
-  const endOfCurrentWeek = endOfWeek(todayDate, { weekStartsOn: 0 });
+  const startOfCurrentWeek = startOfWeek(todayDate, { weekStartsOn: 1 });
+  const endOfCurrentWeek = endOfWeek(todayDate, { weekStartsOn: 1 });
 
   // Queries
   const todayQuery = useTodayEntries();
@@ -103,7 +103,7 @@ function JournalPage() {
       isLoading = false;
       isError = false;
       error = null;
-      refetch = () => {};
+      refetch = () => { };
   }
 
   const todayEntries = activeTab === 'today' ? entriesData : [];
@@ -138,11 +138,6 @@ function JournalPage() {
     }
   }, [navigate]);
 
-//   const handleLogout = () => {
-//     localStorage.removeItem('jwtToken');
-//     navigate('/login');
-//   };
-
   // Memoized tabs
   const tabs = useMemo(() => [
     { id: 'today', label: 'Today', icon: CalendarDays },
@@ -156,7 +151,7 @@ function JournalPage() {
   ], []);
 
   // ==========================================================================
-  // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+  //  MASTER ELEVATION PALETTE (Single Source of Truth)
   // ==========================================================================
   const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
   const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
@@ -169,30 +164,24 @@ function JournalPage() {
 
   if (isError) {
     return (
-      // 🌟 Cleaned up using Master Palette
+      // Cleaned up using Master Palette
       <div className={`w-full max-w-7xl mx-auto flex-grow p-6 rounded-2xl border ${cardBg} ${cardBorder} flex flex-col items-center justify-center font-inter text-lg text-rose-500`}>
-{/*         <p>{error?.message || 'Failed to load journal data.'}</p> */}
-<p>{error?.response?.data?.message || 'Failed to load journal data.'}</p>
+        <p>{error?.response?.data?.message || 'Failed to load journal data.'}</p>
 
-{/*         <button */}
-{/*           onClick={handleLogout} */}
-{/*           className="mt-6 py-2.5 px-6 rounded-full font-poppins font-semibold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 shadow-sm transition-all duration-200" */}
-{/*         > */}
-{/*           Logout */}
-{/*         </button> */}
-<button
-  onClick={() => refetch()}
-  className="mt-6 py-2.5 px-6 rounded-full font-poppins font-semibold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 transition-all duration-200"
->
-  Retry
-</button>
+
+        <button
+          onClick={() => refetch()}
+          className="mt-6 py-2.5 px-6 rounded-full font-poppins font-semibold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 transition-all duration-200"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
     <div className="w-full flex-grow flex flex-col relative">
-      {/* 🌟 AESTHETIC UPGRADE: Responsive Floating Background Icons */}
+      {/*  Responsive Floating Background Icons */}
       <div className="fixed top-[15%] lg:top-[30%] -left-10 sm:left-4 xl:left-[calc(50%-44rem)] opacity-5 sm:opacity-10 lg:opacity-20 animate-float z-0 pointer-events-none">
         <Feather className="w-48 h-48 sm:w-12 sm:h-12 lg:w-16 lg:h-16 text-purple-500 dark:text-purple-400" />
       </div>
@@ -221,11 +210,11 @@ function JournalPage() {
           </FadeIn>
         </div>
 
-        {/* 🚀 DYNAMIC CENTER DOCK (Tabs Only) */}
+        {/*  DYNAMIC CENTER DOCK (Tabs Only) */}
         <FadeIn delay={0.5} direction="up" fullWidth>
           <div className="flex items-center justify-center w-full pt-6 pb-4 relative z-30">
             <div className="w-full xl:w-auto overflow-x-auto scrollbar-hide -mx-4 px-4 xl:mx-0 xl:px-0 text-center">
-              {/* 🌟 Cleaned up using Master Palette */}
+              {/*  Cleaned up using Master Palette */}
               <div className={`inline-flex items-center p-1.5 rounded-[1.25rem] border ${cardBg} ${cardBorder} hover:shadow-md transition-shadow min-w-max`}>
                 <nav className="flex flex-nowrap gap-1">
                   {tabs.map((tab) => {
@@ -233,16 +222,15 @@ function JournalPage() {
                     const isActive = activeTab === tab.id;
 
                     return (
-                        <button
-                          key={tab.id}
-                          onClick={() => setActiveTab(tab.id)}
-                          className={`relative flex items-center justify-center gap-2 px-3 sm:px-4 lg:px-5 py-2.5 lg:py-3 rounded-xl transition-all duration-200 active:scale-95 outline-none group ${
-                            isActive
-                              ? 'text-white shadow-sm'
-                              // 🌟 Synced hover states to the Master Palette
-                              : `${textSecondary} hover:${textPrimary} hover:bg-slate-100 dark:hover:bg-white/10`
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`relative flex items-center justify-center gap-2 px-3 sm:px-4 lg:px-5 py-2.5 lg:py-3 rounded-xl transition-all duration-200 active:scale-95 outline-none group ${isActive
+                            ? 'text-white shadow-sm'
+                            //  Synced hover states to the Master Palette
+                            : `${textSecondary} hover:${textPrimary} hover:bg-slate-100 dark:hover:bg-white/10`
                           }`}
-                        >
+                      >
                         {isActive && (
                           <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-teal-500 dark:to-teal-700 rounded-xl z-0 shadow-inner" />
                         )}
@@ -261,42 +249,42 @@ function JournalPage() {
           </div>
         </FadeIn>
 
-       {/* Dashboard Content Container */}
-               <FadeIn delay={0.6} direction="up" fullWidth className="pt-2 lg:pt-4 min-h-[50vh]">
-                 {/* ✅ ADD SUSPENSE WRAPPER HERE */}
-                 <Suspense fallback={
-                   <div className="flex items-center justify-center w-full h-64">
-                     <Loader className="w-8 h-8 animate-spin text-purple-500" />
-                   </div>
-                 }>
-                   {activeTab === 'today' && <TodayDashboard todayEntries={todayEntries} isLoading={isLoading} />}
-                   {activeTab === 'weekly' && (
-                     <WeeklyDashboard
-                       weeklyEntries={weeklyEntries}
-                       isLoading={isLoading}
-                       userId={userId}
-                       startOfCurrentWeek={startOfCurrentWeek}
-                       endOfCurrentWeek={endOfCurrentWeek}
-                     />
-                   )}
-                   {activeTab === 'all' && (
-                     <OverallDashboard
-                       journalEntries={entriesData}
-                       isLoading={isLoading}
-                       userId={userId}
-                       loadMore={paginatedQuery.fetchNextPage}
-                       hasNextPage={paginatedQuery.hasNextPage}
-                       isFetchingNextPage={paginatedQuery.isFetchingNextPage}
-                       totalEntries={totalEntries}
-                     />
-                   )}
-                   {activeTab === 'search' && <JournalSearch userId={userId} />}
-                   {activeTab === 'milestones' && <MilestoneTracker userId={userId} />}
-                   {activeTab === 'roadmap' && <RoadmapPlanner />}
-                   {activeTab === 'chat' && <ReflectionChat />}
-                   {activeTab === 'schedule' && <ScheduleTab />}
-                 </Suspense>
-               </FadeIn>
+        {/* Dashboard Content Container */}
+        <FadeIn delay={0.6} direction="up" fullWidth className="pt-2 lg:pt-4 min-h-[50vh]">
+          {/*  ADD SUSPENSE WRAPPER  */}
+          <Suspense fallback={
+            <div className="flex items-center justify-center w-full h-64">
+              <Loader className="w-8 h-8 animate-spin text-purple-500" />
+            </div>
+          }>
+            {activeTab === 'today' && <TodayDashboard todayEntries={todayEntries} isLoading={isLoading} />}
+            {activeTab === 'weekly' && (
+              <WeeklyDashboard
+                weeklyEntries={weeklyEntries}
+                isLoading={isLoading}
+                userId={userId}
+                startOfCurrentWeek={startOfCurrentWeek}
+                endOfCurrentWeek={endOfCurrentWeek}
+              />
+            )}
+            {activeTab === 'all' && (
+              <OverallDashboard
+                journalEntries={entriesData}
+                isLoading={isLoading}
+                userId={userId}
+                loadMore={paginatedQuery.fetchNextPage}
+                hasNextPage={paginatedQuery.hasNextPage}
+                isFetchingNextPage={paginatedQuery.isFetchingNextPage}
+                totalEntries={totalEntries}
+              />
+            )}
+            {activeTab === 'search' && <JournalSearch userId={userId} />}
+            {activeTab === 'milestones' && <MilestoneTracker userId={userId} />}
+            {activeTab === 'roadmap' && <RoadmapPlanner />}
+            {activeTab === 'chat' && <ReflectionChat />}
+            {activeTab === 'schedule' && <ScheduleTab />}
+          </Suspense>
+        </FadeIn>
       </main>
     </div>
   );
