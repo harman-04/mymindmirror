@@ -19,6 +19,18 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
+/**
+ * Redis cache configuration.
+ *
+ * <p><strong>Why {@code @SuppressWarnings({"deprecation", "removal"})}:</strong>
+ * Spring Data Redis has deprecated the Jackson 2-based {@code GenericJackson2JsonRedisSerializer}
+ * in favor of a Jackson 3 equivalent. MyMindMirror cannot migrate yet because
+ * <strong>JJWT 0.11.5 does not support Jackson 3</strong> — it depends on Jackson 2 for JWT
+ * claim parsing. Migrating one library without the other breaks JWT handling.
+ *
+ * <p>Tracked in the README's "Known Limitations" section. Remove this annotation and
+ * migrate to the Jackson 3 serializer when JJWT ships Jackson 3 support.
+ */
 @Configuration
 @EnableCaching
 @SuppressWarnings({"deprecation", "removal"})
