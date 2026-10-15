@@ -1,6 +1,7 @@
 package com.mymindmirror.backend.service;
 
 import com.mymindmirror.backend.enums.AITask;
+import com.mymindmirror.backend.enums.GamificationAction;
 import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.TaskForInsightRequest;
@@ -9,8 +10,6 @@ import com.mymindmirror.backend.service.ai.DynamicAiClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,11 +22,11 @@ public class MilestoneInsightService {
     private final DynamicAiClientService aiClientService;
     private final GamificationService gamificationService;
 
-    public Mono<MilestoneInsightResponse> getMilestoneInsights(Milestone milestone) {
+    public MilestoneInsightResponse getMilestoneInsights(Milestone milestone) {
         User user = milestone.getUser();
         log.info("Requesting native Spring AI insights for milestone: {}", milestone.getTitle());
 
-        // Map Milestone tasks to DTOs
+        // Tasks are already eagerly loaded by the controller, perfectly safe to map!
         List<TaskForInsightRequest> taskRequests = milestone.getTasks().stream()
                 .map(task -> new TaskForInsightRequest(
                         task.getDescription(),
@@ -45,33 +44,32 @@ public class MilestoneInsightService {
                 taskRequests
         );
 
-        // Wrap the synchronous blocking AI call in a reactive Mono on a background thread
-        return Mono.fromCallable(() -> {
-            try {
-                MilestoneInsightResponse response = aiClientService.generateStructured(prompt, MilestoneInsightResponse.class, user.getId(), AITask.MILESTONE_INSIGHTS);
+        try {
+            //  AI Call is completely synchronous and outside any database transactions
+            MilestoneInsightResponse response = aiClientService.generateStructured(prompt, MilestoneInsightResponse.class, user.getId(), AITask.MILESTONE_INSIGHTS);
 
-                // 💡 NEW: Reward for strategic review!
-                gamificationService.recordActivity(user, "AI_INSIGHT");
+            // Record activity handles its own isolated micro-transaction
+            gamificationService.recordActivity(user, GamificationAction.AI_INSIGHT);
 
-                return response;
-            } catch (Exception e) {
-                log.error("Failed to get milestone insights from AI natively", e);
-                return MilestoneInsightResponse.createFallback();
-            }
-        }).subscribeOn(Schedulers.boundedElastic());
+            return response;
+        } catch (Exception e) {
+            log.error("Failed to get milestone insights from AI natively", e);
+            return MilestoneInsightResponse.createFallback();
+        }
     }
 
     private String buildInsightsPrompt(String title, String description, String dueDate,
                                        String status, double completionPercentage,
                                        List<TaskForInsightRequest> tasks) {
         StringBuilder tasksStr = new StringBuilder();
-        if (tasks != null && !tasks.isEmpty()) {
+        if (!tasks.isEmpty()) {
             tasksStr.append("\nTasks:\n");
             for (TaskForInsightRequest task : tasks) {
                 tasksStr.append(String.format("- %s (Status: %s, Due: %s)\n",
-                        task.getDescription(),
-                        task.getStatus() != null ? task.getStatus() : "PENDING",
-                        task.getDueDate() != null ? task.getDueDate() : "No due date"));
+                        task.description(),
+                        task.status() != null ? task.status() : "PENDING",
+                        task.dueDate() != null ? task.dueDate() : "No due date"
+                ));
             }
         } else {
             tasksStr.append("No specific tasks defined for this milestone.");

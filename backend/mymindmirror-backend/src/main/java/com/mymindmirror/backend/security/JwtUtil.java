@@ -59,13 +59,22 @@ public class JwtUtil {
 
     /**
      * Validates a JWT token against UserDetails.
+     * Returns false (instead of throwing) if the token is expired (rejected by the
+     * JJWT parser), malformed, or otherwise invalid – so callers never need to
+     * wrap this in try/catch.
+     *
      * @param token The JWT token string.
      * @param userDetails The UserDetails object to validate against.
-     * @return True if the token is valid for the user, false otherwise.
+     * @return True if the token is valid for the user and not expired, false otherwise.
      */
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        try {
+            final String username = extractUsername(token);
+            return username.equals(userDetails.getUsername());
+        } catch (Exception e) {
+            log.warn("JWT validation failed for user {}: {}", userDetails.getUsername(), e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -77,41 +86,8 @@ public class JwtUtil {
         return extractAllClaims(token).getSubject();
     }
 
-    /**
-     * Extracts the expiration date from the JWT token.
-     * @param token The JWT token string.
-     * @return The expiration Date.
-     */
-    public Date extractExpiration(String token) {
-        return extractAllClaims(token).getExpiration();
-    }
-
-    /**
-     * Extracts the user's UUID from the JWT token claims.
-     * @param token The JWT token string.
-     * @return The user's UUID.
-     * @throws IllegalArgumentException if userId claim is missing or not a valid UUID.
-     */
-    public UUID extractUserId(String token) {
-        String userIdStr = extractAllClaims(token).get("userId", String.class);
-        if (userIdStr == null) {
-            log.error("JWT token missing 'userId' claim.");
-            throw new IllegalArgumentException("JWT token is missing 'userId' claim.");
-        }
-        try {
-            return UUID.fromString(userIdStr);
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid UUID format for 'userId' claim in JWT: {}", userIdStr);
-            throw new IllegalArgumentException("Invalid UUID format in JWT 'userId' claim.", e);
-        }
-    }
-
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-    }
-
-    private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
     }
 
     /**
@@ -135,4 +111,36 @@ public class JwtUtil {
         }
         return false;
     }
+
+
+    // ---- Unused (kept as reference for potential future use) ----
+
+    /**
+     * Extracts the user's UUID from the JWT token claims.
+     * @param token The JWT token string.
+     * @return The user's UUID.
+     * @throws IllegalArgumentException if userId claim is missing or not a valid UUID.
+     */
+// public UUID extractUserId(String token) {
+//     String userIdStr = extractAllClaims(token).get("userId", String.class);
+//     if (userIdStr == null) {
+//         log.error("JWT token missing 'userId' claim.");
+//         throw new IllegalArgumentException("JWT token is missing 'userId' claim.");
+//     }
+//     try {
+//         return UUID.fromString(userIdStr);
+//     } catch (IllegalArgumentException e) {
+//         log.error("Invalid UUID format for 'userId' claim in JWT: {}", userIdStr);
+//         throw new IllegalArgumentException("Invalid UUID format in JWT 'userId' claim.", e);
+//     }
+// }
+
+    /**
+     * Extracts the expiration date from the JWT token.
+     * @param token The JWT token string.
+     * @return The expiration Date.
+     */
+// public Date extractExpiration(String token) {
+//     return extractAllClaims(token).getExpiration();
+// }
 }

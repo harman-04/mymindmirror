@@ -1,0 +1,65 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/mymindmirror-backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/mymindmirror-backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    name: Unit + Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: backend/mymindmirror-backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/mymindmirror-backend/pom.xml
+
+      - name: Verify Docker is available
+        run: docker ps
+
+      - name: Run all tests (unit + integration)
+        run: mvn -B verify
+
+      - name: Upload Surefire reports (unit tests)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/mymindmirror-backend/target/surefire-reports/**
+          retention-days: 7
+
+      - name: Upload Failsafe reports (integration tests)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafe-reports
+          path: backend/mymindmirror-backend/target/failsafe-reports/**
+          retention-days: 7
+
+      - name: Upload JaCoCo coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/mymindmirror-backend/target/site/jacoco/**
+          retention-days: 7

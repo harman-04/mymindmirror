@@ -1,34 +1,28 @@
 package com.mymindmirror.backend.controller;
 
+import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.GamificationApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.response.UserStatsResponse;
 import com.mymindmirror.backend.service.GamificationService;
-import com.mymindmirror.backend.service.UserService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Optional;
-
 @RestController
 @RequestMapping("/api/gamification")
 @RequiredArgsConstructor
-public class GamificationController {
+public class GamificationController implements GamificationApi {
 
     private final GamificationService gamificationService;
-    private final UserService userService;
 
+    @Override
     @GetMapping("/stats")
-    public ResponseEntity<UserStatsResponse> getUserStats(@AuthenticationPrincipal UserDetails userDetails) {
-        Optional<User> userOpt = userService.findByUsername(userDetails.getUsername());
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).build();
-        }
-        UserStatsResponse stats = gamificationService.getUserStats(userOpt.get());
+    public ResponseEntity<UserStatsResponse> getUserStats(@CurrentUser User currentUser) {
+        UserStatsResponse stats = gamificationService.getUserStats(currentUser);
         return ResponseEntity.ok(stats);
     }
 }

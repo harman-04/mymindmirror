@@ -1,10 +1,12 @@
 package com.mymindmirror.backend.payload.request;
 
-import lombok.Data;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
-@Data
-public class ImportTaskRequest {
-    private UUID roadmapId;
-    private UUID taskId;
-}
+public record ImportTaskRequest(
+        @NotNull(message = "Roadmap ID is required")
+        UUID roadmapId,
+
+        @NotNull(message = "Task ID is required")
+        UUID taskId
+) {}

@@ -1,5 +1,6 @@
 package com.mymindmirror.backend.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,15 +18,18 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig {
 
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
+
     private final JwtRequestFilter jwtRequestFilter;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
 
 
     public WebSecurityConfig(JwtRequestFilter jwtRequestFilter,
@@ -39,26 +43,33 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            CorsConfigurationSource corsConfigurationSource // Inject CorsConfigurationSource
-    ) throws Exception {
+            CorsConfigurationSource corsConfigurationSource) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource)) // Use the injected source
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
+                        //  Strict: Only permit health and info endpoints
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+
+                        //  Swagger / OpenAPI
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+                        // Public auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/**").authenticated() // All /api endpoints require authentication
+                        // All other /api endpoints require authentication
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 );
 
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
@@ -75,16 +86,16 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173",
-                "http://localhost:3000")); // Allow your frontend origin
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE",  "PATCH", "OPTIONS"));
+        // Split comma-separated values from properties
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));  // Allow your frontend origin
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Cache-Control"));
         configuration.setAllowCredentials(true); // Allow sending credentials (like cookies/auth headers)
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Cache-Control")); // Expose headers if needed by client
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Cache-Control"));
         configuration.setMaxAge(3600L); // How long the pre-flight response can be cached
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Apply this CORS config to all paths
+        source.registerCorsConfiguration("/**", configuration);  // Apply this CORS config to all paths
         return source;
     }
 }

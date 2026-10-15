@@ -1,5 +1,6 @@
 package com.mymindmirror.backend.service;
 
+import com.mymindmirror.backend.constants.CacheConstants;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.response.ApiKeyStatusResponse;
 import com.mymindmirror.backend.util.FieldEncryptionUtil;
@@ -15,11 +16,8 @@ public class ApiKeyService {
 
     private final FieldEncryptionUtil encryptionUtil;
     private final UserService userService;
+    // ❌ REMOVED DynamicAiClientService
 
-    /**
-     * Retrieves the decrypted Gemini API key for the given user.
-     * @return the plain API key, or null if not set.
-     */
     public String getDecryptedApiKey(User user) {
         if (user.getGeminiApiKeyEncrypted() == null) {
             return null;
@@ -27,26 +25,21 @@ public class ApiKeyService {
         return encryptionUtil.decrypt(user.getGeminiApiKeyEncrypted());
     }
 
-    /**
-     * Encrypts and stores the Gemini API key for the user.
-     */
-
     @Caching(evict = {
-            @CacheEvict(value = "apiKeyStatus", key = "#user.id"),
-            @CacheEvict(value = "userFullProfile", key = "#user.id")
+            @CacheEvict(value = CacheConstants.API_KEY_STATUS, key = "#user.id"),
+            @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
     })
     public void saveApiKey(User user, String plainApiKey) {
-
         if (plainApiKey == null || plainApiKey.isBlank()) {
             user.setGeminiApiKeyEncrypted(null);
         } else {
             user.setGeminiApiKeyEncrypted(encryptionUtil.encrypt(plainApiKey));
         }
-
         userService.save(user);
+        // ❌ REMOVED the evictUserModel call from here
     }
 
-    @Cacheable(value = "apiKeyStatus", key = "#user.id")
+    @Cacheable(value = CacheConstants.API_KEY_STATUS, key = "#user.id")
     public ApiKeyStatusResponse getApiKeyStatus(User user) {
         String decrypted = getDecryptedApiKey(user);
         boolean usingOwnKey = decrypted != null && !decrypted.isBlank();
@@ -60,5 +53,4 @@ public class ApiKeyService {
                 : "Using shared API key. For better privacy, add your own key.";
         return new ApiKeyStatusResponse(usingOwnKey, masked, message);
     }
-
 }

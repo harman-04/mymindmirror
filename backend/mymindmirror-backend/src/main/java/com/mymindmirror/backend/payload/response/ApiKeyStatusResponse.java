@@ -1,14 +1,17 @@
 package com.mymindmirror.backend.payload.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class ApiKeyStatusResponse {
-    private boolean usingOwnKey;
-    private String maskedKey;
-    private String message;
-}
+public record ApiKeyStatusResponse(
+        @Schema(description = "True when the user has stored their own Gemini API key.")
+        boolean usingOwnKey,
+
+        @Schema(
+                description = "Masked form of the user's key: last 4 characters visible, prefixed " +
+                        "with '••••••••'. Null when no personal key is set.",
+                nullable = true)
+        String maskedKey,
+
+        @Schema(description = "Human-readable status message for display.")
+        String message
+) {}

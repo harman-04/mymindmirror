@@ -1,20 +1,21 @@
 package com.mymindmirror.backend.payload.response;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Data
-@AllArgsConstructor
-public class CustomTaskResponse {
-    private UUID id;
-    private String title;
-    private String description;
-    private LocalDate dueDate;
-    private Double estimatedHours;
-    private String priority;
-    private boolean completed;
-    private LocalDate createdAt;
-}
+public record CustomTaskResponse(
+        UUID id,
+        String title,
+        String description,
+        LocalDate dueDate,
+        Double estimatedHours,
+
+        @Schema(description = "Task priority.", allowableValues = {"LOW", "MEDIUM", "HIGH"})
+        String priority,
+
+        @Schema(description = "Completion flag.")
+        boolean completed,
+
+        @Schema(description = "Task creation date.")
+        LocalDate createdAt) {}

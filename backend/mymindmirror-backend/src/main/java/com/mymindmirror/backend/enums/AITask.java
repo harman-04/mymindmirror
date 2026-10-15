@@ -2,40 +2,33 @@ package com.mymindmirror.backend.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @Getter
 @RequiredArgsConstructor
 public enum AITask {
     // ------------------------------------------------------------------------
-    // PLAIN TEXT TASKS (generate) - Utilizing the massive 1,500 RPD Gemma pools!
+    // PLAIN TEXT TASKS (generate) - Utilizing Gemma & Flash
     // ------------------------------------------------------------------------
-    TODAY_REFLECTION("gemma-4-31b-it", "gemma-4-26b-a4b-it"),
-    REFLECTIVE_QUESTION("gemini-3.1-flash-lite", "gemma-4-26b-a4b-it"),
-    // High-Reasoning Chat uses premium 3.5 Flash, falls back to 3 Flash
-    REFLECTION_CHAT("gemini-3.5-flash", "gemini-3-flash"),
+    TODAY_REFLECTION(List.of("gemma-4-31b-it", "gemma-4-26b-a4b-it", "gemini-3.6-flash", "gemini-3.5-flash")),
+    REFLECTIVE_QUESTION(List.of("gemini-3.1-flash-lite", "gemma-4-26b-a4b-it", "gemini-3.6-flash", "gemini-3.5-flash")),
+    REFLECTION_CHAT(List.of("gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-pro", "gemini-2.5-pro")),
 
     // ------------------------------------------------------------------------
     // STRUCTURED JSON TASKS (generateStructured) - GEMINI ONLY
-    // Primary is ALWAYS the high-capacity 3.1-Flash-Lite (500 RPD pool).
-    // Fallbacks are distributed perfectly to capture 2.5, 2.5-Lite, and 3.0 pools!
+    // We cascade from high-quota/Lite models to high-reasoning/Flash models.
+    // If a Lite model hallucinates bad JSON, it instantly falls over to a smarter Flash model!
     // ------------------------------------------------------------------------
+    JOURNAL_ANALYSIS(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite")),
+    ROADMAP_INITIAL(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    ROADMAP_EXTENSION(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    ROADMAP_NEXT_STEPS(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    ROADMAP_ELABORATION(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    ROADMAP_RESCHEDULE(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    MILESTONE_INSIGHTS(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    PARSE_GROWTH_TIP(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    SCHEDULE_GENERATION(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash")),
+    SCHEDULE_REOPTIMIZATION(List.of("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"));
 
-    // Journal Pipeline
-    JOURNAL_ANALYSIS("gemini-3.1-flash-lite", "gemini-2.5-flash-lite"), // Capture 2.5 Lite pool
-
-    // Roadmap Engine
-    ROADMAP_INITIAL("gemini-3.1-flash-lite", "gemini-3-flash"),
-    ROADMAP_EXTENSION("gemini-3.1-flash-lite", "gemini-3-flash"),
-    ROADMAP_NEXT_STEPS("gemini-3.1-flash-lite", "gemini-2.5-flash"),       // Capture standard 2.5 Flash pool
-    ROADMAP_ELABORATION("gemini-3.1-flash-lite", "gemini-2.5-flash-lite"),  // Capture 2.5 Lite pool
-    ROADMAP_RESCHEDULE("gemini-3.1-flash-lite", "gemini-3-flash"),
-
-    // Tasking & Calendars
-    MILESTONE_INSIGHTS("gemini-3.1-flash-lite", "gemini-2.5-flash"),
-    PARSE_GROWTH_TIP("gemini-3.1-flash-lite", "gemini-2.5-flash-lite"),    // Capture 2.5 Lite pool
-    SCHEDULE_GENERATION("gemini-3.1-flash-lite", "gemini-3-flash"),
-    SCHEDULE_REOPTIMIZATION("gemini-3.1-flash-lite", "gemini-2.5-flash");
-
-    private final String primaryModel;
-    private final String fallbackModel;
+    private final List<String> modelCascade;
 }

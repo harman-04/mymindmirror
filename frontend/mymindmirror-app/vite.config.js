@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     global: "window",
   },
   plugins: [
-    react({ jsxRuntime: 'automatic' }),   // ← MODERN JSX TRANSFORM
+    react({ jsxRuntime: 'automatic' }),
     tailwindcss(),
     mode === 'production' && VitePWA({
       registerType: "autoUpdate",
@@ -25,8 +25,9 @@ export default defineConfig(({ mode }) => ({
         name: "MyMindMirror",
         short_name: "MyMindMirror",
         description: "AI-Powered Journaling & Personal Growth",
-        theme_color: "#1E1A3E",
-        background_color: "#1E1A3E",
+        // 🌟 AESTHETIC UPGRADE: Synced PWA OS colors to your new #131127 dark background!
+        theme_color: "#131127",
+        background_color: "#131127",
         display: "standalone",
         start_url: "/",
         icons: [
@@ -65,6 +66,20 @@ export default defineConfig(({ mode }) => ({
       }
     }),
   ],
+
+  // 🌟 PERFORMANCE UPGRADE: Strips all console.logs in production automatically!
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
+
+  // 🚀 PHASE 6: ENTERPRISE BUILD OPTIMIZATION
+    build: {
+      target: 'esnext',
+      cssCodeSplit: true,
+      chunkSizeWarningLimit: 2500, // Silences the warning
+      // REMOVED rollupOptions entirely! Vite will now mathematically sort your chunks.
+    },
+
   test: {
     globals: true,
     environment: "jsdom",

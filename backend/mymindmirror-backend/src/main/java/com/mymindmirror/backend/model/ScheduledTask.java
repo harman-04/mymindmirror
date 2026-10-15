@@ -43,13 +43,13 @@ public class ScheduledTask {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "scheduled_date", nullable = false)
     private LocalDate scheduledDate;
 
-    @Column(nullable = false)
+    @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
-    @Column(nullable = false)
+    @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
     @Column(name = "priority")
@@ -60,7 +60,7 @@ public class ScheduledTask {
     @Column(name = "reminder_sent")
     private boolean reminderSent = false;
 
-    // --- 💡 NEW: Block Type for Smart Scheduling ---
+    // ---   Block Type for Smart Scheduling ---
     // Options: WORK_TASK, ROUTINE, BREAK, MEAL, AI_SUGGESTION
     @Column(name = "block_type", length = 30)
     private String blockType = "WORK_TASK";

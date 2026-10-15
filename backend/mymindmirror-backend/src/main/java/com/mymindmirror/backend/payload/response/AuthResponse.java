@@ -1,22 +1,13 @@
-// AuthResponse.java
 package com.mymindmirror.backend.payload.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-/**
- * DTO for authentication responses (returning JWT token).
- */
-@Data // Lombok annotation for getters, setters, equals, hashCode, toString
-@AllArgsConstructor // Generates a constructor with all fields
-@NoArgsConstructor // Generates a no-argument constructor
-public class AuthResponse {
-    private String token;
-    private String message;
+public record AuthResponse(
+        @Schema(
+                description = "JWT token. Present on successful login; null after successful registration.",
+                nullable = true)
+        String token,
 
-    // Constructor for registration success (no token)
-    public AuthResponse(String message) {
-        this.message = message;
-    }
-}
+        @Schema(description = "Human-readable status message, e.g. \"Login successful.\".")
+        String message
+) {}

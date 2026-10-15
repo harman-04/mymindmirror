@@ -1,13 +1,13 @@
-// src/components/TodaysReflection.jsx
 import React from 'react';
 import { useTodaysReflection } from '../hooks/useJournalData';
 import { RefreshCw, Sparkles, AlertCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { SkeletonReflection, SkeletonText } from './Skeleton';
 
-function TodaysReflection({ todayEntries }) {
+function TodaysReflection({ todayEntries, isLoading }) {
   const {
     data: reflection,
-    isLoading,
+    isLoading: isGenerating,
     isError,
     error,
     refresh,
@@ -17,40 +17,33 @@ function TodaysReflection({ todayEntries }) {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
 
-  // Theme-based glass styles
-  const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-  const cardBorder = isDarkMode ? 'border-white/10' : 'border-white/50';
-  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-gray-900';
-  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-gray-500';
-
-  // 💡 FIX: Purple in Light Mode, Teal in Dark Mode
-  const accentColor = isDarkMode ? 'text-teal-400' : 'text-purple-600';
-
-  const errorColor = isDarkMode ? 'text-red-300' : 'text-red-700';
-  const buttonHover = isDarkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-200/50';
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+  // ==========================================================================
+  const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+  const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   const handleRefresh = () => refresh();
 
-  // Premium Skeleton loader component
-  const SkeletonLoader = () => (
-    <div className="animate-pulse space-y-3 lg:space-y-4 w-full px-2">
-      <div className="h-4 lg:h-5 bg-gray-300 dark:bg-gray-700/50 rounded-full w-full" />
-      <div className="h-4 lg:h-5 bg-gray-300 dark:bg-gray-700/50 rounded-full w-[90%]" />
-      <div className="h-4 lg:h-5 bg-gray-300 dark:bg-gray-700/50 rounded-full w-[75%]" />
-      <div className="h-4 lg:h-5 bg-gray-300 dark:bg-gray-700/50 rounded-full w-[40%]" />
-    </div>
-  );
+  if (isLoading) {
+      return <SkeletonReflection />;
+  }
 
   // No entries state
   if (!todayEntries || todayEntries.length === 0) {
     return (
-      <div className={`p-5 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 transition-all duration-300 flex flex-col h-full`}>
-        <div className="flex items-center gap-2.5 mb-4 lg:mb-6">
-          <Sparkles className={`w-5 h-5 lg:w-6 lg:h-6 ${accentColor}`} />
-          <h3 className={`text-xl lg:text-2xl font-poppins font-bold ${accentColor} tracking-tight`}>
-            Today's Reflection
-          </h3>
-        </div>
+      <div className={`p-5 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} transition-shadow duration-300 flex flex-col h-full`}>
+       <div className="flex items-center gap-3 lg:gap-4 mb-4 lg:mb-6">
+           {/* 🌟 RESTORED: The Beautiful Gradient Jewel Icon */}
+           <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-purple-100 to-purple-50 dark:from-teal-900/40 dark:to-teal-800/20 text-purple-600 dark:text-teal-400 shrink-0 shadow-sm border border-purple-200/50 dark:border-teal-700/30">
+               <Sparkles className="w-5 h-5 lg:w-6 lg:h-6" />
+           </div>
+           <h3 className={`text-xl lg:text-2xl font-poppins font-extrabold ${textPrimary} tracking-tight`}>
+             Today's Reflection
+           </h3>
+       </div>
         <div className="flex-grow flex flex-col justify-center items-center text-center">
           <p className={`font-playfair italic text-base lg:text-lg ${textSecondary} max-w-[80%]`}>
             "Log an entry today to generate your personalized AI reflection."
@@ -61,42 +54,47 @@ function TodaysReflection({ todayEntries }) {
   }
 
   return (
-    <div className={`p-5 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 transition-all duration-300 group flex flex-col h-full`}>
-
+    <div className={`p-5 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} transition-shadow hover:shadow-lg duration-300 flex flex-col h-full`}>
       {/* Header */}
-      <div className="flex justify-between items-start mb-4 lg:mb-6">
-        <div className="flex items-center gap-2.5">
-          <Sparkles className={`w-5 h-5 lg:w-6 lg:h-6 ${accentColor}`} />
-          <h3 className={`text-xl lg:text-2xl font-poppins font-bold ${accentColor} tracking-tight`}>
-            Today's Reflection
-          </h3>
-        </div>
+      <div className="flex justify-between items-start mb-4 lg:mb-6 gap-4">
+         <div className="flex items-center gap-3 lg:gap-4 flex-1 min-w-[200px]">
+             {/* 🌟 RESTORED: The Beautiful Gradient Jewel Icon */}
+             <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-purple-100 to-purple-50 dark:from-teal-900/40 dark:to-teal-800/20 text-purple-600 dark:text-teal-400 shrink-0 shadow-sm border border-purple-200/50 dark:border-teal-700/30">
+                 <Sparkles className="w-5 h-5 lg:w-6 lg:h-6" />
+             </div>
+             <h3 className={`text-xl lg:text-2xl font-poppins font-extrabold ${textPrimary} tracking-tight`}>
+               Today's Reflection
+             </h3>
+         </div>
+
         <button
           onClick={handleRefresh}
-          disabled={isLoading || isRefetching}
-          className={`p-2 lg:p-2.5 rounded-full transition-all duration-300 ${buttonHover} focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 hover:shadow-md`}
+          disabled={isGenerating || isRefetching}
+          className={`shrink-0 p-2 lg:p-2.5 rounded-full transition-all duration-200 bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-50 shadow-sm active:scale-95`}
           title="Regenerate reflection"
         >
           <RefreshCw
-            className={`w-4 h-4 lg:w-5 lg:h-5 ${isLoading || isRefetching ? `animate-spin ${accentColor}` : textSecondary}`}
+            className={`w-4 h-4 lg:w-5 lg:h-5 ${isGenerating || isRefetching ? `animate-spin text-purple-600 dark:text-teal-400` : textSecondary}`}
           />
         </button>
       </div>
 
       {/* Body Content - flex-grow ensures perfect vertical centering */}
       <div className="flex-grow flex flex-col justify-center w-full">
-        {(isLoading || isRefetching) ? (
-          <SkeletonLoader />
+        {(isGenerating || isRefetching) ? (
+             <div className="w-full px-2 lg:px-4">
+                 <SkeletonText lines={4} />
+             </div>
         ) : isError ? (
-          <div className="space-y-3 bg-red-50 dark:bg-red-500/10 p-4 rounded-xl border border-red-200 dark:border-red-500/20">
-            <div className="flex items-center gap-2 text-red-500">
+          <div className="space-y-3 bg-rose-50 dark:bg-rose-500/10 p-4 rounded-xl border border-rose-200/60 dark:border-rose-500/20 shadow-sm">
+            <div className="flex items-center gap-2 text-rose-500">
               <AlertCircle size={18} className="shrink-0" />
-              <p className={`font-inter text-sm lg:text-base font-medium ${errorColor}`}>
+              <p className="font-inter text-sm lg:text-base font-medium text-rose-700 dark:text-rose-300">
                 {error?.message || 'Failed to generate reflection.'}
               </p>
             </div>
             <p className={`text-xs lg:text-sm ${textSecondary} pl-6`}>
-              Possible reasons: ML service offline, Gemini quota exceeded, or missing API key.
+              This usually happens when the AI service is busy,  Gemini quota exceeded or when your Gemini API key isn't set up.
             </p>
             <button
               onClick={handleRefresh}

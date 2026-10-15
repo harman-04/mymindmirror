@@ -1,21 +1,22 @@
-// src/main/java/com/mymindmirror/backend/service/TaskService.java
 package com.mymindmirror.backend.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mymindmirror.backend.enums.GamificationAction;
 import com.mymindmirror.backend.enums.Status;
+import com.mymindmirror.backend.mapper.TaskMapper;
 import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.RoadmapTask;
 import com.mymindmirror.backend.model.Task;
 import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.payload.request.TaskRequest;
 import com.mymindmirror.backend.payload.response.TaskResponse;
 import com.mymindmirror.backend.repository.RoadmapTaskRepository;
 import com.mymindmirror.backend.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -31,85 +32,56 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final MilestoneService milestoneService;
     private final RoadmapTaskRepository roadmapTaskRepository;
-    private final ObjectMapper objectMapper;
     private final GamificationService gamificationService;
+    private final TaskMapper taskMapper;
 
-    // ---------- Public DTO methods (to be used by controllers) ----------
+    // ========================================================================
+    // NEW PUBLIC METHODS – Accept TaskRequest DTO directly
+    // ========================================================================
 
     @Transactional
-    public TaskResponse createTask(UUID milestoneId, User user, String description, LocalDate dueDate,
-                                   String details, List<String> subtasks) {
+    public TaskResponse createTask(UUID milestoneId, User user, TaskRequest request) {
         Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
 
-        Task task = new Task(milestone, description, dueDate);
-        task.setStatus(Status.PENDING);
-        task.setDetails(details);
-        if (subtasks != null && !subtasks.isEmpty()) {
-            try {
-                task.setSubtasksJson(objectMapper.writeValueAsString(subtasks));
-            } catch (JsonProcessingException e) {
-                log.error("Failed to serialize subtasks", e);
-                task.setSubtasksJson("[]");
-            }
+        // Map DTO to entity (status is already set to PENDING in the DTO from controller? Actually the controller doesn't send status; we need to set it)
+        // To be safe, we'll set status PENDING here if the request has null status.
+        Task task = taskMapper.toEntity(request);
+        if (task.getStatus() == null) {
+            task.setStatus(Status.PENDING);
         }
+        task.setMilestone(milestone);
+
         Task saved = taskRepository.save(task);
         milestoneService.updateMilestoneStatusBasedOnTasks(milestone.getId());
-        // 💡 THE FINAL TRIGGER: Reward the user for breaking their milestone down into tasks!
-        gamificationService.recordActivity(user, "TASK_CREATE");
-        return toDto(saved);
-    }
+        gamificationService.recordActivity(user, GamificationAction.TASK_CREATE);
 
-    // Overloaded for backward compatibility with roadmap import
-    @Transactional
-    public TaskResponse createTask(UUID milestoneId, User user, String description, LocalDate dueDate) {
-        return createTask(milestoneId, user, description, dueDate, null, null);
-    }
-
-    @Transactional(readOnly = true)
-    public List<TaskResponse> getAllTasksForMilestone(UUID milestoneId, User user) {
-        log.info("Fetching all tasks for milestone {} for user {}", milestoneId, user.getUsername());
-        Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
-        return taskRepository.findByMilestoneOrderByCreationTimestampAsc(milestone).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<TaskResponse> getTaskByIdForMilestoneAndUser(UUID taskId, UUID milestoneId, User user) {
-        log.info("Fetching task {} for milestone {} for user {}", taskId, milestoneId, user.getUsername());
-        Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
-
-        List<Task> tasks = taskRepository.findByIdAndMilestone(taskId, milestone);
-        if (tasks.isEmpty()) {
-            log.warn("Task {} not found or not part of milestone {} for user {}", taskId, milestoneId, user.getUsername());
-            return Optional.empty();
-        }
-        return Optional.of(toDto(tasks.get(0)));
+        return taskMapper.toResponse(saved);
     }
 
     @Transactional
-    public TaskResponse updateTask(UUID taskId, UUID milestoneId, User user,
-                                   String newDescription, LocalDate newDueDate, Status newStatus,
-                                   String newDetails, List<String> newSubtasks) {
+    public TaskResponse updateTask(UUID taskId, UUID milestoneId, User user, TaskRequest request) {
         Task existingTask = getTaskEntityByIdForMilestoneAndUser(taskId, milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found or not owned by user/milestone."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Task not found or not owned by user/milestone."));
 
-        if (newDescription != null && !newDescription.trim().isEmpty()) {
-            existingTask.setDescription(newDescription);
-        }
-        if (newDueDate != null) {
-            existingTask.setDueDate(newDueDate);
-        }
-        if (newStatus != null) {
-            Status oldStatus = existingTask.getStatus();
+        //  Capture old status BEFORE MapStruct overwrites it
+        Status oldStatus = existingTask.getStatus();
+
+        // Map all fields from the request (including status) to the existing entity
+        taskMapper.updateEntity(existingTask, request);
+
+        // Handle status change logic using captured oldStatus and request.status()
+        if (request.status() != null) {
+            Status newStatus = request.status();
+            // Ensure the entity has the new status (already set by mapper, but explicit is safer)
             existingTask.setStatus(newStatus);
-            if (oldStatus != Status.COMPLETED && newStatus == Status.COMPLETED) {
-                // 💡 NEW: Reward Milestone Task completion!
-                gamificationService.recordActivity(user, "TASK");
 
+            if (oldStatus != Status.COMPLETED && newStatus == Status.COMPLETED) {
+                gamificationService.recordActivity(user, GamificationAction.TASK);
                 if (existingTask.getRoadmapTaskId() != null) {
                     syncRoadmapTaskCompletion(existingTask.getRoadmapTaskId(), true);
                 }
@@ -121,26 +93,42 @@ public class TaskService {
             }
             milestoneService.updateMilestoneStatusBasedOnTasks(milestoneId);
         }
-        if (newDetails != null) {
-            existingTask.setDetails(newDetails);
-        }
-        if (newSubtasks != null) {
-            try {
-                existingTask.setSubtasksJson(objectMapper.writeValueAsString(newSubtasks));
-            } catch (JsonProcessingException e) {
-                log.error("Failed to serialize subtasks", e);
-                existingTask.setSubtasksJson("[]");
-            }
-        }
+
         Task updated = taskRepository.save(existingTask);
-        return toDto(updated);
+        return taskMapper.toResponse(updated);
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getAllTasksForMilestone(UUID milestoneId, User user) {
+        Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
+
+        return taskRepository.findByMilestoneOrderByCreationTimestampAsc(milestone).stream()
+                .map(taskMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<TaskResponse> getTaskByIdForMilestoneAndUser(UUID taskId, UUID milestoneId, User user) {
+        Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
+        List<Task> tasks = taskRepository.findByIdAndMilestone(taskId, milestone);
+        if (tasks.isEmpty()) return Optional.empty();
+        return Optional.of(taskMapper.toResponse(tasks.get(0)));
     }
 
     @Transactional
     public void deleteTask(UUID taskId, UUID milestoneId, User user) {
         log.info("Deleting task {} for milestone {} for user {}", taskId, milestoneId, user.getUsername());
         Task existingTask = getTaskEntityByIdForMilestoneAndUser(taskId, milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found or not owned by user/milestone."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Task not found or not owned by user/milestone."));
 
         Milestone milestone = existingTask.getMilestone();
         milestone.getTasks().remove(existingTask);
@@ -148,9 +136,10 @@ public class TaskService {
         milestoneService.updateMilestoneStatusBasedOnTasks(milestone.getId());
     }
 
-    // ---------- Internal entity methods (for other services) ----------
+    // ========================================================================
+    // INTERNAL METHODS – For RoadmapService import (unchanged)
+    // ========================================================================
 
-    // For RoadmapService import – returns entity (internal use)
     @Transactional
     public Task createTaskWithRoadmapLink(UUID milestoneId, User user, String description,
                                           LocalDate dueDate, UUID roadmapTaskId,
@@ -167,43 +156,18 @@ public class TaskService {
         return savedTask;
     }
 
-    // Overloaded for backward compatibility (no details/subtasks)
-    @Transactional
-    public Task createTaskWithRoadmapLink(UUID milestoneId, User user, String description,
-                                          LocalDate dueDate, UUID roadmapTaskId) {
-        return createTaskWithRoadmapLink(milestoneId, user, description, dueDate, roadmapTaskId, null, null);
-    }
 
-    // Helper to get entity for internal use (e.g., updateTask uses it)
+    // ========================================================================
+    // PRIVATE HELPERS
+    // ========================================================================
+
     private Optional<Task> getTaskEntityByIdForMilestoneAndUser(UUID taskId, UUID milestoneId, User user) {
         Milestone milestone = milestoneService.getMilestoneByIdForUser(milestoneId, user)
-                .orElseThrow(() -> new IllegalArgumentException("Milestone not found or not owned by user."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Milestone not found or not owned by user."));
         List<Task> tasks = taskRepository.findByIdAndMilestone(taskId, milestone);
         return tasks.isEmpty() ? Optional.empty() : Optional.of(tasks.get(0));
-    }
-
-    // DTO conversion
-    private TaskResponse toDto(Task task) {
-        TaskResponse dto = new TaskResponse();
-        dto.setId(task.getId());
-        dto.setDescription(task.getDescription());
-        dto.setCreationTimestamp(task.getCreationTimestamp());
-        dto.setDueDate(task.getDueDate());
-        dto.setStatus(task.getStatus());
-        dto.setDetails(task.getDetails());
-        dto.setRoadmapTaskId(task.getRoadmapTaskId());
-        if (task.getSubtasksJson() != null && !task.getSubtasksJson().isEmpty()) {
-            try {
-                List<String> subtasks = objectMapper.readValue(task.getSubtasksJson(), new TypeReference<List<String>>() {});
-                dto.setSubtasks(subtasks);
-            } catch (JsonProcessingException e) {
-                log.error("Failed to deserialize subtasksJson for task {}", task.getId(), e);
-                dto.setSubtasks(List.of());
-            }
-        } else {
-            dto.setSubtasks(List.of());
-        }
-        return dto;
     }
 
     private void syncRoadmapTaskCompletion(UUID roadmapTaskId, boolean completed) {

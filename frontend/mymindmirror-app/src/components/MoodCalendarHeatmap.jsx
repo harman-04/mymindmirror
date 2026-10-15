@@ -11,14 +11,14 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import DownloadChartButton from './DownloadChartButton';
 import { Calendar, CalendarDays } from 'lucide-react';
+import { SkeletonHeatmap } from './Skeleton';
 
-const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
+const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date(),  isLoading }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const chartContainerRef = useRef(null);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  // 💡 NEW: State to hold the tapped box data for mobile users
   const [selectedDateInfo, setSelectedDateInfo] = useState(null);
 
   useEffect(() => {
@@ -27,8 +27,15 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
       return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-  const cardBorder = isDarkMode ? 'border-white/10' : 'border-white/50';
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+  // ==========================================================================
+  const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+  const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const sectionBg = isDarkMode ? 'bg-[#131127]/80' : 'bg-slate-50/80';
+  const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   const moodColors = {
     light: {
@@ -40,7 +47,6 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
       empty: '#E5E7EB',
       text: '#1F2937',
       secondaryText: '#6B7280',
-      background: '#FFFFFF',
       stroke: '#D1D5DB'
     },
     dark: {
@@ -52,7 +58,6 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
       empty: 'rgba(255, 255, 255, 0.05)',
       text: '#F3F4F6',
       secondaryText: '#9CA3AF',
-      background: '#131127',
       stroke: 'rgba(255, 255, 255, 0.1)'
     },
   };
@@ -96,9 +101,7 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
   };
 
   const getTitleForValue = (value) => {
-    if (!value || !value.date) {
-      return 'No entry';
-    }
+    if (!value || !value.date) return 'No entry';
     try {
       const dateObj = typeof value.date === 'string' ? parseISO(value.date) : value.date;
       const formattedDate = format(dateObj, 'MMM d, yyyy');
@@ -106,17 +109,14 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
       if (value.count === null || value.count === undefined) {
         return `${formattedDate} • No entries`;
       }
-
       const entryText = value.totalEntries === 1 ? '1 Entry' : `${value.totalEntries} Entries`;
       const moodPrefix = value.totalEntries === 1 ? 'Mood' : 'Avg Mood';
-
       return `${formattedDate} • ${entryText} • ${moodPrefix}: ${value.count.toFixed(2)}`;
     } catch (e) {
       return 'No entry';
     }
   };
 
-  // 💡 NEW: Handles tapping on a mobile device to show data without hovering
   const handleBoxClick = (value) => {
     if (!value || !value.date) {
       setSelectedDateInfo('No entry on selected date');
@@ -127,29 +127,30 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
 
   const startDate = subDays(startOfYear(displayYear), 1);
   const endDate = endOfYear(displayYear);
-
   const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // 💡 REBUILT HEADER (Used for both Empty State and Chart State)
+  if (isLoading) return <SkeletonHeatmap/>;
+
   const renderHeader = () => (
-    <div className={`p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-black/10 flex justify-between items-start gap-4`}>
-        {/* Left Side: Icon + Title + Subtitle */}
-        <div className="flex items-start gap-2 sm:gap-3 flex-1">
-            <Calendar className="w-5 h-5 lg:w-6 lg:h-6 text-emerald-500 mt-0.5 shrink-0" />
+    <div className={`p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg} flex justify-between items-start gap-4`}>
+        <div className="flex items-start gap-3 sm:gap-4 flex-1">
+            {/* 🌟 RESTORED: Emerald Jewel Icon */}
+            <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-50 dark:from-emerald-900/40 dark:to-teal-800/20 text-emerald-600 dark:text-emerald-400 shrink-0 shadow-sm border border-emerald-200/50 dark:border-emerald-700/30">
+                <Calendar className="w-5 h-5 lg:w-6 lg:h-6" />
+            </div>
             <div className="flex flex-col">
-                <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight leading-tight">
+                <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight leading-tight`}>
                     Annual Mood<br className="sm:hidden" /> Heatmap
                 </h3>
-                <p className="text-[11px] lg:text-xs text-gray-500 dark:text-gray-400 mt-1 lg:mt-1.5 font-medium">
+                <p className={`text-[11px] lg:text-xs mt-1 lg:mt-1.5 font-medium ${textSecondary}`}>
                     {isMobile ? "Swipe horizontally to view the full year." : "Scroll horizontally to view the full year. Hover to see dates."}
                 </p>
             </div>
         </div>
 
-        {/* Right Side: Year + Download Button */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0 mt-0.5">
-            <span className="text-sm lg:text-base font-bold text-gray-500 dark:text-gray-400 font-poppins">
+            <span className={`text-sm lg:text-base font-bold ${textSecondary} font-poppins`}>
                 ({format(displayYear, 'yyyy')})
             </span>
             <DownloadChartButton
@@ -164,17 +165,18 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
 
   if (values.length === 0) {
     return (
-      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full`}>
+        <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full`}>
           {renderHeader()}
-          <div className="w-full flex-grow flex flex-col items-center justify-center p-6 lg:p-10 text-center" style={{ backgroundColor: currentColors.background, minHeight: '260px' }}>
+          {/* 🌟 FIX: Removed hardcoded background color to let cardBg show through */}
+          <div className="w-full flex-grow flex flex-col items-center justify-center p-6 lg:p-10 text-center min-h-[260px]">
              <div className="relative mb-4 lg:mb-6">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-teal-400/20 rounded-full blur-2xl" />
-                <CalendarDays className="w-12 h-12 lg:w-16 lg:h-16 relative text-gray-400 dark:text-gray-500" />
+                <CalendarDays className={`w-12 h-12 lg:w-16 lg:h-16 relative ${textSecondary}`} />
               </div>
-              <p className="text-lg lg:text-xl font-bold text-gray-700 dark:text-gray-300">
+              <p className={`text-lg lg:text-xl font-bold ${textPrimary}`}>
                 No journal entries for {format(displayYear, 'yyyy')}
               </p>
-              <p className="text-sm lg:text-base text-center max-w-md mt-2 text-gray-500 dark:text-gray-400">
+              <p className={`text-sm lg:text-base text-center max-w-md mt-2 ${textSecondary}`}>
                 Start journaling to see your mood patterns throughout the year.
               </p>
           </div>
@@ -183,14 +185,14 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
   }
 
   return (
-    <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5`}>
+      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}>
 
       {renderHeader()}
 
+      {/* 🌟 FIX: Removed hardcoded background color */}
       <div
         ref={chartContainerRef}
         className="w-full flex-grow overflow-x-auto custom-scrollbar flex flex-col"
-        style={{ backgroundColor: currentColors.background }}
       >
         <style>
           {`
@@ -240,7 +242,6 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
               transform-origin: center;
               cursor: pointer;
             }
-
           `}
         </style>
 
@@ -251,7 +252,7 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
             values={values}
             classForValue={getClassForValue}
             titleForValue={getTitleForValue}
-            onClick={handleBoxClick} // 💡 Enables Mobile Tapping!
+            onClick={handleBoxClick}
             showWeekdayLabels={true}
             showMonthLabels={true}
             gutterSize={isMobile ? 2 : 3}
@@ -260,22 +261,22 @@ const MoodCalendarHeatmap = ({ journalEntries, displayYear = new Date() }) => {
           />
         </div>
 
-        {/* 💡 NEW: Selected Date Info Badge (Perfect for Mobile) */}
+        {/* Selected Date Info Badge */}
         <div className="min-h-[28px] flex justify-center items-center w-full min-w-[700px] lg:min-w-[900px] mb-4">
             {selectedDateInfo ? (
-                <span className="inline-block px-4 py-1.5 bg-gray-100 dark:bg-white/10 rounded-full text-xs font-bold text-gray-800 dark:text-gray-100 shadow-sm border border-gray-200 dark:border-white/20 animate-fade-in transition-all">
+                <span className={`inline-block px-4 py-1.5 ${sectionBg} rounded-full text-xs font-bold ${textPrimary} shadow-sm border ${sectionBorder} animate-fade-in transition-all`}>
                     {selectedDateInfo}
                 </span>
             ) : (
-                <span className="text-xs font-medium text-gray-400 dark:text-gray-500 italic">
+                <span className={`text-xs font-medium ${textSecondary} italic`}>
                     Tap a square to view exact details
                 </span>
             )}
         </div>
 
         {/* Color Legend */}
-        <div className="flex flex-wrap justify-center items-center pb-6 lg:pb-8 px-4 gap-3 lg:gap-4 text-xs lg:text-sm font-inter text-gray-700 dark:text-gray-300 min-w-[700px] lg:min-w-[900px]">
-          <span className="font-bold tracking-wide uppercase text-[10px] lg:text-xs text-gray-500 mr-2">Mood Scale:</span>
+        <div className={`flex flex-wrap justify-center items-center pb-6 lg:pb-8 px-4 gap-3 lg:gap-4 text-xs lg:text-sm font-inter ${textPrimary} min-w-[700px] lg:min-w-[900px]`}>
+          <span className={`font-bold tracking-wide uppercase text-[10px] lg:text-xs ${textSecondary} mr-2`}>Mood Scale:</span>
           {[
             { color: currentColors.veryNegative, label: 'Very Negative' },
             { color: currentColors.negative, label: 'Negative' },

@@ -1,26 +1,29 @@
 // src/main/java/com/mymindmirror/backend/payload/response/TaskResponse.java
 package com.mymindmirror.backend.payload.response;
-
 import com.mymindmirror.backend.enums.Status;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class TaskResponse {
-    private UUID id;
-    private String description;
-    private LocalDateTime creationTimestamp;
-    private LocalDate dueDate;
-    private Status status;
-    private String details;
-    private List<String> subtasks;
-    private UUID roadmapTaskId; // if linked to roadmap
-}
+public record TaskResponse(
+        UUID id,
+        String description,
+        LocalDateTime creationTimestamp,
+        LocalDate dueDate,
+
+        @Schema(
+                description = "Task status.",
+                allowableValues = {"PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE", "CANCELLED"})
+        Status status,
+
+        @Schema(description = "Additional task details. Markdown allowed.", nullable = true)
+        String details,
+
+        @Schema(description = "Concrete subtasks for this task.", nullable = true)
+        List<String> subtasks,
+
+        UUID roadmapTaskId
+) {}

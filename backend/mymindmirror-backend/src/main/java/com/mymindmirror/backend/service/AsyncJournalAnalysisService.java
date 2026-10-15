@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,39 +27,32 @@ public class AsyncJournalAnalysisService {
 
     private final JournalEntryRepository journalEntryRepository;
     private final UserService userService;
-    private final ApiKeyService apiKeyService;   // still needed for caching? not directly, but can be removed if unused
-    private final DynamicAiClientService aiClientService;   // NEW
+    private final DynamicAiClientService aiClientService;
     private final ObjectMapper objectMapper;
     private final EmbeddingGenerationService embeddingGenerationService;
+    private final TransactionTemplate transactionTemplate;
+
     @Async
-    @Transactional
     public void analyzeJournalEntryAsync(UUID entryId, String decryptedRawText, UUID userId) {
         log.info("Starting async analysis for entry: {}", entryId);
 
         try {
+            // 1. Verify user exists (optional, but needed for embedding)
             User user = userService.findById(userId).orElse(null);
             if (user == null) {
                 log.error("User not found for async analysis, entry: {}", entryId);
                 return;
             }
 
-            JournalEntry entry = journalEntryRepository.findById(entryId).orElse(null);
-            if (entry == null) {
-                log.warn("Entry {} was deleted before async analysis could complete", entryId);
-                return;
-            }
-
-            // Build the prompt (mirroring Flask's prompt structure)
+            // 2. Build prompt and call AI (outside any transaction)
             String prompt = buildJournalAnalysisPrompt(decryptedRawText);
-
-            // Call the structured AI client
             JournalAnalysisResponse analysis;
             try {
                 analysis = aiClientService.generateStructured(prompt, JournalAnalysisResponse.class, userId, AITask.JOURNAL_ANALYSIS);
                 log.info("AI analysis completed for entry: {}", entryId);
             } catch (Exception e) {
                 log.error("AI analysis failed for entry {}: {}", entryId, e.getMessage());
-                // Fallback: set empty analysis
+                // Fallback
                 analysis = new JournalAnalysisResponse(
                         Map.of(),
                         List.of(),
@@ -68,14 +62,19 @@ public class AsyncJournalAnalysisService {
                 );
             }
 
-            // Update the entry with the analysis
-            updateEntryWithAnalysis(entry, analysis);
+            // 3. Update and save in a short transaction, and get the saved entity
+            JournalAnalysisResponse finalAnalysis = analysis;
+            JournalEntry savedEntry = transactionTemplate.execute(status -> {
+                // Use findByIdWithDetails to eagerly load keyPhrases – avoids lazy loading inside update
+                JournalEntry freshEntry = journalEntryRepository.findByIdWithDetails(entryId)
+                        .orElseThrow(() -> new RuntimeException("Entry disappeared before saving"));
+                updateEntryWithAnalysis(freshEntry, finalAnalysis);
+                return journalEntryRepository.save(freshEntry);
+            });
 
-            journalEntryRepository.save(entry);
-            log.info("Async analysis saved for entry: {}", entryId);
+            // 4. Generate embedding asynchronously using the updated entry (not the stale one!)
+            embeddingGenerationService.updateEmbedding(savedEntry, user.getId());
 
-            // Trigger  background vector embedding generation
-            embeddingGenerationService.updateEmbedding(entry, user.getId());
         } catch (Exception e) {
             log.error("Async analysis failed for entry {}: {}", entryId, e.getMessage(), e);
         }

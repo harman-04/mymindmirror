@@ -10,7 +10,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-// DailyJournalSummaryRepository.java
 public interface DailyJournalSummaryRepository extends JpaRepository<DailyJournalSummary, Long> {
     @Query("SELECT d.date, d.avgMood, d.totalWords FROM DailyJournalSummary d WHERE d.userId = :userId AND d.date BETWEEN :start AND :end ORDER BY d.date")
     List<Object[]> findByUserAndDateRange(@Param("userId") UUID userId, @Param("start") LocalDate start, @Param("end") LocalDate end);

@@ -1,20 +1,31 @@
 package com.mymindmirror.backend.payload.response;
-
 import com.mymindmirror.backend.enums.InsightStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
-/**
- * DTO for receiving AI-generated milestone insights natively from Spring AI.
- */
 public record MilestoneInsightResponse(
+        @Schema(description = "Summary of work remaining on this milestone.")
         String remainingWork,
+
+        @Schema(description = "Assessment of the user's progress.")
         String performanceAssessment,
+
+        @Schema(description = "Actionable tips. Each tip may contain markdown.")
         List<String> tips,
+
+        @Schema(description = "Short encouragement message.")
         String encouragement,
+
+        @Schema(description = "Suggested new tasks to help achieve the goal.")
         List<String> suggestedNewTasks,
-        InsightStatus status // Native Jackson mapping will convert the string "SUCCESS" to this Enum
+
+        @Schema(
+                description = "Insight generation status. ERROR when the AI is unavailable and the " +
+                        "deterministic fallback payload is returned.",
+                allowableValues = {"SUCCESS", "ERROR", "PARTIAL"})
+        InsightStatus status
 ) {
-    // Static factory method for fallback errors
     public static MilestoneInsightResponse createFallback() {
         return new MilestoneInsightResponse(
                 "Unable to determine remaining work.",

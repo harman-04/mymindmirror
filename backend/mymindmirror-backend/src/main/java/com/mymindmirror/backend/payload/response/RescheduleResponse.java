@@ -7,7 +7,7 @@ public record RescheduleResponse(
         List<TaskUpdate> tasks
 ) {
     public record TaskUpdate(
-            Integer taskId,   // index of the task in the remainingTasks list
+            String taskId,   // String to safely handle AI‑returned IDs
             Integer newWeek
     ) {}
 }

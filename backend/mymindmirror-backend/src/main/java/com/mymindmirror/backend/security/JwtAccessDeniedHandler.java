@@ -1,44 +1,52 @@
-// src/main/java/com/mymindmirror/backend/security/JwtAccessDeniedHandler.java
 package com.mymindmirror.backend.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
+import com.mymindmirror.backend.payload.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
+/**
+ * Handles authorization failures at the filter chain level. Returns a 403
+ * Forbidden with the unified ErrorResponse shape. In development, an optional
+ * debug_message is included for faster troubleshooting.
+ */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
+    private final ObjectMapper objectMapper;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Value("${app.error.expose-debug:false}")
+    private boolean exposeDebugMessage;
 
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response,
-                       AccessDeniedException accessDeniedException) throws IOException, ServletException {
-        // This log will tell us exactly why access was denied
-        log.error("Access Denied Error: {} to URI: {}", accessDeniedException.getMessage(), request.getRequestURI(), accessDeniedException); // Log the full stack trace
+    public void handle(HttpServletRequest request,
+                       HttpServletResponse response,
+                       AccessDeniedException accessDeniedException) throws IOException {
 
-        response.setStatus(HttpStatus.FORBIDDEN.value());
-        response.setContentType("application/json");
+        log.error("Access Denied for {}: {}", request.getRequestURI(), accessDeniedException.getMessage(), accessDeniedException);
 
-        Map<String, Object> errorDetails = new HashMap<>();
-        errorDetails.put("timestamp", System.currentTimeMillis());
-        errorDetails.put("status", HttpStatus.FORBIDDEN.value());
-        errorDetails.put("error", "Forbidden");
-        errorDetails.put("message", "You do not have permission to access this resource."); // This is a generic message
-        errorDetails.put("debug_message", accessDeniedException.getMessage()); // Provide the actual exception message for debugging
-        errorDetails.put("path", request.getRequestURI());
+        ErrorResponse body = exposeDebugMessage
+                ? ErrorResponse.of(403, "Forbidden",
+                "You do not have permission to access this resource.",
+                request.getRequestURI(),
+                accessDeniedException.getMessage())
+                : ErrorResponse.of(403, "Forbidden",
+                "You do not have permission to access this resource.",
+                request.getRequestURI());
 
-        objectMapper.writeValue(response.getWriter(), errorDetails);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

@@ -9,29 +9,47 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirm
 
     if (!isOpen) return null;
 
+    // ==========================================================================
+    // 🌟 MASTER ELEVATION PALETTE (Modal/Layer 1 Architecture)
+    // ==========================================================================
     const colors = {
-        overlayBg: 'bg-black/60',
-        modalBg: isDarkMode ? 'bg-[#1A162F]/95 backdrop-blur-xl' : 'bg-white/95 backdrop-blur-xl',
-        modalBorder: isDarkMode ? 'border-white/10' : 'border-gray-200/70',
-        textColor: isDarkMode ? 'text-gray-100' : 'text-gray-900',
-        textSecondary: isDarkMode ? 'text-gray-400' : 'text-gray-500',
-        buttonPrimary: isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600',
-        buttonSecondary: isDarkMode ? 'bg-black/20 hover:bg-black/40 text-gray-200 border border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-transparent',
+        overlayBg: 'bg-black/60', // Crisp, non-blurred overlay to protect GPU
+
+        // 🌟 FIX: Modals float above the page, so they must be Layer 1 (cardBg)
+        modalBg: isDarkMode ? 'bg-[#1A162F]/95' : 'bg-white/95',
+        modalBorder: isDarkMode ? 'border-white/10' : 'border-slate-200/80',
+
+        // Typography synced to Master Palette
+        textColor: isDarkMode ? 'text-gray-100' : 'text-slate-900',
+        textSecondary: isDarkMode ? 'text-gray-400' : 'text-slate-500',
+
+        // 🌟 FIX: Destructive synced to ProfilePage "Danger Zone" gradients
+        buttonPrimary: isDestructive
+            ? 'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700'
+            : 'bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600',
+
+        // 🌟 FIX: Secondary button uses slate-100 for better contrast on white modal
+        buttonSecondary: isDarkMode
+            ? 'bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10'
+            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80',
+
         buttonText: 'text-white',
-        iconBg: isDestructive ? 'bg-red-100 dark:bg-red-900/30' : 'bg-purple-100 dark:bg-teal-900/30',
-        iconColor: isDestructive ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-teal-400',
-        shadow: 'shadow-2xl shadow-black/50',
+
+        // 🌟 FIX: Synced icons to Master Palette
+        iconBg: isDestructive ? 'bg-red-50 dark:bg-red-900/30' : 'bg-purple-50 dark:bg-teal-900/30',
+        iconColor: isDestructive ? 'text-red-500 dark:text-red-400' : 'text-purple-600 dark:text-teal-400',
+        shadow: 'shadow-2xl shadow-black/20',
     };
 
     return (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${colors.overlayBg} backdrop-blur-md transition-opacity duration-300`}>
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center p-4 ${colors.overlayBg} transition-opacity duration-300`}>
             {/* Click outside to close (disabled if loading) */}
             <div className="absolute inset-0" onClick={!isLoading ? onClose : undefined} aria-hidden="true" />
 
-            <div className={`relative p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${colors.modalBg} ${colors.modalBorder} border ${colors.shadow}
-                             max-w-md w-full text-center transform scale-95 opacity-0 animate-scale-in`}>
+            <div className={`relative p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${colors.modalBg} border ${colors.modalBorder} ${colors.shadow}
+                             max-w-md w-full text-center transform opacity-0 animate-scale-in`}>
 
-                <div className={`mx-auto w-14 h-14 lg:w-16 lg:h-16 mb-4 lg:mb-6 rounded-full flex items-center justify-center ${colors.iconBg}`}>
+                <div className={`mx-auto w-14 h-14 lg:w-16 lg:h-16 mb-4 lg:mb-6 rounded-full flex items-center justify-center border ${isDarkMode ? 'border-white/5' : 'border-black/5'} ${colors.iconBg}`}>
                     {isDestructive ? (
                         <XCircle className={`w-7 h-7 lg:w-8 lg:h-8 ${colors.iconColor}`} />
                     ) : (
@@ -46,11 +64,11 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirm
                     {message}
                 </p>
 
-                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                <div className="flex flex-col sm:flex-row justify-center gap-3 mt-2">
                     <button
                         onClick={onClose}
                         className={`flex-1 py-2.5 lg:py-3 px-6 rounded-full font-bold text-sm lg:text-base ${colors.buttonSecondary}
-                                   transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50`}
+                                   transition-all duration-200 active:scale-95 disabled:opacity-50`}
                         disabled={isLoading}
                     >
                         {cancelText || 'Cancel'}
@@ -58,7 +76,7 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirm
                     <button
                         onClick={onConfirm}
                         className={`flex-1 py-2.5 lg:py-3 px-6 rounded-full font-bold text-sm lg:text-base ${colors.buttonPrimary} ${colors.buttonText}
-                                   transition-all duration-300 hover:scale-105 active:scale-95 shadow-md disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center`}
+                                   transition-all duration-200 active:scale-95 shadow-sm hover:shadow-md disabled:opacity-70 flex justify-center items-center`}
                         disabled={isLoading}
                     >
                         {isLoading ? (
@@ -71,18 +89,6 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message, confirm
                     </button>
                 </div>
             </div>
-
-            <style>
-                {`
-                @keyframes scale-in {
-                    from { opacity: 0; transform: scale(0.95); }
-                    to { opacity: 1; transform: scale(1); }
-                }
-                .animate-scale-in {
-                    animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-                `}
-            </style>
         </div>
     );
 }

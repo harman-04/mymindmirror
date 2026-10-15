@@ -4,13 +4,15 @@ import com.mymindmirror.backend.model.Roadmap;
 import com.mymindmirror.backend.model.RoadmapTask;
 import com.mymindmirror.backend.model.User;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,124 +23,166 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RoadmapTaskRepositoryTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private RoadmapTaskRepository repository;
 
     @Autowired
-    private RoadmapTaskRepository roadmapTaskRepository;
+    private RoadmapRepository roadmapRepository;
 
-    private User testUser;
-    private Roadmap testRoadmap;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private TestEntityManager em;
+
+    private User user;
+    private User otherUser;
+    private Roadmap roadmap;
+    private Roadmap otherRoadmap;
 
     @BeforeEach
     void setUp() {
-        // Create a test user
-        testUser = new User();
-        testUser.setUsername("taskTester");
-        testUser.setEmail("task@test.com");
-        testUser.setPasswordHash("hashed");
-        entityManager.persistAndFlush(testUser);
+        user = new User();
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash("hashed");
+        user = userRepository.save(user);
 
-        // Create a test roadmap
-        testRoadmap = new Roadmap(testUser, "Test Roadmap", "For repository testing", 4);
-        entityManager.persistAndFlush(testRoadmap);
+        otherUser = new User();
+        otherUser.setUsername("otheruser");
+        otherUser.setEmail("other@example.com");
+        otherUser.setPasswordHash("hashed");
+        otherUser = userRepository.save(otherUser);
+
+        roadmap = new Roadmap();
+        roadmap.setUser(user);
+        roadmap.setTitle("My Roadmap");
+        roadmap.setCreatedAt(LocalDate.now());
+        roadmap.setStatus("ACTIVE");
+        roadmap.setDurationWeeks(4);
+        roadmap = roadmapRepository.save(roadmap);
+
+        otherRoadmap = new Roadmap();
+        otherRoadmap.setUser(otherUser);
+        otherRoadmap.setTitle("Other Roadmap");
+        otherRoadmap.setCreatedAt(LocalDate.now());
+        otherRoadmap.setStatus("ACTIVE");
+        otherRoadmap.setDurationWeeks(4);
+        otherRoadmap = roadmapRepository.save(otherRoadmap);
+    }
+
+    private RoadmapTask persist(Roadmap r, String description) {
+        RoadmapTask t = new RoadmapTask();
+        t.setRoadmap(r);
+        t.setDescription(description);
+        t.setWeekNumber(1);
+        t.setDayNumber(1);
+        t.setTaskType("daily");
+        t.setCompleted(false);
+        t.setImportedToMilestone(false);
+        return repository.save(t);
+    }
+
+    // ============================================================
+    // findByRoadmap_User
+    // ============================================================
+
+    @Test
+    @DisplayName("findByRoadmap_User returns only the user's roadmap tasks")
+    void findByRoadmap_User_isolatesByUser() {
+        persist(roadmap, "Mine 1");
+        persist(roadmap, "Mine 2");
+        persist(otherRoadmap, "Theirs 1");
+
+        List<RoadmapTask> result = repository.findByRoadmap_User(user);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(RoadmapTask::getDescription)
+                .containsExactlyInAnyOrder("Mine 1", "Mine 2");
     }
 
     @Test
-    void testSaveAndFindRoadmapTask() {
-        // Create a task
-        RoadmapTask task = new RoadmapTask();
-        task.setRoadmap(testRoadmap);
-        task.setDescription("Write unit tests");
-        task.setDetails("Create repository tests for RoadmapTask");
-        task.setSubtasks("[\"Write test\", \"Run test\", \"Verify\"]");
-        task.setDayNumber(1);
-        task.setWeekNumber(1);
-        task.setCompleted(false);
-        task.setTaskType("daily");
-        task.setImportedToMilestone(false);
+    @DisplayName("findByRoadmap_User aggregates tasks across multiple roadmaps of the same user")
+    void findByRoadmap_User_multipleRoadmaps() {
+        Roadmap second = new Roadmap();
+        second.setUser(user);
+        second.setTitle("Second Roadmap");
+        second.setCreatedAt(LocalDate.now());
+        second.setStatus("ACTIVE");
+        second.setDurationWeeks(4);
+        second = roadmapRepository.save(second);
 
-        // Save
-        RoadmapTask savedTask = roadmapTaskRepository.save(task);
-        assertThat(savedTask.getId()).isNotNull();
+        persist(roadmap, "R1 Task 1");
+        persist(second, "R2 Task 1");
+        persist(second, "R2 Task 2");
 
-        // Retrieve
-        Optional<RoadmapTask> found = roadmapTaskRepository.findById(savedTask.getId());
-        assertThat(found).isPresent();
-        assertThat(found.get().getDescription()).isEqualTo("Write unit tests");
-        assertThat(found.get().getDetails()).isEqualTo("Create repository tests for RoadmapTask");
-        assertThat(found.get().getSubtasks()).isEqualTo("[\"Write test\", \"Run test\", \"Verify\"]");
-        assertThat(found.get().getDayNumber()).isEqualTo(1);
-        assertThat(found.get().getWeekNumber()).isEqualTo(1);
-        assertThat(found.get().isCompleted()).isFalse();
-        assertThat(found.get().getTaskType()).isEqualTo("daily");
-        assertThat(found.get().getImportedToMilestone()).isFalse();
+        List<RoadmapTask> result = repository.findByRoadmap_User(user);
+
+        assertThat(result).hasSize(3);
     }
 
     @Test
-    void testUpdateTaskFields() {
-        // Create and save a task
-        RoadmapTask task = new RoadmapTask();
-        task.setRoadmap(testRoadmap);
-        task.setDescription("Initial description");
-        task.setCompleted(false);
-        task.setImportedToMilestone(false);
-        RoadmapTask savedTask = roadmapTaskRepository.save(task);
+    @DisplayName("findByRoadmap_User returns empty for a user with no roadmap tasks")
+    void findByRoadmap_User_empty() {
+        assertThat(repository.findByRoadmap_User(user)).isEmpty();
+    }
 
-        // Update fields
-        savedTask.setDescription("Updated description");
-        savedTask.setCompleted(true);
-        savedTask.setImportedToMilestone(true);
-        roadmapTaskRepository.save(savedTask);
+    // ============================================================
+// findByIdWithRoadmap (JPQL with JOIN FETCH)
+// ============================================================
 
-        // Verify
-        Optional<RoadmapTask> updated = roadmapTaskRepository.findById(savedTask.getId());
-        assertThat(updated).isPresent();
-        assertThat(updated.get().getDescription()).isEqualTo("Updated description");
-        assertThat(updated.get().isCompleted()).isTrue();
-        assertThat(updated.get().getImportedToMilestone()).isTrue();
+    @Test
+    @DisplayName("findByIdWithRoadmap eagerly loads the parent roadmap via JOIN FETCH")
+    void findByIdWithRoadmap_loadsRoadmapEagerly() {
+        RoadmapTask saved = persist(roadmap, "Elaborate Me");
+        em.flush();
+        em.clear();
+
+        Optional<RoadmapTask> result = repository.findByIdWithRoadmap(saved.getId());
+
+        assertThat(result).isPresent();
+        //  Accessing roadmap.getTitle() must NOT throw LazyInitializationException
+        assertThat(result.get().getRoadmap()).isNotNull();
+        assertThat(result.get().getRoadmap().getTitle()).isEqualTo("My Roadmap");
+        assertThat(result.get().getRoadmap().getUser().getUsername()).isEqualTo("testuser");
     }
 
     @Test
-    void testDeleteRoadmapTask() {
-        // Create and save a task
-        RoadmapTask task = new RoadmapTask();
-        task.setRoadmap(testRoadmap);
-        task.setDescription("To be deleted");
-        RoadmapTask savedTask = roadmapTaskRepository.save(task);
-        UUID taskId = savedTask.getId();
-
-        // Delete
-        roadmapTaskRepository.deleteById(taskId);
-
-        // Verify deletion
-        Optional<RoadmapTask> deleted = roadmapTaskRepository.findById(taskId);
-        assertThat(deleted).isEmpty();
+    @DisplayName("findByIdWithRoadmap returns empty for unknown ID")
+    void findByIdWithRoadmap_unknownId() {
+        Optional<RoadmapTask> result = repository.findByIdWithRoadmap(UUID.randomUUID());
+        assertThat(result).isEmpty();
     }
 
     @Test
-    void testImportedToMilestoneFlag() {
-        // Create two tasks: one imported, one not
-        RoadmapTask importedTask = new RoadmapTask();
-        importedTask.setRoadmap(testRoadmap);
-        importedTask.setDescription("Imported task");
-        importedTask.setImportedToMilestone(true);
+    @DisplayName("findByIdWithRoadmap returns exactly one result (no duplicates from JOIN)")
+    void findByIdWithRoadmap_returnsSingleResult() {
+        RoadmapTask saved = persist(roadmap, "Unique");
+        // Add sibling tasks to ensure JOIN doesn't multiply rows
+        persist(roadmap, "Sibling 1");
+        persist(roadmap, "Sibling 2");
+        em.flush();
+        em.clear();
 
-        RoadmapTask notImportedTask = new RoadmapTask();
-        notImportedTask.setRoadmap(testRoadmap);
-        notImportedTask.setDescription("Normal task");
-        notImportedTask.setImportedToMilestone(false);
+        Optional<RoadmapTask> result = repository.findByIdWithRoadmap(saved.getId());
 
-        roadmapTaskRepository.save(importedTask);
-        roadmapTaskRepository.save(notImportedTask);
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(saved.getId());
+        assertThat(result.get().getDescription()).isEqualTo("Unique");
+    }
 
-        // Retrieve all tasks (no custom query, but we can fetch via roadmap and filter manually)
-        // Here we just verify the flag was saved correctly
-        Optional<RoadmapTask> foundImported = roadmapTaskRepository.findById(importedTask.getId());
-        assertThat(foundImported).isPresent();
-        assertThat(foundImported.get().getImportedToMilestone()).isTrue();
+    @Test
+    @DisplayName("findByIdWithRoadmap works for tasks of any user (no user filter in query)")
+    void findByIdWithRoadmap_crossesUserBoundary() {
+        // NOTE: This method does NOT filter by user in the query.
+        // Authorization is enforced at the SERVICE layer (checks roadmap.user).
+        // The test documents this behaviour so it's explicit and intentional.
+        RoadmapTask otherTask = persist(otherRoadmap, "Other's Task");
+        em.flush();
+        em.clear();
 
-        Optional<RoadmapTask> foundNotImported = roadmapTaskRepository.findById(notImportedTask.getId());
-        assertThat(foundNotImported).isPresent();
-        assertThat(foundNotImported.get().getImportedToMilestone()).isFalse();
+        Optional<RoadmapTask> result = repository.findByIdWithRoadmap(otherTask.getId());
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getRoadmap().getUser().getUsername()).isEqualTo("otheruser");
     }
 }

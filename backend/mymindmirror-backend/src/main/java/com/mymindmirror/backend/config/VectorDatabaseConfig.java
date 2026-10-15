@@ -12,12 +12,14 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
 
 @Slf4j
 @Configuration
+@Profile("!test")  // Exclude when test profile is active
 @EnableConfigurationProperties(VectorDataSourceProperties.class)
 public class VectorDatabaseConfig {
 
@@ -34,6 +36,8 @@ public class VectorDatabaseConfig {
         ds.setMaximumPoolSize(5);
         // Helps prevent the "connection closed" warnings from cloud databases
         ds.setMaxLifetime(240000);
+        ds.setConnectionTimeout(5000);
+        ds.setValidationTimeout(3000);
         return ds;
     }
 

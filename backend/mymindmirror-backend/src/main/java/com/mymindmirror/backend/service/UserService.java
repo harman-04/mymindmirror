@@ -1,8 +1,12 @@
 package com.mymindmirror.backend.service;
 
+import com.mymindmirror.backend.constants.CacheConstants;
 import com.mymindmirror.backend.model.*;
+import com.mymindmirror.backend.payload.request.UpdateRoadmapPreferencesRequest;
+import com.mymindmirror.backend.payload.request.UpdateUserPreferencesRequest;
 import com.mymindmirror.backend.payload.request.UserProfileRequest;
 import com.mymindmirror.backend.payload.response.UserFullProfileResponse;
+import com.mymindmirror.backend.payload.response.UserPreferencesResponse;
 import com.mymindmirror.backend.payload.response.UserRoadmapPreferencesDto;
 import com.mymindmirror.backend.repository.*;
 import com.mymindmirror.backend.util.EncryptionUtil;
@@ -70,16 +74,7 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    public List<User> findAllUsers() {
-        log.debug("Attempting to find all users.");
-        return userRepository.findAll();
-    }
-
-    public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username).orElse(null);
-    }
-
-    @CacheEvict(value = "userFullProfile", key = "#userId")
+    @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#userId")
     public User updateUser(UUID userId, UserProfileRequest request) {
         log.info("Attempting to update user with ID: {}", userId);
         User user = userRepository.findById(userId)
@@ -90,26 +85,27 @@ public class UserService {
 
         boolean changed = false;
 
-        if (request.getUsername() != null && !request.getUsername().trim().isEmpty() && !request.getUsername().equals(user.getUsername())) {
-            if (userRepository.existsByUsername(request.getUsername())) {
-                log.warn("User update failed: New username '{}' already exists.", request.getUsername());
+        //  Use record accessors .username() and .email()
+        if (request.username() != null && !request.username().trim().isEmpty() && !request.username().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(request.username())) {
+                log.warn("User update failed: New username '{}' already exists.", request.username());
                 throw new IllegalArgumentException("Username already taken.");
             }
-            user.setUsername(request.getUsername());
+            user.setUsername(request.username());
             changed = true;
-            log.debug("Updated username to: {}", request.getUsername());
+            log.debug("Updated username to: {}", request.username());
         }
 
-        if (request.getEmail() != null && !request.getEmail().trim().isEmpty() && !request.getEmail().equals(user.getEmail())) {
+        if (request.email() != null && !request.email().trim().isEmpty() && !request.email().equals(user.getEmail())) {
             // Check if the new email exists for another user (not the current one)
-            Optional<User> existingUserWithEmail = userRepository.findByEmail(request.getEmail());
+            Optional<User> existingUserWithEmail = userRepository.findByEmail(request.email());
             if (existingUserWithEmail.isPresent() && !existingUserWithEmail.get().getId().equals(userId)) {
-                log.warn("User update failed: New email '{}' already exists for another user.", request.getEmail());
+                log.warn("User update failed: New email '{}' already exists for another user.", request.email());
                 throw new IllegalArgumentException("Email already taken by another user.");
             }
-            user.setEmail(request.getEmail());
+            user.setEmail(request.email());
             changed = true;
-            log.debug("Updated email to: {}", request.getEmail());
+            log.debug("Updated email to: {}", request.email());
         }
 
         if (changed) {
@@ -123,18 +119,15 @@ public class UserService {
     }
 
 
-//    @CacheEvict(value = {"userFullProfile", "userPreferencesDto", "gamificationStats", "apiKeyStatus", "keyPhraseFrequencies"}, key = "#userId")
-//    public void deleteUser(UUID userId) {
-//        log.info("Attempting to delete user with ID: {}", userId);
-//        if (!userRepository.existsById(userId)) {
-//            log.warn("User deletion failed: User with ID {} not found.", userId);
-//            throw new IllegalArgumentException("User not found.");
-//        }
-//        userRepository.deleteById(userId);
-//        log.info("User with ID {} deleted successfully.", userId);
-//    }
 
-    @CacheEvict(value = {"userFullProfile", "userPreferencesDto", "gamificationStats", "apiKeyStatus", "keyPhraseFrequencies"}, key = "#userId")
+
+    @Caching(evict = {
+            @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#userId"),
+            @CacheEvict(value = CacheConstants.USER_PREFERENCES_DTO, key = "#userId"),
+            @CacheEvict(value = CacheConstants.GAMIFICATION_STATS, key = "#userId"),
+            @CacheEvict(value = CacheConstants.API_KEY_STATUS, key = "#userId"),
+            @CacheEvict(value = CacheConstants.KEY_PHRASE_FREQUENCIES, key = "#userId")
+    })
     @Transactional
     public void deleteUser(UUID userId) {
         log.info("Attempting to delete user with ID: {}", userId);
@@ -176,7 +169,7 @@ public class UserService {
      * or new password is the same as the old password.
      */
 
-    @CacheEvict(value = "userFullProfile", key = "#userId")
+    @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#userId")
     @Transactional
     public void changeUserPassword(UUID userId, String currentPassword, String newPassword) {
         log.info("Attempting to change password for user ID: {}", userId);
@@ -232,21 +225,13 @@ public class UserService {
         return userRepository.save(user);
     }
 
-//
-//    @Transactional(readOnly = true)
-//    @Cacheable(value = "userPreferences", key = "#user.id")
-//    public UserRoadmapPreferences getRoadmapPreferences(User user) {
-//        return userRoadmapPreferencesRepository.findByUser(user)
-//                .orElseGet(() -> createDefaultRoadmapPreferences(user));
-//    }
 
-    // In UserService.java
 
     /**
      * Returns roadmap preferences as a DTO (cached).
      */
     @Transactional(readOnly = true)
-    @Cacheable(value = "userPreferencesDto", key = "#user.id")
+    @Cacheable(value = CacheConstants.USER_PREFERENCES_DTO, key = "#user.id")
     public UserRoadmapPreferencesDto getRoadmapPreferencesDto(User user) {
         UserRoadmapPreferences prefs = getRoadmapPreferences(user); // no cache on entity method
         return new UserRoadmapPreferencesDto(
@@ -267,12 +252,12 @@ public class UserService {
         return userRoadmapPreferencesRepository.findByUser(user)
                 .orElseGet(() -> createDefaultRoadmapPreferences(user));
     }
-    
+
 
 
     @Caching(evict = {
-            @CacheEvict(value = "userPreferencesDto", key = "#user.id"),
-            @CacheEvict(value = "userFullProfile", key = "#user.id")
+            @CacheEvict(value = CacheConstants.USER_PREFERENCES_DTO, key = "#user.id"),
+            @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
     })
     @Transactional
     public UserRoadmapPreferences updateRoadmapPreferences(User user, String difficulty, String languagePreference,
@@ -297,44 +282,65 @@ public class UserService {
         return userRoadmapPreferencesRepository.save(prefs);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheConstants.USER_PREFERENCES_DTO, key = "#user.id"),
+            @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
+    })
+    @Transactional
+    public UserRoadmapPreferencesDto updateRoadmapPreferences(User user, UpdateRoadmapPreferencesRequest request) {
+        UserRoadmapPreferences updated = updateRoadmapPreferences(
+                user,
+                request.difficulty(),
+                request.languagePreference(),
+                request.learningStyle(),
+                request.hoursPerWeek(),
+                request.avoidWeekends()
+        );
+        return new UserRoadmapPreferencesDto(
+                updated.getDifficulty(),
+                updated.getLanguagePreference(),
+                updated.getLearningStyle(),
+                updated.getHoursPerWeek(),
+                updated.isAvoidWeekends()
+        );
+    }
 
-
-    @Cacheable(value = "userFullProfile", key = "#user.id")
+    @Cacheable(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
     public UserFullProfileResponse getFullUserProfile(User user, String decryptedApiKey) {
-        UserFullProfileResponse response = new UserFullProfileResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setEmail(user.getEmail());
 
         // API key status
         boolean usingOwnKey = decryptedApiKey != null && !decryptedApiKey.isBlank();
-        response.setUsingOwnKey(usingOwnKey);
+        String maskedKey = null;
         if (usingOwnKey) {
             int len = decryptedApiKey.length();
-            String masked = "••••••••" + decryptedApiKey.substring(Math.max(0, len - 4));
-            response.setMaskedKey(masked);
-        } else {
-            response.setMaskedKey(null);
+            maskedKey = "••••••••" + decryptedApiKey.substring(Math.max(0, len - 4));
         }
 
         // Roadmap preferences – now using the DTO directly from cache
-        response.setRoadmapPreferences(getRoadmapPreferencesDto(user));
+        UserRoadmapPreferencesDto roadmapPrefsDto = getRoadmapPreferencesDto(user);
 
+        // User Entity-based preferences
         UserPreferences prefs = userPreferencesRepository.findByUser(user)
                 .orElseGet(() -> createDefaultPreferences(user));
 
-        response.setAvailableHoursJson(prefs.getAvailableHoursJson());
-        response.setTimezone(prefs.getTimezone());
-
-        // --- NEW: Map lifestyle fields ---
-        response.setEnergyPeak(prefs.getEnergyPeak());
-        response.setWakeTime(prefs.getWakeTime() != null ? prefs.getWakeTime().toString() : null);
-        response.setSleepTime(prefs.getSleepTime() != null ? prefs.getSleepTime().toString() : null);
-        response.setLunchTime(prefs.getLunchTime() != null ? prefs.getLunchTime().toString() : null);
-        response.setDailyHabitsJson(prefs.getDailyHabitsJson());
-
-        return response;
+        //  Construct the immutable record using the constructor. No more .setX()!
+        return new UserFullProfileResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                usingOwnKey,
+                maskedKey,
+                roadmapPrefsDto,
+                prefs.getAvailableHoursJson(),
+                prefs.getTimezone(),
+                prefs.getEnergyPeak(),
+                prefs.getWakeTime() != null ? prefs.getWakeTime().toString() : null,
+                prefs.getSleepTime() != null ? prefs.getSleepTime().toString() : null,
+                prefs.getLunchTime() != null ? prefs.getLunchTime().toString() : null,
+                prefs.getDailyHabitsJson()
+        );
     }
+
     private UserPreferences createDefaultPreferences(User user) {
         UserPreferences prefs = new UserPreferences();
         prefs.setUser(user);
@@ -350,48 +356,44 @@ public class UserService {
                 .orElseGet(() -> createDefaultPreferences(user));
     }
 
-//    @CacheEvict(value = "userFullProfile", key = "#user.id")
-//    @Transactional
-//    public UserPreferences updateUserPreferences(User user, String availableHoursJson, String timezone) {
-//        UserPreferences prefs = userPreferencesRepository.findByUser(user)
-//                .orElseGet(() -> createDefaultPreferences(user));
-//        if (availableHoursJson != null) {
-//            prefs.setAvailableHoursJson(availableHoursJson);
-//        }
-//        if (timezone != null) {
-//            prefs.setTimezone(timezone);
-//        }
-//        return userPreferencesRepository.save(prefs);
-//    }
 
-    @CacheEvict(value = "userFullProfile", key = "#user.id")
+    @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
     @Transactional
-    public UserPreferences updateUserPreferences(User user, java.util.Map<String, Object> updates) {
+    public UserPreferencesResponse updateUserPreferences(User user, UpdateUserPreferencesRequest request) {
         UserPreferences prefs = userPreferencesRepository.findByUser(user)
                 .orElseGet(() -> createDefaultPreferences(user));
 
-        if (updates.containsKey("availableHoursJson")) {
-            prefs.setAvailableHoursJson((String) updates.get("availableHoursJson"));
+        if (request.availableHoursJson() != null) {
+            prefs.setAvailableHoursJson(request.availableHoursJson());
         }
-        if (updates.containsKey("timezone")) {
-            prefs.setTimezone((String) updates.get("timezone"));
+        if (request.timezone() != null) {
+            prefs.setTimezone(request.timezone());
         }
-        if (updates.containsKey("energyPeak")) {
-            prefs.setEnergyPeak((String) updates.get("energyPeak"));
+        if (request.energyPeak() != null) {
+            prefs.setEnergyPeak(request.energyPeak());
         }
-        if (updates.containsKey("wakeTime")) {
-            prefs.setWakeTime(java.time.LocalTime.parse((String) updates.get("wakeTime")));
+        if (request.wakeTime() != null) {
+            prefs.setWakeTime(request.wakeTime());
         }
-        if (updates.containsKey("sleepTime")) {
-            prefs.setSleepTime(java.time.LocalTime.parse((String) updates.get("sleepTime")));
+        if (request.sleepTime() != null) {
+            prefs.setSleepTime(request.sleepTime());
         }
-        if (updates.containsKey("lunchTime")) {
-            prefs.setLunchTime(java.time.LocalTime.parse((String) updates.get("lunchTime")));
+        if (request.lunchTime() != null) {
+            prefs.setLunchTime(request.lunchTime());
         }
-        if (updates.containsKey("dailyHabitsJson")) {
-            prefs.setDailyHabitsJson((String) updates.get("dailyHabitsJson"));
+        if (request.dailyHabitsJson() != null) {
+            prefs.setDailyHabitsJson(request.dailyHabitsJson());
         }
 
-        return userPreferencesRepository.save(prefs);
+        UserPreferences saved = userPreferencesRepository.save(prefs);
+        return new UserPreferencesResponse(
+                saved.getAvailableHoursJson(),
+                saved.getTimezone(),
+                saved.getEnergyPeak(),
+                saved.getWakeTime() != null ? saved.getWakeTime().toString() : null,
+                saved.getSleepTime() != null ? saved.getSleepTime().toString() : null,
+                saved.getLunchTime() != null ? saved.getLunchTime().toString() : null,
+                saved.getDailyHabitsJson()
+        );
     }
 }

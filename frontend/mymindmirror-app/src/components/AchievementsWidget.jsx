@@ -1,10 +1,12 @@
 // src/components/AchievementsWidget.jsx
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useGamificationStats } from '../hooks/useGamification';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   Flame, Award, Target, Star, Trophy, Sparkles,
-  Zap, Crown, BookOpen, CalendarCheck, BrainCircuit, Shield, Eye, Map, Compass, Search
+  Zap, Crown, BookOpen, CalendarCheck, BrainCircuit, Shield, Eye, Map, Compass, Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const badgeIcons = {
@@ -40,13 +42,22 @@ const XP_PER_LEVEL = 500;
 function AchievementsWidget() {
   const { theme } = useTheme();
   const { data: stats, isLoading, isError } = useGamificationStats();
-
-  // 💡 Moved up so it can be utilized perfectly in the Skeleton Loader
   const isDarkMode = theme === 'dark';
+  const navigate = useNavigate();
+
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+  // ==========================================================================
+  const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+  const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const sectionBg = isDarkMode ? 'bg-[#131127]/80 shadow-inner' : 'bg-slate-50/80 shadow-inner';
+  const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   if (isLoading) {
     return (
-      <div className={`p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${isDarkMode ? 'bg-[#1A162F]/60 border-white/10 ring-white/5' : 'bg-white/70 border-gray-200/50 ring-black/5'} backdrop-blur-xl border shadow-xl ring-1 animate-pulse`}>
+      <div className={`p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} ring-1 ring-black/5 dark:ring-white/5 animate-pulse`}>
         {/* Header Skeleton */}
         <div className="flex justify-between items-center mb-6 lg:mb-8">
           <div className="flex items-center gap-3 lg:gap-4 w-full max-w-[250px] lg:max-w-[300px]">
@@ -57,7 +68,7 @@ function AchievementsWidget() {
         </div>
 
         {/* Level Progress Skeleton */}
-        <div className={`mb-6 lg:mb-8 p-4 lg:p-6 rounded-xl lg:rounded-2xl border ${isDarkMode ? 'bg-[#131127]/50 border-white/5' : 'bg-gray-50 border-gray-200/50'} space-y-4`}>
+        <div className={`mb-6 lg:mb-8 p-4 lg:p-6 rounded-xl lg:rounded-2xl border ${sectionBorder} ${sectionBg} space-y-4`}>
           <div className="flex justify-between items-end">
             <div className={`h-6 lg:h-8 rounded-md w-16 lg:w-20 ${isDarkMode ? 'bg-white/5' : 'bg-gray-200/80'}`} />
             <div className={`h-4 lg:h-5 rounded-full w-24 lg:w-32 ${isDarkMode ? 'bg-white/5' : 'bg-gray-200/80'}`} />
@@ -66,9 +77,13 @@ function AchievementsWidget() {
         </div>
 
         {/* Badges Grid Skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 lg:gap-4 mb-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className={`h-9 lg:h-11 rounded-xl ${isDarkMode ? 'bg-white/5' : 'bg-gray-200/80'}`} />
+            <div key={i} className={`flex flex-col items-center justify-center gap-2 p-3 lg:p-4 rounded-2xl border ${isDarkMode ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-gray-50/50'}`}>
+              <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-200/80'}`} />
+              <div className={`h-3 w-3/4 rounded-full mt-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200/80'}`} />
+              <div className={`h-3 w-1/2 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-gray-200/80'}`} />
+            </div>
           ))}
         </div>
       </div>
@@ -81,22 +96,23 @@ function AchievementsWidget() {
   const level = stats.level || 1;
   const totalXp = stats.experiencePoints || 0;
 
+  const displayLimit = 6;
+  const visibleBadges = badges.slice(0, displayLimit);
   const currentLevelXP = totalXp % XP_PER_LEVEL;
   const progressPercentage = (currentLevelXP / XP_PER_LEVEL) * 100;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl bg-white/70 dark:bg-[#1A162F]/60 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl ring-1 ring-black/5 dark:ring-white/5 transition-all duration-300">
-
+    <div className={`p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl border ${cardBorder} ring-1 ring-black/5 dark:ring-white/5 transition-all duration-300 hover:shadow-md ${cardBg}`}>
       {/* Header */}
       <div className="flex flex-wrap items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div className="flex-1 min-w-[150px]">
-           <h3 className="text-lg sm:text-xl lg:text-2xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 flex items-center gap-2.5">
+           <h3 className={`text-lg sm:text-xl lg:text-2xl font-poppins font-extrabold flex items-center gap-2.5 ${textPrimary}`}>
             <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-purple-100 to-teal-50 dark:from-teal-900/40 dark:to-purple-900/20 text-purple-600 dark:text-teal-400 border border-purple-200/50 dark:border-teal-700/30 shadow-sm">
                 <Award className="w-5 h-5 lg:w-6 lg:h-6" />
             </div>
              Achievements
            </h3>
-           <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 mt-1 lg:mt-1.5 leading-tight">
+           <p className={`text-xs lg:text-sm mt-1 lg:mt-1.5 leading-tight ${textSecondary}`}>
              Your journey progress and unlocked badges.
            </p>
         </div>
@@ -110,13 +126,13 @@ function AchievementsWidget() {
       </div>
 
       {/* RPG Leveling Section */}
-      <div className="mb-6 lg:mb-8 bg-white/80 dark:bg-gray-900/50 p-4 lg:p-6 rounded-xl lg:rounded-2xl border border-gray-200 dark:border-gray-700/80 shadow-inner">
+      <div className={`mb-6 lg:mb-8 p-4 lg:p-6 rounded-xl lg:rounded-2xl border ${sectionBorder} ${sectionBg}`}>
         <div className="flex flex-wrap justify-between items-end gap-2 mb-3 lg:mb-4">
           <div className="flex items-center gap-3 lg:gap-4">
             <div className="bg-gradient-to-br from-purple-500 to-teal-500 text-white text-xs sm:text-sm lg:text-base font-bold px-2.5 lg:px-3.5 py-0.5 lg:py-1 rounded-md shadow-md shrink-0">
               Lv. {level}
             </div>
-            <span className="text-[10px] sm:text-xs lg:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className={`text-[10px] sm:text-xs lg:text-sm font-semibold uppercase tracking-wider ${textSecondary}`}>
               {totalXp} Total XP
             </span>
           </div>
@@ -140,22 +156,34 @@ function AchievementsWidget() {
       </div>
 
       {/* Badges Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-2">
-        {badges.map((badgeKey) => {
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 lg:gap-4 mb-2">
+        {visibleBadges.map((badgeKey) => {
           const badge = badgeIcons[badgeKey];
           if (!badge) return null;
           const Icon = badge.icon;
           return (
             <div
               key={badgeKey}
-              className={`group relative flex items-center justify-start sm:justify-center gap-2 px-2.5 sm:px-3 lg:px-4 py-2 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold
+              onClick={() => {
+                  if (window.innerWidth < 1024) {
+                      toast.success(badge.label, { description: badge.description });
+                  }
+              }}
+              className={`group relative flex flex-col items-center justify-center gap-2 p-3 lg:p-4 rounded-2xl text-center
                          ${badge.bg} border ${badge.border}
-                         hover:-translate-y-1 lg:hover:-translate-y-1.5 hover:shadow-md lg:hover:shadow-lg transition-all duration-300 cursor-default overflow-hidden`}
+                         hover:-translate-y-1 hover:shadow-md active:scale-95 transition-all duration-300 cursor-pointer lg:cursor-default`}
             >
-              <Icon className={`${badge.color} shrink-0 w-3.5 h-3.5 lg:w-4 lg:h-4`} />
-              <span className="text-gray-700 dark:text-gray-200 truncate">{badge.label}</span>
+              {/* Central Icon Container */}
+              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center shadow-sm shrink-0">
+                  <Icon className={`${badge.color} w-5 h-5 lg:w-6 lg:h-6`} />
+              </div>
 
-              {/* Tooltip hidden on mobile, visible on lg+ screens */}
+              {/* Locked 2-line text height to ensure perfect symmetry */}
+              <span className={`text-[10px] lg:text-xs font-bold leading-tight line-clamp-2 h-[28px] lg:h-[32px] flex items-center justify-center w-full ${textPrimary}`}>
+                  {badge.label}
+              </span>
+
+              {/* Hover Tooltip */}
               <div className="hidden lg:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-3 py-2 rounded-lg text-xs whitespace-nowrap bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 opacity-0 group-hover:opacity-100 transition duration-200 pointer-events-none z-50 shadow-xl font-medium">
                 {badge.description}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-100"></div>
@@ -165,12 +193,16 @@ function AchievementsWidget() {
         })}
       </div>
 
-      {/* Footer Text */}
-      <div className="text-center mt-5 lg:mt-8 pt-4 lg:pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
-        <p className="text-[10px] sm:text-[11px] lg:text-sm font-medium text-gray-400 dark:text-gray-500">
-          {badges.length === 0 ? "Log an entry to earn your first XP!" : "Keep going to level up and unlock more badges!"}
-        </p>
-      </div>
+     {/* Full-Width Anchor Button */}
+     <div className="mt-4 lg:mt-6 w-full">
+        <button
+            onClick={() => navigate('/achievements')}
+            className={`group w-full flex items-center justify-center gap-2 px-6 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl text-xs lg:text-sm font-bold ${sectionBg} border ${sectionBorder} ${textSecondary} hover:text-purple-600 dark:hover:text-teal-400 hover:border-purple-200/50 dark:hover:border-teal-500/30 active:scale-[0.99] transition-all duration-300 shadow-sm`}
+        >
+            <Trophy className="w-4 h-4 lg:w-5 lg:h-5 group-hover:scale-110 transition-transform" />
+            View Full Trophy Room
+        </button>
+     </div>
     </div>
   );
 }

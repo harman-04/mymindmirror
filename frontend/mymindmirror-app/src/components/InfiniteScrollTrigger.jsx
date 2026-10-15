@@ -1,9 +1,19 @@
 // src/components/InfiniteScrollTrigger.jsx
 import React, { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext'; // 🌟 Added Theme Hook
 
 const InfiniteScrollTrigger = ({ onIntersect, isLoading, hasNextPage }) => {
   const triggerRef = useRef(null);
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
+
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (Layer 2 Floating Pill)
+  // ==========================================================================
+  const pillBg = isDarkMode ? 'bg-white/5' : 'bg-slate-50';
+  const pillBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   useEffect(() => {
     if (!triggerRef.current || isLoading || !hasNextPage) return;
@@ -26,9 +36,11 @@ const InfiniteScrollTrigger = ({ onIntersect, isLoading, hasNextPage }) => {
   return (
     <div ref={triggerRef} className="flex justify-center py-6 w-full">
       {isLoading && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-gray-700/50">
-           <Loader2 size={18} className="animate-spin text-purple-500 dark:text-purple-400" />
-           <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Loading more...</span>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-sm border ${pillBg} ${pillBorder}`}>
+           <Loader2 size={18} className="animate-spin text-purple-500 dark:text-teal-400" />
+           <span className={`text-xs font-semibold ${textSecondary} font-poppins tracking-wide`}>
+             Loading more...
+           </span>
         </div>
       )}
     </div>

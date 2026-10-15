@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 const API_BASE_URL = 'http://localhost:8080/api';
-// const FLASK_API_URL = 'http://localhost:5000'; // ⭐ REMOVED: No direct Flask API calls from frontend ⭐
 
 const getToken = () => localStorage.getItem('jwtToken');
 
@@ -73,10 +72,15 @@ const generateTodaysReflection = async (todayEntries, forceRefresh = false) => {
     const reflection = springBootResponse.data?.reflection || "Couldn't generate a reflection today. Keep journaling!";
     localStorage.setItem(cacheKey, reflection);
     return reflection;
-  } catch (err) {
+//  } catch (err) {
+//    console.error('Error generating reflection:', err.response ? err.response.data : err.message);
+//    throw new Error('Failed to generate reflection.');
+//  }
+} catch (err) {
     console.error('Error generating reflection:', err.response ? err.response.data : err.message);
-    throw new Error('Failed to generate reflection.');
-  }
+    const backendMessage = err.response?.data?.message;
+    throw new Error(backendMessage || 'Failed to generate reflection.');
+}
 };
 
 export const useTodaysReflection = (todayEntries) => {
@@ -231,64 +235,6 @@ export const useDeleteJournalEntry = () => {
   });
 };
 
-// --- Search Queries (New) ---
-
-//export const useSearchJournalEntries = (searchParams) => {
-//  return useQuery({
-//    queryKey: ['journalSearchResults', searchParams],
-//    queryFn: async () => {
-//      const token = getToken();
-//      if (!token) throw new Error('Not authenticated.');
-//
-//      let url = `${API_BASE_URL}/journal/history`; // Default for date search
-//
-//      const params = {};
-//      if (searchParams.searchType === 'keyword') {
-//        if (!searchParams.keyword.trim()) throw new Error('Please enter a keyword to search.');
-//        url = `${API_BASE_URL}/journal/search/keyword`;
-//        params.keyword = searchParams.keyword.trim();
-//      } else if (searchParams.searchType === 'mood') {
-//        const parsedMinMood = searchParams.minMood === '' ? null : parseFloat(searchParams.minMood);
-//        const parsedMaxMood = searchParams.maxMood === '' ? null : parseFloat(searchParams.maxMood);
-//
-//        if (isNaN(parsedMinMood) && isNaN(parsedMaxMood)) {
-//          throw new Error('Please enter at least a minimum or maximum mood score.');
-//        }
-//        if (parsedMinMood !== null && parsedMaxMood !== null && parsedMinMood > parsedMaxMood) {
-//          throw new Error('Minimum mood score cannot be greater than maximum mood score.');
-//        }
-//        url = `${API_BASE_URL}/journal/search/mood`;
-//        if (parsedMinMood !== null) params.minMood = parsedMinMood;
-//        if (parsedMaxMood !== null) params.maxMood = parsedMaxMood;
-//      } else if (searchParams.searchType === 'date') {
-//        if (!searchParams.startDate && !searchParams.endDate) {
-//          throw new Error('Please select at least a start date or an end date.');
-//        }
-//        if (searchParams.startDate && searchParams.endDate && new Date(searchParams.startDate) > new Date(searchParams.endDate)) {
-//          throw new Error('Start date cannot be after end date.');
-//        }
-//        if (searchParams.startDate) params.startDate = searchParams.startDate;
-//        if (searchParams.endDate) params.endDate = searchParams.endDate;
-//      } else {
-//        throw new Error('Invalid search type.');
-//      }
-//
-//      const response = await axios.get(url, {
-//        params: params,
-//        headers: { Authorization: `Bearer ${token}` },
-//      });
-//      return response.data;
-//    },
-//    // Only enable the query if searchParams indicate a valid search is intended
-//    enabled: !!searchParams && (
-//      (searchParams.searchType === 'keyword' && !!searchParams.keyword.trim()) ||
-//      (searchParams.searchType === 'mood' && (searchParams.minMood !== '' || searchParams.maxMood !== '')) ||
-//      (searchParams.searchType === 'date' && (searchParams.startDate !== '' || searchParams.endDate !== ''))
-//    ),
-//    staleTime: 5 * 60 * 1000, // Cache search results for 5 minutes
-//    cacheTime: 10 * 60 * 1000,
-//  });
-//};
 
 
 export const useSearchJournalEntries = (searchParams) => {
@@ -373,34 +319,6 @@ export const useKeyPhraseFrequencies = () => {
 };
 
 
-/**
- * Fetches paginated journal entries using the new /history/paginated endpoint.
- * @param {number} pageSize - Number of entries per page (default 20).
- */
-//export const usePaginatedJournalEntries = (pageSize = 20, options = {}) => {
-//  return useInfiniteQuery({
-//    queryKey: ['journalEntries', 'paginated', pageSize],
-//    queryFn: async ({ pageParam = 0 }) => {
-//      const token = getToken();
-//      if (!token) throw new Error('Not authenticated');
-//      const response = await axios.get(
-//        `${API_BASE_URL}/journal/history/paginated?page=${pageParam}&size=${pageSize}`,
-//        { headers: { Authorization: `Bearer ${token}` } }
-//      );
-//      return response.data; // expects { content: [], pageable, totalPages, ... }
-//    },
-//    getNextPageParam: (lastPage) => {
-//      // Return next page number if available
-//      if (lastPage.pageable && lastPage.pageable.pageNumber < lastPage.totalPages - 1) {
-//        return lastPage.pageable.pageNumber + 1;
-//      }
-//      return undefined;
-//    },
-//    staleTime: 10 * 60 * 1000,
-//    cacheTime: 15 * 60 * 1000,
-//      ...options,
-//  });
-//};
 
 
 export const usePaginatedJournalEntries = (pageSize = 20, options = {}) => {
@@ -487,9 +405,9 @@ export const useImportGrowthTip = () => {
       toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['milestones'] });
     },
-    onError: (error) => {
-      toast.error('Failed to add growth tip: ' + (error.response?.data?.message || error.message));
-    },
+//    onError: (error) => {
+//      toast.error('Failed to add growth tip: ' + (error.response?.data?.message || error.message));
+//    },
   });
 };
 
@@ -527,39 +445,3 @@ export const useJournalEntryById = (entryId, enabled = true) => {
   });
 };
 
-// --- FIND THIS AT THE BOTTOM OF useJournalData.js AND ADD THESE BELOW IT ---
-
-//export const useReflectionChat = () => {
-//const queryClient = useQueryClient();
-//  return useMutation({
-//    mutationFn: async ({ query, sessionId, rememberChat }) => {
-//      const token = getToken();
-//      if (!token) throw new Error('Not authenticated.');
-//
-//      const response = await axios.post(
-//        `${API_BASE_URL}/chat/reflect`,
-//        { query, sessionId, rememberChat },
-//        { headers: { Authorization: `Bearer ${token}` } }
-//      );
-//      return response.data.answer;
-//    },
-//         onSuccess: () => {
-//           queryClient.invalidateQueries({ queryKey: ['gamificationStats'] }); // 💡 ADD THIS
-//         }
-//  });
-//};
-//
-//export const useClearChatMemory = () => {
-//  return useMutation({
-//    mutationFn: async (sessionId) => {
-//      const token = getToken();
-//      if (!token) throw new Error('Not authenticated.');
-//      if (!sessionId) return;
-//
-//      return axios.delete(`${API_BASE_URL}/chat/clear-memory`, {
-//        params: { sessionId },
-//        headers: { Authorization: `Bearer ${token}` }
-//      });
-//    }
-//  });
-//};

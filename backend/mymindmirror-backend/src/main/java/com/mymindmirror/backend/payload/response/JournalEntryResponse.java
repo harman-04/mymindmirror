@@ -1,86 +1,50 @@
 package com.mymindmirror.backend.payload.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mymindmirror.backend.model.JournalEntry;
-import com.mymindmirror.backend.model.KeyPhrase;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-@Data
-@NoArgsConstructor
-public class JournalEntryResponse {
-    private UUID id;
-    private UserResponse user;
+public record JournalEntryResponse(
+        UUID id,
+        UserResponse user,
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate entryDate;
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        LocalDate entryDate,
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime creationTimestamp;
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime creationTimestamp,
 
-    private String rawText;
+        @Schema(description = "Journal text. Stored AES-encrypted at rest; decrypted for this response.")
+        String rawText,
 
-    // AI Analysis Fields
-    private Double moodScore;
-    private Map<String, Double> emotions;
-    private List<String> coreConcerns;
-    private String summary;
-    private List<String> growthTips;
-    private List<String> keyPhrases; // Keeps the API consistent as a List of Strings
+        @Schema(
+                description = "Mood score. Range: -1.0 to 1.0. Null until asynchronous AI analysis completes.",
+                nullable = true)
+        Double moodScore,
 
-    private Integer clusterId;
+        @Schema(
+                description = "Emotion intensities. Map of emotion name to a score in [0.0, 1.0]. " +
+                        "Null until AI analysis completes.",
+                nullable = true)
+        Map<String, Double> emotions,
 
-    public JournalEntryResponse(JournalEntry journalEntry) {
-        this.id = journalEntry.getId();
-        this.user = new UserResponse(journalEntry.getUser());
-        this.entryDate = journalEntry.getEntryDate();
-        this.creationTimestamp = journalEntry.getCreationTimestamp();
-        this.rawText = journalEntry.getRawText();
-        this.moodScore = journalEntry.getMoodScore();
-        this.summary = journalEntry.getSummary();
-        this.clusterId = journalEntry.getClusterId();
+        @Schema(description = "List of core concerns detected by the AI. Null until analysis completes.",
+                nullable = true)
+        List<String> coreConcerns,
 
-        // Map the KeyPhrase entity back to a simple String for the frontend
-        this.keyPhrases = (journalEntry.getKeyPhrases() != null)
-                ? journalEntry.getKeyPhrases().stream()
-                .map(KeyPhrase::getPhrase)
-                .collect(Collectors.toList())
-                : Collections.emptyList();
+        @Schema(description = "AI-generated summary of the entry. Null until analysis completes.",
+                nullable = true)
+        String summary,
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            if (journalEntry.getEmotions() != null && !journalEntry.getEmotions().isEmpty()) {
-                this.emotions = objectMapper.readValue(journalEntry.getEmotions(), new TypeReference<Map<String, Double>>() {});
-            } else {
-                this.emotions = Collections.emptyMap();
-            }
-            if (journalEntry.getCoreConcerns() != null && !journalEntry.getCoreConcerns().isEmpty()) {
-                this.coreConcerns = objectMapper.readValue(journalEntry.getCoreConcerns(), new TypeReference<List<String>>() {});
-            } else {
-                this.coreConcerns = Collections.emptyList();
-            }
-            if (journalEntry.getGrowthTips() != null && !journalEntry.getGrowthTips().isEmpty()) {
-                this.growthTips = objectMapper.readValue(journalEntry.getGrowthTips(), new TypeReference<List<String>>() {});
-            } else {
-                this.growthTips = Collections.emptyList();
-            }
+        @Schema(description = "AI-generated growth tips (markdown). Null until analysis completes.",
+                nullable = true)
+        List<String> growthTips,
 
-        } catch (JsonProcessingException e) {
-            System.err.println("Error parsing JSON from JournalEntry: " + e.getMessage());
-            this.emotions = Collections.emptyMap();
-            this.coreConcerns = Collections.emptyList();
-            this.growthTips = Collections.emptyList();
-        }
-    }
-}
+        @Schema(description = "Key phrases extracted by the AI. Null until analysis completes.",
+                nullable = true)
+        List<String> keyPhrases
+) {}

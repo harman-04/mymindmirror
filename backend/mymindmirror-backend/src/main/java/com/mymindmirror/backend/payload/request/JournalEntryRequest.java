@@ -1,15 +1,7 @@
 package com.mymindmirror.backend.payload.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
 
-/**
- * DTO for incoming journal entry creation requests from the frontend.
- */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class JournalEntryRequest {
-    private String rawText;
-}
+public record JournalEntryRequest(
+        @NotBlank(message = "Journal text cannot be empty")
+        String rawText) {}

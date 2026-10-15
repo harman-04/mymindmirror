@@ -1,60 +1,58 @@
 package com.mymindmirror.backend.payload.response;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class RoadmapResponse {
-    private UUID id;
-    private String title;
-    private String description;
-    private LocalDate createdAt;
-    private String status;
-    private Integer durationWeeks;
-    private List<TaskDto> tasks;
-    private List<ResourceDto> resources;
-    private List<MilestoneDto> milestones;
-    private Integer generatedWeeks;
-    private Integer originalDurationValue;
-    private String originalDurationUnit;
+public record RoadmapResponse(
+        UUID id,
+        String title,
+        String description,
+        LocalDate createdAt,
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TaskDto {
-        private UUID id;
-        private String description;
-        private Integer dayNumber;
-        private Integer weekNumber;
-        private Boolean completed;
-        private String taskType;
-        private String details;
-        private List<String> subtasks;
-        private Boolean importedToMilestone;
-    }
+        @Schema(
+                description = "Roadmap status.",
+                allowableValues = {"PLANNED", "ACTIVE", "COMPLETED"})
+        String status,
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ResourceDto {
-        private UUID id;
-        private String name;
-        private String url;
-        private String type;
-    }
+        @Schema(description = "Total planned duration of the roadmap in weeks.")
+        Integer durationWeeks,
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class MilestoneDto {
-        private UUID id;
-        private String name;
-        private Integer weekNumber;
-        private Boolean achieved;
-    }
+        List<TaskDto> tasks,
+        List<ResourceDto> resources,
+        List<MilestoneDto> milestones,
+
+        @Schema(description = "Number of weeks that have actual tasks generated so far. May be less " +
+                "than durationWeeks when generation is staged.")
+        Integer generatedWeeks,
+
+        @Schema(description = "Original duration value as supplied by the user at creation.")
+        Integer originalDurationValue,
+
+        @Schema(description = "Original duration unit as supplied by the user.",
+                allowableValues = {"DAYS", "WEEKS", "MONTHS", "YEARS"})
+        String originalDurationUnit
+) {
+    public record TaskDto(
+            UUID id,
+            String description,
+            Integer dayNumber,
+            Integer weekNumber,
+            Boolean completed,
+
+            @Schema(
+                    description = "Type of roadmap task.",
+                    allowableValues = {"daily", "weekly"})
+            String taskType,
+
+            @Schema(description = "Long-form instructions. Markdown allowed.")
+            String details,
+
+            List<String> subtasks,
+            Boolean importedToMilestone) {}
+
+    public record ResourceDto(UUID id, String name, String url, String type) {}
+
+    public record MilestoneDto(UUID id, String name, Integer weekNumber, Boolean achieved) {}
 }

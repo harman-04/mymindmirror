@@ -1,50 +1,19 @@
 package com.mymindmirror.backend.payload.response;
-
-import lombok.Data;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class RoadmapGenerateResponse {
-    private String title;
-    private Integer durationWeeks;
-    private List<Phase> phases;
-    private List<Task> tasks;
-    private List<Resource> resources;
-    private List<Milestone> milestones;
-    private Boolean isFallback = false;
-
-    @Data
-    public static class Phase {
-        private String name;
-        private Integer weeks;
-        private String description;
-    }
-
-    @Data
-    public static class Task {
-        private Integer day;
-        private Integer week;
-        private String description;
-        private String type; // "daily", "weekly"
-        private String details;
-        private List<String> subtasks;
-    }
-
-    @Data
-    public static class Resource {
-        private String name;
-        private String url;
-        private String type;
-    }
-
-    @Data
-    public static class Milestone {
-        private String name;
-        private Integer week;
-    }
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record RoadmapGenerateResponse(
+        String title,
+        Integer durationWeeks,
+        List<Task> tasks,
+        List<Resource> resources,
+        List<Milestone> milestones,
+        Boolean isFallback
+) {
+    public record Task(Integer day, Integer week, String description, String type,
+                       String details, List<String> subtasks) {}
+    public record Resource(String name, String url, String type) {}
+    public record Milestone(String name, Integer week) {}
 }

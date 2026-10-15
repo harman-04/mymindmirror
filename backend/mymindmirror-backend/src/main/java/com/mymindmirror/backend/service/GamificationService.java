@@ -3,6 +3,8 @@ package com.mymindmirror.backend.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mymindmirror.backend.constants.CacheConstants;
+import com.mymindmirror.backend.enums.GamificationAction;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.model.UserStats;
 import com.mymindmirror.backend.payload.response.UserStatsResponse;
@@ -29,14 +31,14 @@ public class GamificationService {
     // Constants for XP Rewards
     private static final int XP_PER_JOURNAL = 50;
     private static final int XP_PER_SCHEDULE = 30;
-    private static final int XP_PER_ROADMAP = 30; // NEW
+    private static final int XP_PER_ROADMAP = 30;
     private static final int XP_PER_TASK_COMPLETE = 20;
-    private static final int XP_PER_INSIGHT = 20; // NEW
+    private static final int XP_PER_INSIGHT = 20;
     private static final int XP_PER_CHAT = 15;
-    private static final int XP_PER_REFLECTION = 15; // NEW
-    private static final int XP_PER_MILESTONE_CREATE = 10; // NEW
-    private static final int XP_PER_TASK_CREATE = 5; // NEW
-    private static final int XP_PER_ELABORATE = 5; // NEW
+    private static final int XP_PER_REFLECTION = 15;
+    private static final int XP_PER_MILESTONE_CREATE = 10;
+    private static final int XP_PER_TASK_CREATE = 5;
+    private static final int XP_PER_ELABORATE = 5;
 
     private static final int XP_PER_LEVEL = 500;
 
@@ -57,16 +59,16 @@ public class GamificationService {
         return userStatsRepository.save(stats);
     }
 
-    @CacheEvict(value = "gamificationStats", key = "#user.id")
+    @CacheEvict(value = CacheConstants.GAMIFICATION_STATS, key = "#user.id")
     @Transactional
-    public UserStats recordActivity(User user, String activityType) {
+    public UserStats recordActivity(User user, GamificationAction action) {
         UserStats stats = userStatsRepository.findByUser(user)
                 .orElseGet(() -> initializeStats(user));
 
         LocalDate today = LocalDate.now();
         LocalDate lastActive = stats.getLastActiveDate();
 
-        // 1. STREAK LOGIC (Any activity keeps the streak alive!)
+        // 1. STREAK LOGIC
         if (lastActive == null) {
             stats.setCurrentStreak(1);
         } else if (!lastActive.equals(today)) {
@@ -85,51 +87,51 @@ public class GamificationService {
         boolean badgesChanged = false;
 
         // 2. INCREMENT COUNTERS, ADD XP, AND AWARD INSTANT BADGES
-        switch (activityType.toUpperCase()) {
-            case "TASK": // Task completion
+        switch (action) {
+            case TASK:
                 stats.setTotalTasksCompleted(stats.getTotalTasksCompleted() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_TASK_COMPLETE);
-                if (stats.getTotalTasksCompleted() >= 1 && badges.add("FIRST_STEP")) badgesChanged = true;
+                if (badges.add("FIRST_STEP")) badgesChanged = true;
                 if (stats.getTotalTasksCompleted() >= 10 && badges.add("TASK_MASTER")) badgesChanged = true;
                 if (stats.getTotalTasksCompleted() >= 50 && badges.add("PRODUCTIVITY_NINJA")) badgesChanged = true;
                 break;
-            case "JOURNAL":
+            case JOURNAL:
                 stats.setTotalJournalEntries(stats.getTotalJournalEntries() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_JOURNAL);
-                if (stats.getTotalJournalEntries() >= 1 && badges.add("FIRST_THOUGHT")) badgesChanged = true;
+                if (badges.add("FIRST_THOUGHT")) badgesChanged = true;
                 if (stats.getTotalJournalEntries() >= 5 && badges.add("REFLECTIVE_SOUL")) badgesChanged = true;
                 break;
-            case "SCHEDULE":
+            case SCHEDULE:
                 stats.setSchedulesGenerated(stats.getSchedulesGenerated() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_SCHEDULE);
-                if (stats.getSchedulesGenerated() >= 1 && badges.add("TIME_LORD")) badgesChanged = true;
+                if (badges.add("TIME_LORD")) badgesChanged = true;
+
                 break;
-            case "CHAT":
+            case CHAT:
                 stats.setTotalChats(stats.getTotalChats() + 1);
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_CHAT);
-                if (stats.getTotalChats() >= 1 && badges.add("FIRST_CHAT")) badgesChanged = true;
+                if (badges.add("FIRST_CHAT")) badgesChanged = true;
                 if (stats.getTotalChats() >= 20 && badges.add("AI_WHISPERER")) badgesChanged = true;
                 break;
-            // --- 💡 NEW ACTIVITY TYPES ---
-            case "TASK_CREATE":
+            case TASK_CREATE:
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_TASK_CREATE);
                 break;
-            case "MILESTONE_CREATE":
+            case MILESTONE_CREATE:
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_MILESTONE_CREATE);
                 if (badges.add("VISIONARY")) badgesChanged = true;
                 break;
-            case "ROADMAP_GENERATE":
+            case ROADMAP_GENERATE:
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_ROADMAP);
                 if (badges.add("ARCHITECT")) badgesChanged = true;
                 break;
-            case "AI_REFLECTION":
+            case AI_REFLECTION:
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_REFLECTION);
                 if (badges.add("INTROSPECTIVE")) badgesChanged = true;
                 break;
-            case "AI_INSIGHT":
+            case AI_INSIGHT:
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_INSIGHT);
                 break;
-            case "ELABORATE_TASK":
+            case ELABORATE_TASK:
                 stats.setExperiencePoints(stats.getExperiencePoints() + XP_PER_ELABORATE);
                 if (badges.add("DEEP_DIVER")) badgesChanged = true;
                 break;
@@ -155,7 +157,7 @@ public class GamificationService {
         return userStatsRepository.save(stats);
     }
 
-    @CacheEvict(value = "gamificationStats", key = "#user.id")
+    @CacheEvict(value = CacheConstants.GAMIFICATION_STATS, key = "#user.id")
     @Transactional
     public void awardRoadmapCompletedBadge(User user) {
         UserStats stats = userStatsRepository.findByUser(user)
@@ -182,7 +184,7 @@ public class GamificationService {
         return new HashSet<>();
     }
 
-    @Cacheable(value = "gamificationStats", key = "#user.id")
+    @Cacheable(value = CacheConstants.GAMIFICATION_STATS, key = "#user.id")
     public UserStatsResponse getUserStats(User user) {
         UserStats stats = userStatsRepository.findByUser(user)
                 .orElseGet(() -> initializeStats(user));

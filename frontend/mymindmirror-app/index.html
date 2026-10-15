@@ -11,7 +11,9 @@
     <meta name="description" content="Reflect, grow, and transform with AI‑powered journal analysis, smart roadmaps, gamification, and deep visual insights. Your private space for self‑discovery." />
     <meta name="keywords" content="journal, AI, self-reflection, mental health, goal tracking, roadmap, gamification, mood tracker, encryption" />
     <meta name="author" content="MyMindMirror" />
-    <meta name="theme-color" content="#1E1A3E" />
+
+    <!-- 🌟 FIX: Defaulted to our new Master Palette dark void to prevent white-flashes -->
+    <meta name="theme-color" content="#131127" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -39,10 +41,13 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet" />
 
-    <!-- Optional: Add a manifest for PWA support -->
-<!--    <link rel="manifest" href="/manifest.json" />-->
+    <!-- Instant Image Preloading -->
+    <link rel="preload" href="/login-bg-dark.webp" as="image" />
+    <link rel="preload" href="/login-bg-light.webp" as="image" />
 </head>
-<body class="bg-[#F8F9FA] text-[#1E1A3E] dark:bg-[#1E1A3E] dark:text-[#E0E0E0] transition-colors duration-500">
+<!-- 🌟 FIX: Synced completely to the Enterprise 3-Layer Master Palette -->
+<!-- slate-50 background for light mode, #131127 background for dark mode -->
+<body class="bg-slate-50 text-slate-900 dark:bg-[#131127] dark:text-gray-100 transition-colors duration-500">
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
 </body>

@@ -1,186 +1,185 @@
-// src/pages/LoginPage.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLogin } from '../hooks/useAuth';
-import { Lock, User, ArrowRight, AlertCircle, Eye, EyeOff, LogIn, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+import PremiumInput from '../components/PremiumInput';
+import { Lock, User, ArrowRight, ChevronLeft, Sparkles } from 'lucide-react';
+import FadeIn from '../components/FadeIn';
 
 function LoginPage() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [formErrors, setFormErrors] = useState({});
+  const [imageLoaded, setImageLoaded] = useState(false);
 
+  const navigate = useNavigate();
   const loginMutation = useLogin();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setFormErrors({});
+
+    let errors = {};
+    if (!username.trim()) errors.username = 'Username is required.';
+    if (!password) errors.password = 'Password is required.';
+
+    if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+        return;
+    }
 
     try {
       const data = await loginMutation.mutateAsync({ username, password });
-      console.log('Login successful');
+      toast.success('Login successful! Welcome back.');
       localStorage.setItem('jwtToken', data.token);
       navigate('/journal');
     } catch (err) {
       console.error('Login error:', err);
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Login failed. Please check your credentials and try again.');
-      }
+//       toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
   };
 
-  // Premium Deep Indigo Glassmorphism Palette
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (3-Layer Architecture)
+  // ==========================================================================
   const colors = {
-    background: 'bg-gray-50 dark:bg-transparent',
-    cardBg: isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl',
-    cardBorder: isDarkMode ? 'border-white/10' : 'border-gray-200/50',
-    textPrimary: isDarkMode ? 'text-gray-100' : 'text-gray-900',
-    textSecondary: isDarkMode ? 'text-gray-400' : 'text-gray-500',
-    inputBg: isDarkMode ? 'bg-[#131127]/80 text-gray-100' : 'bg-white text-gray-900',
-    inputBorder: isDarkMode ? 'border-white/10' : 'border-gray-300',
-    inputFocusRing: 'focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:focus:ring-teal-400 dark:focus:border-teal-400',
-    buttonGradient: 'bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-white transition-all duration-300',
-  };
+      // 🌟 FIX: We only need Layer 1 for the card surface!
+      cardBg: isDarkMode ? 'bg-[#1A162F]/95' : 'bg-white/95',
+      cardBorder: isDarkMode ? 'border-white/10' : 'border-slate-200/80',
+      textPrimary: isDarkMode ? 'text-gray-100' : 'text-slate-900',
+      textSecondary: isDarkMode ? 'text-gray-400' : 'text-slate-500',
+      buttonPrimary: 'bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-white transition-all duration-300',
+    };
 
   return (
-    <div className={`min-h-[90vh] w-full ${colors.background} ${colors.textPrimary} transition-colors duration-300 relative flex items-center justify-center p-4 sm:p-6`}>
+       <div className={`min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 ${colors.textPrimary}`}>
 
-      {/* Animated Background Orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-teal-500/5" />
-        <div className="absolute top-[10%] left-[15%] w-[30vw] h-[30vw] bg-purple-500/10 rounded-full blur-[100px] animate-pulse-slow" />
-        <div className="absolute bottom-[10%] right-[15%] w-[30vw] h-[30vw] bg-teal-500/10 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
-      </div>
+         {/* Desktop Back Button */}
+         {/* 🌟 FIX: Synced to Master Palette colors and border! */}
+<Link to="/" className={`hidden lg:inline-flex fixed top-6 left-6 lg:top-10 lg:left-10 items-center gap-2 ${colors.textSecondary} hover:text-purple-600 dark:hover:text-teal-400 transition-all duration-300 font-bold z-50 ${colors.cardBg} px-5 py-2.5 rounded-full border ${colors.cardBorder} shadow-sm hover:shadow-md active:scale-95`}>             <ChevronLeft className="w-4 h-4" /> Home
+         </Link>
 
-      {/* Floating Decorative Icons */}
-      <div className="absolute top-32 left-10 opacity-20 animate-float hidden lg:block pointer-events-none z-0">
-        <LogIn className="w-12 h-12 text-purple-400" />
-      </div>
-      <div className="absolute bottom-32 right-10 opacity-20 animate-float-delayed hidden lg:block pointer-events-none z-0">
-        <Sparkles className="w-12 h-12 text-teal-400" />
-      </div>
+         <FadeIn direction="up" delay={0.1} className="w-full max-w-5xl z-10 lg:max-h-[90vh] flex">
+<div className={`w-full flex flex-col lg:flex-row rounded-[2rem] lg:rounded-[2.5rem] ${colors.cardBg} border ${colors.cardBorder} shadow-2xl overflow-hidden transition-all duration-300`}>
+               {/* LEFT SIDE: Lush Image Panel */}
+               {/* 🌟 FIX: Synced internal border to cardBorder */}
+               <div className={`hidden lg:flex relative w-1/2 overflow-hidden items-center justify-center group border-r ${colors.cardBorder}`}>
 
-      {/* Login Card */}
-      <div className={`w-full max-w-md rounded-3xl ${colors.cardBg} border ${colors.cardBorder} shadow-2xl p-8 lg:p-10 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+                   <div className={`absolute inset-0 bg-gradient-to-br ${isDarkMode ? 'from-purple-900/40 to-teal-900/40' : 'from-purple-200/50 to-teal-200/50'} animate-pulse`}></div>
 
-        <div className="text-center mb-8">
-          <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 dark:from-purple-900/30 dark:to-teal-900/30 mb-5 shadow-inner border border-purple-200/50 dark:border-teal-700/30">
-            <LogIn className="w-8 h-8 text-purple-600 dark:text-teal-400" />
-          </div>
-          <h2 className="text-3xl font-poppins font-extrabold bg-gradient-to-r from-purple-600 to-teal-500 dark:from-purple-400 dark:to-teal-400 bg-clip-text text-transparent tracking-tight">
-            Welcome Back
-          </h2>
-          <p className={`text-sm lg:text-base font-medium ${colors.textSecondary} mt-2`}>
-            Sign in to continue your journey.
-          </p>
-        </div>
+                   <img
+                       src={isDarkMode ? "/login-bg-dark.webp" : "/login-bg-light.webp"}
+                       alt="Abstract glowing fluid"
+                       onLoad={() => setImageLoaded(true)}
+                       className={`absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-1000 ease-out
+                                  ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110'}`}
+                     />
+                   <div className={`absolute inset-0 bg-gradient-to-t to-transparent ${isDarkMode ? 'from-black/90 via-black/30' : 'from-white/90 via-white/30'}`}></div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 lg:space-y-6">
+                   <div className="relative z-10 p-12 mt-auto w-full">
+                      <div className={`inline-flex items-center gap-3 mb-4 p-3 backdrop-blur-md rounded-2xl border ${isDarkMode ? 'bg-white/10 border-white/20' : 'bg-slate-900/5 border-slate-900/10'}`}>
+                         <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`} />
+                         <span className={`font-poppins font-bold tracking-widest uppercase text-sm ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>MyMindMirror</span>
+                      </div>
 
-          {error && (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-500/30 text-red-700 dark:text-red-400 text-sm font-medium animate-in fade-in">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+                      <h1 className={`text-4xl lg:text-5xl font-poppins font-extrabold leading-tight mb-4 drop-shadow-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        Reflect.<br/>Grow.<br/>Evolve.
+                      </h1>
+                      <p className={`text-base font-medium leading-relaxed max-w-sm drop-shadow-sm ${isDarkMode ? 'text-gray-200' : 'text-slate-600'}`}>
+                        Your personal AI-powered journal for a clearer mind and a brighter future.
+                      </p>
+                   </div>
+               </div>
 
-          {/* Username Input */}
-          <div>
-            <label className={`block text-xs lg:text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5 ${colors.textSecondary}`}>
-              <User className="w-3.5 h-3.5" /> Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className={`w-full p-3.5 lg:p-4 rounded-xl border ${colors.inputBorder} ${colors.inputBg} outline-none transition-all text-sm lg:text-base placeholder-gray-400 dark:placeholder-gray-600 ${colors.inputFocusRing}`}
-              placeholder="johndoe"
-              required
-              disabled={loginMutation.isPending}
-            />
-          </div>
+               {/* RIGHT SIDE: The Login Form */}
+               {/* 🌟 FIX: Applied sectionBg (Layer 2) and changed 'scrollbar-hide' to 'custom-scrollbar' for premium overflow handling! */}
+{/* 🌟 FIX: Removed sectionBg. It now naturally acts as the Layer 1 Card surface! */}
+<div className="w-full lg:w-1/2 flex flex-col items-center p-6 sm:p-8 lg:p-12 relative z-0 overflow-y-auto custom-scrollbar">
+                   <div className="w-full max-w-sm my-auto py-4">
 
-          {/* Password Input */}
-          <div>
-            <label className={`block text-xs lg:text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5 ${colors.textSecondary}`}>
-              <Lock className="w-3.5 h-3.5" /> Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`w-full p-3.5 lg:p-4 rounded-xl border ${colors.inputBorder} ${colors.inputBg} outline-none transition-all text-sm lg:text-base placeholder-gray-400 dark:placeholder-gray-600 pr-12 ${colors.inputFocusRing}`}
-                placeholder="••••••••"
-                required
-                disabled={loginMutation.isPending}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-500 hover:text-purple-600 dark:hover:text-teal-400 hover:bg-black/5 dark:hover:bg-white/5 transition-all outline-none"
-                tabIndex="-1"
-                disabled={loginMutation.isPending}
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
+                       {/* Mobile-only inline Back Button! */}
+                       {/* 🌟 FIX: Synced to textSecondary */}
+                       <Link to="/" className={`lg:hidden inline-flex items-center gap-1.5 ${colors.textSecondary} hover:text-purple-600 dark:hover:text-teal-400 transition-colors font-bold mb-6 text-sm`}>
+                           <ChevronLeft className="w-4 h-4" /> Back to Home
+                       </Link>
 
-          <button
-            type="submit"
-            disabled={loginMutation.isPending}
-            className={`w-full mt-2 py-4 rounded-xl lg:rounded-2xl font-bold text-base lg:text-lg flex items-center justify-center gap-2 ${colors.buttonGradient} group`}
-          >
-            {loginMutation.isPending ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                Login <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </>
-            )}
-          </button>
-        </form>
+                       <div className="text-center mb-8 lg:mt-0">
+                           <h2 className="text-3xl font-poppins font-extrabold bg-gradient-to-r from-purple-600 to-teal-500 dark:from-purple-400 dark:to-teal-400 bg-clip-text text-transparent tracking-tight">
+                               Welcome Back
+                           </h2>
+                           <p className={`text-sm lg:text-base font-medium ${colors.textSecondary} mt-2`}>
+                               Sign in to continue your journey.
+                           </p>
+                       </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200/50 dark:border-white/5 text-center">
-            <p className={`text-sm font-medium ${colors.textSecondary}`}>
-            Don't have an account?{' '}
-            <Link to="/register" className="text-purple-600 dark:text-teal-400 hover:text-purple-700 dark:hover:text-teal-300 font-bold transition-colors">
-                Register here
-            </Link>
-            </p>
-        </div>
-      </div>
+                       <form onSubmit={handleSubmit} className="space-y-5 lg:space-y-6" noValidate>
 
-      <style>{`
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.15; transform: scale(1); }
-          50% { opacity: 0.3; transform: scale(1.05); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }
-        .animate-float { animation: float 5s ease-in-out infinite; }
-        .animate-float-delayed { animation: float 5s ease-in-out infinite 2.5s; }
+                           {/* 🌟 FIX: We explicitly pass inputBg (Layer 3) to pop off the Layer 2 form background! */}
+                           <PremiumInput
+                               icon={User}
+                               label="Username"
+                               value={username}
+                               onChange={(e) => {
+                                   setUsername(e.target.value);
+                                   if (formErrors.username) setFormErrors(prev => ({ ...prev, username: null }));
+                               }}
+                               placeholder="johndoe"
+                               error={formErrors.username}
+                               showError={!!formErrors.username}
+                               disabled={loginMutation.isPending}
+                           />
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideInFromBottom { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                           {/* 🌟 FIX: Explicitly pass inputBg (Layer 3) */}
+                           <PremiumInput
+                               type="password"
+                               icon={Lock}
+                               label="Password"
+                               value={password}
+                               onChange={(e) => {
+                                   setPassword(e.target.value);
+                                   if (formErrors.password) setFormErrors(prev => ({ ...prev, password: null }));
+                               }}
+                               placeholder="••••••••"
+                               error={formErrors.password}
+                               showError={!!formErrors.password}
+                               disabled={loginMutation.isPending}
+                           />
 
-        .animate-in { animation-duration: 0.5s; animation-fill-mode: both; }
-        .fade-in { animation-name: fadeIn; }
-        .slide-in-from-bottom-4 { animation-name: slideInFromBottom; }
-        .delay-1000 { animation-delay: 1s; }
-      `}</style>
-    </div>
-  );
+                           <button
+                               type="submit"
+                               disabled={loginMutation.isPending}
+                               className={`w-full mt-2 py-4 rounded-xl lg:rounded-2xl font-bold text-base lg:text-lg flex items-center justify-center gap-2 ${colors.buttonPrimary} group`}
+                           >
+                               {loginMutation.isPending ? (
+                               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                               ) : (
+                               <>
+                                   Login <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                               </>
+                               )}
+                           </button>
+                       </form>
+
+                       {/* 🌟 FIX: Applied sectionBorder to the divider */}
+{/* 🌟 FIX: Explicitly set the border color so it doesn't default to bright white! */}
+<div className="mt-8 pt-6 border-t border-slate-200/60 dark:border-white/10 text-center">
+                           <p className={`text-sm font-medium ${colors.textSecondary}`}>
+                           Don't have an account?{' '}
+                           <Link to="/register" className="text-purple-600 dark:text-teal-400 hover:text-purple-700 dark:hover:text-teal-300 font-bold transition-colors">
+                               Register here
+                           </Link>
+                           </p>
+                       </div>
+                   </div>
+               </div>
+           </div>
+         </FadeIn>
+       </div>
+    );
 }
 
 export default LoginPage;

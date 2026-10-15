@@ -1,16 +1,19 @@
 // src/components/JournalHistory.js
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { format, parseISO } from "date-fns";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUpdateJournalEntry, useDeleteJournalEntry,  useImportGrowthTip, useJournalEntryById  } from '../hooks/useJournalData';
-import { SkeletonCard } from './Skeleton';
+import { SkeletonCard, SkeletonAnalysis } from './Skeleton';
 import { AlertTriangle, ChevronDown, ChevronUp, Edit, Trash2, BookOpen, Lightbulb, Heart, Brain, Target, Clock, Plus, Loader, Sparkles } from 'lucide-react';
 import { downloadChartAsPng } from '../utils/downloadChart';
 import DownloadChartButton from './DownloadChartButton';
-
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { motion } from 'framer-motion';
+import PremiumInput from './PremiumInput'; // 🌟 NEW: Import Design System
+import { toast } from 'sonner'; // 🌟 NEW: Import Toasts for mutations
 // 💡 UPGRADED: Enterprise Markdown Parser
 const formatText = (text) => {
   if (!text) return '';
@@ -73,20 +76,39 @@ const formatText = (text) => {
   while (i < total) {
     const line = lines[i];
 
-    if (/^(\*{3,}|-{3,}|_{3,})$/.test(line.trim())) {
+if (/^(\*{3,}|-{3,}|_{3,})$/.test(line.trim())) {
       result.push('<hr class="guide-hr border-gray-200 dark:border-gray-700/50 my-4" />');
       i++;
       continue;
     }
 
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      result.push(`<h${level} class="guide-heading">${applyMarkdown(headingMatch[2])}</h${level}>`);
-      i++;
-      continue;
-    }
+   // 🌟 THE ULTIMATE HEADING PARSER (AI-Hallucination Proof)
+       let cleanLine = line.trim();
 
+       // 1. Match 1-6 hashes, even if they are wrapped in bold/italic stars
+       const headingMatch = cleanLine.match(/^[\s*_]*(#{1,6})\s*(.*)/);
+
+       if (headingMatch) {
+         const level = headingMatch[1].length;
+
+         // 2. Extract the text after the primary hashes
+         let headingText = headingMatch[2];
+
+         // 3. Strip any bold/italic markers that might have been INSIDE the hashes (e.g. ## **Title**)
+         headingText = headingText.replace(/^[\s*_]+/, '');
+
+         // 4. THE FIX: Catch the edge case where the AI double-hashes (e.g. ## ## Title or ### ## Title)
+         // This specifically requires a space after the hash so we don't accidentally delete "#1"
+         headingText = headingText.replace(/^(#{1,6})\s+/, '');
+
+         // 5. Strip trailing bold/italic markers
+         headingText = headingText.replace(/[\s*_]+$/, '').trim();
+
+         // 6. Force premium Enterprise styling on the heading
+         result.push(`<h${level} class="guide-heading mt-6 mb-3 font-poppins font-bold text-gray-900 dark:text-gray-100">${applyMarkdown(headingText)}</h${level}>`);
+         i++;
+         continue;
+       }
     if (line.startsWith('> ')) {
       i = processBlockquote(i);
       continue;
@@ -164,9 +186,9 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, theme, isDeleting
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
-      <div className={`relative max-w-md w-full rounded-2xl lg:rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300 ${
-        theme === 'dark' ? 'bg-[#1A162F]/95 backdrop-blur-xl border-white/10' : 'bg-white/95 backdrop-blur-xl border-gray-200'
-      } border`}>
+      <div className={`relative max-w-md w-full rounded-2xl lg:rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300 border ${
+              theme === 'dark' ? 'bg-[#1A162F]/95 border-white/10' : 'bg-white/95 border-slate-200/80'
+            }`}>
         <div className="p-6 lg:p-8 text-center">
           <div className="mx-auto w-14 h-14 lg:w-16 lg:h-16 mb-4 lg:mb-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
             <AlertTriangle className="w-7 h-7 lg:w-8 lg:h-8 text-red-600 dark:text-red-400" />
@@ -197,7 +219,15 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, theme, isDeleting
   );
 };
 
-const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoodColorClass, getMoodLabel, getChipStyle, emotionChartOptions, importGrowthTipMutation, isPending }) => {
+const ExpandedEntryContent = ({ entry, isDarkMode, getMoodColorClass, getMoodLabel, getChipStyle, emotionChartOptions, importGrowthTipMutation, isPending }) => {
+
+  // 🌟 NESTED ELEVATION PALETTE (Layer 3)
+  // Because this sits inside the row (Layer 2), it alternates back to pure white (Light) or deep black (Dark)
+  const innerContentBg = isDarkMode ? 'bg-black/20 shadow-inner' : 'bg-white shadow-sm';
+  const innerContentBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
+
   const parsedEmotions = entry.emotions && typeof entry.emotions === "string" ? JSON.parse(entry.emotions) : entry.emotions || {};
   const parsedCoreConcerns = entry.coreConcerns && typeof entry.coreConcerns === "string" ? JSON.parse(entry.coreConcerns) : entry.coreConcerns || [];
   const parsedGrowthTips = entry.growthTips && typeof entry.growthTips === "string" ? JSON.parse(entry.growthTips) : entry.growthTips || [];
@@ -228,7 +258,8 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
         datasets: [{
           data: filteredData,
           backgroundColor: backgroundColors,
-          borderColor: isDarkMode ? '#131127' : '#ffffff',
+          // Cutout matches the deep background perfectly
+          borderColor: isDarkMode ? '#0B0914' : '#ffffff',
           borderWidth: isDarkMode ? 1 : 2,
           hoverOffset: 6
         }],
@@ -241,29 +272,30 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Raw Text */}
-      <div className={`rounded-xl lg:rounded-2xl  p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
-        <div className="flex items-center gap-2 mb-2 lg:mb-3">
-          <BookOpen className="w-4 h-4 lg:w-5 lg:h-5 text-purple-500 dark:text-purple-400" />
-          <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Journal Entry</span>
+      <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
+        <div className="flex items-center gap-2 mb-3 lg:mb-4">
+          {/* 🌟 FIX: Clean, borderless icons for deep content */}
+          <BookOpen className="w-5 h-5 text-purple-500 dark:text-purple-400 shrink-0" />
+          <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Journal Entry</span>
         </div>
-        <p className="text-sm lg:text-base text-gray-800 dark:text-gray-200 leading-relaxed lg:leading-loose whitespace-pre-wrap">{entry.rawText}</p>
+        <p className={`text-sm lg:text-base ${textPrimary} leading-relaxed lg:leading-loose whitespace-pre-wrap`}>{entry.rawText}</p>
       </div>
 
       {/* Summary */}
       {entry.summary && (
-        <div className={`rounded-xl lg:rounded-2xl p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
-          <div className="flex items-center gap-2 mb-2 lg:mb-3">
-            <Brain className="w-4 h-4 lg:w-5 lg:h-5 text-teal-500 dark:text-teal-400" />
-            <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Summary</span>
+        <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
+          <div className="flex items-center gap-2 mb-3 lg:mb-4">
+            <Brain className="w-5 h-5 text-teal-500 dark:text-teal-400 shrink-0" />
+            <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Summary</span>
           </div>
-          <p className="text-sm lg:text-base text-gray-700 dark:text-gray-300 leading-relaxed">{entry.summary}</p>
+          <p className={`text-sm lg:text-base ${textPrimary} leading-relaxed`}>{entry.summary}</p>
         </div>
       )}
 
       {/* Mood Score */}
-      <div className={`rounded-xl lg:rounded-2xl p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
+      <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
         <div className="flex flex-wrap gap-2 justify-between items-center">
-          <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mood Score</span>
+          <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Mood Score</span>
           <span className={`font-bold text-lg lg:text-2xl ${getMoodColorClass(entry.moodScore)}`}>
             {entry.moodScore?.toFixed(2) ?? "N/A"} <span className="text-sm lg:text-lg opacity-80">({getMoodLabel(entry.moodScore)})</span>
           </span>
@@ -272,10 +304,10 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
 
       {/* Emotions */}
       {Object.keys(parsedEmotions).length > 0 && (
-        <div className={`rounded-xl lg:rounded-2xl p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
-          <div className="flex items-center gap-2 mb-3 lg:mb-4">
-            <Heart className="w-4 h-4 lg:w-5 lg:h-5 text-pink-500 dark:text-pink-400" />
-            <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Emotions</span>
+        <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
+          <div className="flex items-center gap-2 mb-4 lg:mb-5">
+            <Heart className="w-5 h-5 text-pink-500 dark:text-pink-400 shrink-0" />
+            <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Emotions</span>
           </div>
           <div className="flex flex-wrap gap-2 lg:gap-3">
             {Object.entries(parsedEmotions).filter(([,score]) => score > 0).sort((a,b)=>b[1]-a[1]).map(([emotion, score]) => (
@@ -287,43 +319,58 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
         </div>
       )}
 
-      {/* Core Concerns */}
-      {parsedCoreConcerns.length > 0 && (
-        <div className={`rounded-xl lg:rounded-2xl p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
-          <div className="flex items-center gap-2 mb-3 lg:mb-4">
-            <Target className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500 dark:text-blue-400" />
-            <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Core Concerns</span>
+      {/* Core Concerns & Key Phrases Group */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+        {parsedCoreConcerns.length > 0 && (
+          <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
+            <div className="flex items-center gap-2 mb-4 lg:mb-5">
+              <Target className="w-5 h-5 text-blue-500 dark:text-cyan-400 shrink-0" />
+              <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Core Concerns</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {parsedCoreConcerns.map((c, idx) => (
+                <span key={idx} className="bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-200 dark:border-blue-500/20">
+                  {c}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 lg:gap-3">
-            {parsedCoreConcerns.map((c, idx) => (
-              <span key={idx} className="bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium border border-blue-200 dark:border-blue-500/20 hover:-translate-y-0.5 transition-transform">
-                {c}
-              </span>
-            ))}
+        )}
+
+        {parsedKeyPhrases.length > 0 && (
+          <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
+            <div className="flex items-center gap-2 mb-4 lg:mb-5">
+              <Target className="w-5 h-5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+              <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Key Phrases</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {parsedKeyPhrases.map((p, idx) => (
+                <span key={idx} className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-indigo-200 dark:border-indigo-500/20">
+                  {p}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Growth Tips Section */}
       {parsedGrowthTips.length > 0 && (
-        <div className={`rounded-xl lg:rounded-2xl p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
+        <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 ${innerContentBg} border ${innerContentBorder}`}>
           <div className="flex items-center gap-2 mb-4 lg:mb-5">
-            <Lightbulb className="w-4 h-4 lg:w-5 lg:h-5 text-amber-500 dark:text-amber-400" />
-            <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Growth Tips & Resources</span>
+            <Lightbulb className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0" />
+            <span className={`text-xs lg:text-sm font-bold uppercase tracking-wider ${textSecondary}`}>Growth Tips & Resources</span>
           </div>
           <div className="space-y-4 lg:space-y-6">
             {parsedGrowthTips.map((tip, idx) => (
-              <div key={idx} className="relative group bg-white/40 dark:bg-black/20 p-3 lg:p-5 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                <div className="pr-10 lg:pr-14 prose prose-sm lg:prose-base dark:prose-invert max-w-none">
-                  <div
-                    className="growth-tip-content"
-                    dangerouslySetInnerHTML={{ __html: formatText(tip) }}
-                  />
+              <div key={idx} className={`relative group bg-slate-50/50 dark:bg-[#131127]/50 p-4 lg:p-6 rounded-xl border border-slate-200/50 dark:border-white/5`}>
+                <div className={`pr-10 lg:pr-14 prose prose-sm lg:prose-base dark:prose-invert max-w-none ${textPrimary}`}>
+                  <div className="growth-tip-content" dangerouslySetInnerHTML={{ __html: formatText(tip) }} />
                 </div>
                 <button
                   onClick={() => importGrowthTipMutation.mutate(tip)}
                   disabled={isPending}
-                  className="absolute top-3 right-3 lg:top-4 lg:right-4 p-2 lg:p-2.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 hover:scale-105 transition-all disabled:opacity-50 flex items-center justify-center shadow-sm"
+                  className="absolute top-4 right-4 p-2.5 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all disabled:opacity-50 flex items-center justify-center shadow-sm"
                   title="Add to Milestones"
                 >
                   <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -334,29 +381,11 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
         </div>
       )}
 
-      {/* Key Phrases */}
-      {parsedKeyPhrases.length > 0 && (
-        <div className={`rounded-xl lg:rounded-2xl p-3 lg:p-6 ${sectionBg} border ${cardBorder}`}>
-          <div className="flex items-center gap-2 mb-3 lg:mb-4">
-            <Target className="w-4 h-4 lg:w-5 lg:h-5 text-purple-500 dark:text-purple-400" />
-            <span className="text-xs lg:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Key Phrases</span>
-          </div>
-          <div className="flex flex-wrap gap-2 lg:gap-3">
-            {parsedKeyPhrases.map((p, idx) => (
-              <span key={idx} className="bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium border border-purple-200 dark:border-purple-500/20 hover:-translate-y-0.5 transition-transform">
-                {p}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Emotion Breakdown Chart */}
       {chartData && chartData.datasets[0].data.length > 0 ? (
-        <div className={`rounded-xl lg:rounded-2xl ${sectionBg} border ${cardBorder} overflow-hidden`}>
-          <div className="flex flex-wrap gap-3 justify-between items-center p-4 lg:p-5 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-black/10">
-            <span className="text-sm lg:text-base font-bold tracking-tight text-gray-800 dark:text-gray-200">Emotion Breakdown</span>
-
+        <div className={`rounded-xl lg:rounded-2xl ${innerContentBg} border ${innerContentBorder} overflow-hidden`}>
+          <div className={`flex flex-wrap gap-3 justify-between items-center p-4 lg:p-6 border-b ${innerContentBorder} bg-slate-50/50 dark:bg-[#131127]/50`}>
+            <span className={`text-sm lg:text-base font-bold tracking-tight ${textPrimary}`}>Emotion Breakdown</span>
             <DownloadChartButton
               chartRef={localChartRef}
               filename={`entry_emotion_breakdown_${entry.id}`}
@@ -365,18 +394,19 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
             />
           </div>
 
-          <div ref={localChartRef} className="p-4 sm:p-6 lg:p-8 flex flex-col items-center" style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff' }}>
-            <div className="text-center mb-4 text-xs lg:text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div ref={localChartRef} className="p-4 sm:p-6 lg:p-8 flex flex-col items-center">
+            <div className={`text-center mb-4 text-xs lg:text-sm font-medium ${textSecondary}`}>
               {format(parseISO(entry.entryDate), 'EEEE, MMMM d, yyyy')}
               {entry.creationTimestamp && <span className="ml-2 opacity-70">• {format(parseISO(entry.creationTimestamp), 'h:mm a')}</span>}
             </div>
             <div className="relative w-full h-[220px] sm:h-[260px] lg:h-[300px] flex items-center justify-center">
-              <Doughnut data={chartData} options={emotionChartOptions} />
+               <Doughnut key={`doughnut-${entry.id}`} data={chartData} options={emotionChartOptions} />
             </div>
           </div>
         </div>
       ) : (
-        <div className={`text-center p-6 lg:p-8 rounded-xl lg:rounded-2xl ${sectionBg} border ${cardBorder} text-gray-500 dark:text-gray-400 italic text-sm lg:text-base`}>
+        // 🌟 FIX: Restored Empty Data State!
+        <div className={`text-center p-6 lg:p-8 rounded-xl lg:rounded-2xl ${innerContentBg} border ${innerContentBorder} ${textSecondary} italic text-sm lg:text-base`}>
           No detailed emotion data for this entry.
         </div>
       )}
@@ -384,25 +414,8 @@ const ExpandedEntryContent = ({ entry, isDarkMode, sectionBg, cardBorder, getMoo
   );
 };
 
-const AnalysisLoadingState = ({ sectionBg, cardBorder }) => (
-  <div className={`space-y-4 lg:space-y-6 p-4 lg:p-6 rounded-xl lg:rounded-2xl ${sectionBg} border ${cardBorder} animate-pulse`}>
-    <div className="flex items-center gap-2 mb-2 lg:mb-4">
-      <Brain className="w-5 h-5 lg:w-6 lg:h-6 text-purple-500 dark:text-purple-400 animate-bounce" />
-      <div className="h-4 lg:h-5 w-32 bg-gray-300 dark:bg-gray-700/50 rounded-full"></div>
-    </div>
-    <div className="space-y-3 lg:space-y-4">
-      <div className="h-4 lg:h-5 bg-gray-200 dark:bg-gray-700/50 rounded-full w-full"></div>
-      <div className="h-4 lg:h-5 bg-gray-200 dark:bg-gray-700/50 rounded-full w-5/6"></div>
-      <div className="h-4 lg:h-5 bg-gray-200 dark:bg-gray-700/50 rounded-full w-4/5"></div>
-    </div>
-    <div className="flex gap-3 pt-4 lg:pt-6">
-      <div className="h-8 lg:h-10 w-24 lg:w-32 bg-gray-200 dark:bg-gray-700/50 rounded-full"></div>
-      <div className="h-8 lg:h-10 w-24 lg:w-32 bg-gray-200 dark:bg-gray-700/50 rounded-full"></div>
-    </div>
-  </div>
-);
 
-function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase, isLoading, searchType }) {
+function JournalHistory({ entries, filterPhrase, isLoading, searchType }) {
   const [expandedEntryId, setExpandedEntryId] = useState(null);
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [editedText, setEditedText] = useState("");
@@ -425,9 +438,15 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
       isProcessing(entries?.find(e => e.id === expandedEntryId))
   );
 
-  const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-  const cardBorder = isDarkMode ? 'border-white/10' : 'border-gray-200/50';
-  const sectionBg = isDarkMode ? 'bg-[#131127]/60 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md';
+// ==========================================================================
+  // 🌟 NESTED ELEVATION PALETTE (Layer 2 context)
+  // ==========================================================================
+  // 🌟 UX UPGRADE: Split into a Two-Tone palette for beautiful collapsed contrast!
+  const rowBaseBg = isDarkMode ? 'bg-[#131127]/90' : 'bg-white';
+  const rowHeaderBg = isDarkMode ? 'bg-black/30' : 'bg-slate-50/80';
+  const rowBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
@@ -437,6 +456,7 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
   }, []);
 
   const emotionChartOptions = {
+//     animation: false,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -467,12 +487,9 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
     cutout: isMobile ? "60%" : "65%",
   };
 
-  if (isLoading) return <SkeletonCard count={3} />;
+//   if (isLoading) return <SkeletonCard count={3} />;
 
   let filteredEntries = entries;
-  if (filterClusterId !== null && filterClusterId !== undefined) {
-    filteredEntries = filteredEntries.filter(entry => entry.clusterId === filterClusterId);
-  }
   if (filterPhrase) {
     const lowerPhrase = filterPhrase.toLowerCase();
     filteredEntries = filteredEntries.filter(entry =>
@@ -502,6 +519,33 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
     });
   }
 
+  const flattenedItems = useMemo(() => {
+    const items = [];
+    sortedDates.forEach(dateKey => {
+      items.push({ type: 'header', id: `header-${dateKey}`, data: dateKey });
+      groupedEntries[dateKey].forEach(entry => {
+        items.push({ type: 'entry', id: `entry-${entry.id}`, data: entry });
+      });
+    });
+    return items;
+  }, [sortedDates, groupedEntries]);
+
+  const listRef = useRef(null);
+  const [listOffset, setListOffset] = useState(0);
+
+  useEffect(() => {
+    if (listRef.current) {
+      setListOffset(listRef.current.getBoundingClientRect().top + window.scrollY);
+    }
+  }, [flattenedItems.length]);
+
+  const virtualizer = useWindowVirtualizer({
+    count: flattenedItems.length,
+    estimateSize: () => 180,
+    overscan: 4,
+    scrollMargin: listOffset,
+  });
+
   const toggleExpand = (id) => {
     setExpandedEntryId(expandedEntryId === id ? null : id);
     if (expandedEntryId === id && editingEntryId === id) handleCancelEdit();
@@ -522,7 +566,7 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
     scrollToEditArea(entry.id);
   };
 
-  const handleSaveEdit = async (entryId) => {
+const handleSaveEdit = async (entryId) => {
     if (!editedText.trim()) {
       setEditError("Journal entry cannot be empty.");
       return;
@@ -532,6 +576,7 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
       setEditingEntryId(null);
       setEditedText("");
       setEditError("");
+      toast.success("Entry updated successfully!"); // 🌟 UX UPGRADE: Toast Success
     } catch (err) {
       setEditError("Failed to update entry. Please try again.");
     }
@@ -557,12 +602,13 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
       }
       setShowDeleteConfirm(false);
       setDeleteEntryId(null);
+      toast.success("Entry deleted successfully!"); // 🌟 UX UPGRADE: Toast Success
     } catch (err) {
       setShowDeleteConfirm(false);
       setDeleteEntryId(null);
+//       toast.error("Failed to delete entry."); // 🌟 UX UPGRADE: Toast Error
     }
   };
-
   const cancelDelete = () => {
     setShowDeleteConfirm(false);
     setDeleteEntryId(null);
@@ -591,150 +637,163 @@ function JournalHistory({ entries, clusterThemes, filterClusterId, filterPhrase,
     return `${base} text-white text-xs px-2 py-1 rounded-full`;
   };
 
+  // 💡 NEW: The Smart Rendering Threshold
+  // If there are less than 20 items (Today/Weekly tabs), bypass the virtualizer
+  // to prevent the mathematical layout positioning bug.
+  const shouldVirtualize = flattenedItems.length > 20;
+
+if (isLoading) return <SkeletonCard count={3} />;
+  // 💡 NEW: Extracted UI logic so we can render it safely in both modes
+  const renderItemContent = (item) => {
+      // 🌟 LAYER 3 PALETTE (For the Skeleton Loader inside the expanded row)
+            const innerContentBg = isDarkMode ? 'bg-black/20' : 'bg-white';
+            const innerContentBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+      if (item.type === 'header') {
+          return (
+            <h3 className="text-xl lg:text-2xl font-poppins font-bold text-purple-600 dark:text-teal-400 mb-2 pb-2 border-b border-purple-200 dark:border-teal-800/50 tracking-tight">
+              {searchType === 'semantic' ? (
+                  <span className="flex items-center gap-2 lg:gap-3">
+                      <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600 dark:text-teal-400" /> {item.data}
+                  </span>
+              ) : item.data}
+            </h3>
+          );
+      }
+
+      const entry = item.data;
+      const isThisEntryExpanded = expandedEntryId === entry.id;
+      const displayEntry = (isThisEntryExpanded && fetchedEntry && fetchedEntry.id === entry.id)
+          ? fetchedEntry : entry;
+
+      const isProcessingEntry = displayEntry.moodScore === null;
+      const showSkeleton = isThisEntryExpanded && isProcessingEntry;
+
+    return (
+            <div className={`rounded-2xl lg:rounded-3xl ${rowBaseBg} border ${rowBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 transition-all duration-300 overflow-hidden hover:shadow-md hover:-translate-y-0.5 flex flex-col`}>
+
+              {/* 🌟 UX UPGRADE: The Two-Tone Header! It is now distinctly darker/lighter than the body. */}
+              <div className={`p-3.5 lg:p-5 cursor-pointer flex flex-wrap justify-between items-center ${rowHeaderBg} border-b ${rowBorder} hover:brightness-95 dark:hover:brightness-110 transition-all gap-3`} onClick={() => toggleExpand(entry.id)}>
+                <div className="flex flex-wrap items-center gap-3 lg:gap-4">
+                    <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-purple-500 dark:text-teal-400" />
+                    <span className={`text-sm lg:text-base font-semibold ${textPrimary}`}>
+                        {searchType === 'semantic' && entry.creationTimestamp
+                            ? format(parseISO(entry.creationTimestamp), "MMM d, yyyy • h:mm a")
+                            : entry.creationTimestamp ? format(parseISO(entry.creationTimestamp), "h:mm a") : "N/A"}
+                    </span>
+                   <span className={`text-sm lg:text-base font-bold flex items-center gap-2 ${isProcessingEntry ? 'text-purple-500' : getMoodColorClass(displayEntry.moodScore)}`}>
+                     {isProcessingEntry ? (
+                       <span className="inline-flex items-center gap-1.5 bg-purple-500/10 px-2.5 py-1 rounded-md animate-pulse">
+                         <Loader className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" /> Analyzing...
+                       </span>
+                     ) : (
+                       <>
+                         {getMoodLabel(displayEntry.moodScore)}
+                         <span className="text-xs lg:text-sm font-medium opacity-70 hidden sm:inline-block">({displayEntry.moodScore?.toFixed(2)})</span>
+                       </>
+                     )}
+                   </span>
+                </div>
+                <div className={`${textSecondary} shrink-0 ml-auto sm:ml-2`}>
+                    {expandedEntryId === entry.id ? <ChevronUp className="w-5 h-5 lg:w-6 lg:h-6" /> : <ChevronDown className="w-5 h-5 lg:w-6 lg:h-6" />}
+                </div>
+              </div>
+
+              {/* 🌟 UX UPGRADE: Collapsed Preview with refined padding and cleaner truncation */}
+              {expandedEntryId !== entry.id && (
+                  <div className={`p-4 lg:p-6 text-sm lg:text-base ${textSecondary} leading-relaxed`}>
+                      {entry.rawText.length > TRUNCATION_LENGTH ? `${entry.rawText.slice(0, TRUNCATION_LENGTH)}...` : entry.rawText}
+                  </div>
+              )}
+
+              {/* Expanded Content */}
+              {expandedEntryId === entry.id && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25, ease: "easeOut" }} className="p-4 lg:p-6 pt-3 space-y-4 lg:space-y-6">
+                     {editingEntryId === entry.id ? (
+                         <div id={`edit-area-${entry.id}`} className="space-y-3 lg:space-y-4 pt-3">
+                           <PremiumInput
+                               multiline={true}
+                               rows={6}
+                               value={editedText}
+                               onChange={(e) => {
+                                   setEditedText(e.target.value);
+                                   if (editError) setEditError("");
+                               }}
+                               placeholder="Edit your journal entry..."
+                               error={editError}
+                               showError={!!editError}
+                               disabled={updateMutation.isPending}
+                           />
+                           <div className="flex flex-wrap justify-end gap-3 mt-3">
+                              <button onClick={handleCancelEdit} className="px-5 py-2 lg:py-2.5 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors text-sm lg:text-base font-semibold text-slate-800 dark:text-gray-200">Cancel</button>
+                              <button onClick={() => handleSaveEdit(entry.id)} disabled={updateMutation.isPending} className="px-5 py-2 lg:py-2.5 rounded-full bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 text-white font-semibold shadow-md hover:shadow-lg transition-all text-sm lg:text-base disabled:opacity-50">
+                                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                              </button>
+                            </div>
+                          </div>
+                       ) : showSkeleton ? (
+                           <div className="pt-3">
+                               <SkeletonAnalysis sectionBg={innerContentBg} cardBorder={innerContentBorder} />
+                           </div>
+                       ) : (
+                           <>
+                              <ExpandedEntryContent
+                                  entry={displayEntry} isDarkMode={isDarkMode}
+                                  getMoodColorClass={getMoodColorClass} getMoodLabel={getMoodLabel} getChipStyle={getChipStyle}
+                                  emotionChartOptions={emotionChartOptions} importGrowthTipMutation={importGrowthTipMutation} isPending={importGrowthTipMutation.isPending}
+                              />
+                             <div className={`flex flex-wrap justify-end gap-2 lg:gap-3 pt-4 lg:pt-5 border-t ${rowBorder} mt-4 lg:mt-5`}>
+                                <button onClick={() => handleEditClick(entry)} className="px-5 py-2 lg:py-2.5 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-1.5 text-xs lg:text-sm font-bold shadow-sm border border-blue-200/50 dark:border-blue-500/20">
+                                  <Edit className="w-4 h-4" /> Edit
+                                </button>
+                                <button onClick={() => handleDeleteClick(entry.id)} className="px-5 py-2 lg:py-2.5 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors flex items-center gap-1.5 text-xs lg:text-sm font-bold shadow-sm border border-rose-200/50 dark:border-rose-500/20">
+                                  <Trash2 className="w-4 h-4" /> Delete
+                                </button>
+                              </div>
+                          </>
+                      )}
+                  </motion.div>
+              )}
+            </div>
+          );
+  };
+
   if (filteredEntries.length === 0) {
     let msg = "No journal entries yet. Start writing your first reflection!";
-    if (filterClusterId !== null && filterClusterId !== undefined) {
-      const themeName = clusterThemes?.[`Theme ${filterClusterId + 1}`] || `Theme ${filterClusterId + 1}`;
-      msg = `No entries found for the selected theme: "${themeName}".`;
-    } else if (filterPhrase) {
-      msg = `No entries found containing the phrase "${filterPhrase}".`;
-    }
+    if (filterPhrase) msg = `No entries found containing the phrase "${filterPhrase}".`;
     return <div className="text-center py-12 lg:py-16 text-gray-500 dark:text-gray-400 font-inter text-base lg:text-lg">{msg}</div>;
   }
 
   return (
-    <div className="font-inter w-full space-y-6 lg:space-y-8">
-      {sortedDates.map(dateKey => (
-        <div key={dateKey} className="space-y-4 lg:space-y-5">
-          <h3 className="text-xl lg:text-2xl font-poppins font-bold text-purple-600 dark:text-teal-400 mb-3 lg:mb-4 pb-2 lg:pb-3 border-b border-purple-200 dark:border-teal-800/50 tracking-tight">
-            {searchType === 'semantic' ? (
-                <span className="flex items-center gap-2 lg:gap-3">
-                    <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600 dark:text-teal-400" /> {dateKey}
-                </span>
-            ) : dateKey}
-          </h3>
+    <div className="font-inter w-full relative" ref={listRef}>
 
-          {groupedEntries[dateKey].map((entry, index) => {
-              const isThisEntryExpanded = expandedEntryId === entry.id;
-              const displayEntry = (isThisEntryExpanded && fetchedEntry && fetchedEntry.id === entry.id)
-                  ? fetchedEntry
-                  : entry;
-
-              const isProcessing = displayEntry.moodScore === null;
-              const showSkeleton = isThisEntryExpanded && isProcessing;
-
+      {/* 💡 THE FIX: Smart Routing Engine */}
+      {shouldVirtualize ? (
+          // IF DATA > 20 ITEMS: Route to the High-Performance DOM Virtualizer (History Tab)
+          <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const item = flattenedItems[virtualItem.index];
               return (
-                  <div key={entry.id} className={`rounded-2xl lg:rounded-3xl ${cardBg} border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 transition-all duration-500 overflow-hidden hover:shadow-xl`}>
-
-                      {/* Card Header */}
-                      <div className="p-3 lg:p-5 cursor-pointer flex flex-wrap justify-between items-center bg-white/30 dark:bg-black/20 hover:bg-white/50 dark:hover:bg-black/40 transition-colors gap-3" onClick={() => toggleExpand(entry.id)}>
-                          <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-                              {/* 💡 FIX: Clock icon now properly syncs with Dark Mode Teal */}
-                              <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-purple-500 dark:text-teal-400" />
-                              <span className="text-sm lg:text-base font-semibold text-gray-800 dark:text-gray-200">
-                                  {searchType === 'semantic' && entry.creationTimestamp
-                                      ? format(parseISO(entry.creationTimestamp), "MMM d, yyyy • h:mm a")
-                                      : entry.creationTimestamp ? format(parseISO(entry.creationTimestamp), "h:mm a") : "N/A"}
-                              </span>
-
-                             <span className={`text-sm lg:text-base font-bold flex items-center gap-2 ${isProcessing ? 'text-purple-500' : getMoodColorClass(displayEntry.moodScore)}`}>
-                               {isProcessing ? (
-                                 <span className="inline-flex items-center gap-1.5 bg-purple-500/10 px-2.5 py-1 rounded-md animate-pulse">
-                                   <Loader className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" /> Analyzing...
-                                 </span>
-                               ) : (
-                                 <>
-                                   {getMoodLabel(displayEntry.moodScore)}
-                                   <span className="text-xs lg:text-sm font-medium opacity-70 hidden sm:inline-block">({displayEntry.moodScore?.toFixed(2)})</span>
-                                 </>
-                               )}
-                             </span>
-                          </div>
-
-                          <div className="text-gray-500 shrink-0 ml-auto sm:ml-2">
-                              {expandedEntryId === entry.id ? <ChevronUp className="w-5 h-5 lg:w-6 lg:h-6" /> : <ChevronDown className="w-5 h-5 lg:w-6 lg:h-6" />}
-                          </div>
-                      </div>
-
-                      {/* Collapsed Preview */}
-                      {expandedEntryId !== entry.id && (
-                          <div className="p-3 lg:p-5 pt-0 lg:pt-0 text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed lg:leading-loose">
-                              {entry.rawText.length > TRUNCATION_LENGTH
-                                  ? `${entry.rawText.slice(0, TRUNCATION_LENGTH)}...`
-                                  : entry.rawText}
-                          </div>
-                      )}
-
-                      {/* Expanded Content */}
-                      {expandedEntryId === entry.id && (
-                          <div className="p-3 lg:p-6 pt-3 space-y-3 lg:space-y-6">
-                              {editingEntryId === entry.id ? (
-                                  <div id={`edit-area-${entry.id}`} className="space-y-3 lg:space-y-4 pt-3">
-                                    <textarea
-                                      value={editedText}
-                                      onChange={e => setEditedText(e.target.value)}
-                                      className={`w-full p-4 lg:p-5 rounded-xl lg:rounded-2xl border resize-y min-h-[150px] focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all text-sm lg:text-base ${
-                                        isDarkMode ? 'bg-[#131127]/80 text-gray-200 border-gray-600/50' : 'bg-white/80 text-gray-800 border-gray-300'
-                                      }`}
-                                    />
-                                    {editError && <p className="text-red-500 text-sm font-medium">{editError}</p>}
-                                    <div className="flex flex-wrap justify-end gap-3 mt-3">
-                                      <button onClick={handleCancelEdit} className="px-5 py-2 lg:py-2.5 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm lg:text-base font-semibold">Cancel</button>
-                                      <button onClick={() => handleSaveEdit(entry.id)} disabled={updateMutation.isPending} className="px-5 py-2 lg:py-2.5 rounded-full bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 text-white font-semibold shadow-md hover:shadow-lg transition-all text-sm lg:text-base disabled:opacity-50">
-                                        {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                                      </button>
-                                    </div>
-                                  </div>
-                              ) : showSkeleton ? (
-                                  <div className="pt-3">
-                                      <AnalysisLoadingState sectionBg={sectionBg} cardBorder={cardBorder} />
-                                  </div>
-                              ) : (
-                                  <>
-                                      <ExpandedEntryContent
-                                          entry={displayEntry}
-                                          isDarkMode={isDarkMode}
-                                          sectionBg={sectionBg}
-                                          cardBorder={cardBorder}
-                                          getMoodColorClass={getMoodColorClass}
-                                          getMoodLabel={getMoodLabel}
-                                          getChipStyle={getChipStyle}
-                                          emotionChartOptions={emotionChartOptions}
-                                          importGrowthTipMutation={importGrowthTipMutation}
-                                          isPending={importGrowthTipMutation.isPending}
-                                      />
-                                     <div className="flex flex-wrap justify-end gap-2 lg:gap-3 pt-3 lg:pt-4 border-t border-gray-200 dark:border-gray-700/50 mt-3 lg:mt-4">
-                                        <button
-                                          onClick={() => handleEditClick(entry)}
-                                          className="px-4 py-2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition flex items-center gap-1.5 text-xs lg:text-sm font-bold shadow-sm"
-                                        >
-                                          <Edit className="w-4 h-4" /> Edit
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteClick(entry.id)}
-                                          className="px-4 py-2 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition flex items-center gap-1.5 text-xs lg:text-sm font-bold shadow-sm"
-                                        >
-                                          <Trash2 className="w-4 h-4" /> Delete
-                                        </button>
-                                      </div>
-                                  </>
-                              )}
-                          </div>
-                      )}
-                  </div>
+                <div key={item.id} data-index={virtualItem.index} ref={virtualizer.measureElement}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualItem.start - virtualizer.options.scrollMargin}px)`, paddingBottom: '24px' }}
+                >
+                  {renderItemContent(item)}
+                </div>
               );
-          })}
-        </div>
-      ))}
-
-      <DeleteConfirmationModal isOpen={showDeleteConfirm} onClose={cancelDelete} onConfirm={confirmDelete} theme={theme}  isDeleting={deleteMutation.isPending}/>
-
-      {(updateMutation.isError || deleteMutation.isError) && (
-        <div className="fixed bottom-4 right-4 bg-red-100 dark:bg-red-900/90 text-red-800 dark:text-red-200 px-5 py-3 rounded-xl shadow-2xl z-50 font-medium text-sm lg:text-base">
-          {updateMutation.isError && `Update failed: ${updateMutation.error.message}`}
-          {deleteMutation.isError && `Delete failed: ${deleteMutation.error.message}`}
-        </div>
+            })}
+          </div>
+      ) : (
+          // IF DATA < 20 ITEMS: Route to standard HTML mapping (Today & Weekly Tabs). Zero mathematical positioning bugs!
+          <div className="flex flex-col space-y-6">
+             {flattenedItems.map((item) => (
+                 <div key={item.id}>
+                     {renderItemContent(item)}
+                 </div>
+             ))}
+          </div>
       )}
+
+      <DeleteConfirmationModal isOpen={showDeleteConfirm} onClose={cancelDelete} onConfirm={confirmDelete} theme={theme} isDeleting={deleteMutation.isPending} />
+
     </div>
   );
 }

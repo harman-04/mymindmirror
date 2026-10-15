@@ -1,17 +1,11 @@
-
-// MoodDataResponse.java (for chart data)
 package com.mymindmirror.backend.payload.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
-/**
- * DTO for mood data specifically for charting.
- */
-@Data
-@AllArgsConstructor // Lombok generates a constructor with all fields
-public class MoodDataResponse {
-    private LocalDate date;
-    private Double moodScore;
-}
+public record MoodDataResponse(
+        LocalDate date,
+
+        @Schema(description = "Mood score. Range: -1.0 to 1.0.")
+        Double moodScore
+) {}

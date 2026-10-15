@@ -1,44 +1,44 @@
 package com.mymindmirror.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mymindmirror.backend.enums.InsightStatus;
 import com.mymindmirror.backend.enums.Status;
+import com.mymindmirror.backend.mapper.MilestoneMapper;
 import com.mymindmirror.backend.model.Milestone;
+import com.mymindmirror.backend.model.Task;
 import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.payload.request.ImportGrowthTipRequest;
 import com.mymindmirror.backend.payload.request.MilestoneRequest;
 import com.mymindmirror.backend.payload.response.MilestoneInsightResponse;
+import com.mymindmirror.backend.payload.response.MilestoneResponse;
 import com.mymindmirror.backend.security.JwtUtil;
 import com.mymindmirror.backend.security.services.UserDetailsImpl;
-import com.mymindmirror.backend.service.*;
+import com.mymindmirror.backend.service.MilestoneInsightService;
+import com.mymindmirror.backend.service.MilestoneService;
+import com.mymindmirror.backend.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.test.context.support.WithUserDetails;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MilestoneController.class)
-@Import(MilestoneControllerTest.TestSecurityConfig.class)
 class MilestoneControllerTest {
 
     @Autowired
@@ -51,80 +51,90 @@ class MilestoneControllerTest {
     private MilestoneService milestoneService;
 
     @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private TaskService taskService;
-
-    @MockitoBean
-    private ApiKeyService apiKeyService;
-
-    @MockitoBean
     private MilestoneInsightService milestoneInsightService;
+
+    @MockitoBean
+    private UserService userService; // for @CurrentUser resolver
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
+
+    @MockitoBean
+    private MilestoneMapper milestoneMapper;
 
     @MockitoBean
     private JwtUtil jwtUtil;
 
-    private User testUser;
-    private Milestone testMilestone;
+    private User currentUser;
     private UUID userId;
     private UUID milestoneId;
+    private UUID taskId;
+    private Milestone mockMilestone;
+    private MilestoneResponse mockResponse;
+    private Task mockTask;
+    private MilestoneInsightResponse mockInsightResponse;
 
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
         milestoneId = UUID.randomUUID();
+        taskId = UUID.randomUUID();
 
-        testUser = new User();
-        testUser.setId(userId);
-        testUser.setUsername("testuser");
-        testUser.setEmail("test@example.com");
+        currentUser = new User();
+        currentUser.setId(userId);
+        currentUser.setUsername("testuser");
+        currentUser.setEmail("test@example.com");
+        currentUser.setPasswordHash("hashed");
 
-        testMilestone = new Milestone();
-        testMilestone.setId(milestoneId);
-        testMilestone.setTitle("Test Milestone");
-        testMilestone.setDescription("Test Description");
-        testMilestone.setDueDate(LocalDate.now().plusDays(7));
-        testMilestone.setStatus(Status.PENDING);
-        testMilestone.setUser(testUser);
+        when(userService.findById(eq(userId))).thenReturn(Optional.of(currentUser));
+
+        UserDetailsImpl userDetails = new UserDetailsImpl(
+                userId, currentUser.getUsername(), currentUser.getEmail(), currentUser.getPasswordHash(), null);
+        Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        mockMilestone = new Milestone();
+        mockMilestone.setId(milestoneId);
+        mockMilestone.setUser(currentUser);
+        mockMilestone.setTitle("Test Milestone");
+        mockMilestone.setDescription("Test Description");
+        mockMilestone.setDueDate(LocalDate.now().plusDays(7));
+        mockMilestone.setStatus(Status.PENDING);
+        mockMilestone.setCreationDate(LocalDate.now());
+
+        mockTask = new Task();
+        mockTask.setId(taskId);
+        mockTask.setDescription("Test Task");
+        mockTask.setStatus(Status.PENDING);
+
+        mockResponse = new MilestoneResponse(
+                milestoneId,
+                "Test Milestone",
+                "Test Description",
+                LocalDate.now(),
+                LocalDate.now().plusDays(7),
+                Status.PENDING,
+                0.0,
+                List.of()
+        );
+
+        mockInsightResponse = new MilestoneInsightResponse(
+                "Remaining work",
+                "Performance assessment",
+                List.of("Tip 1", "Tip 2"),
+                "Encouragement",
+                List.of("New task 1"),
+                com.mymindmirror.backend.enums.InsightStatus.SUCCESS
+        );
     }
 
-    // Test security configuration: disables CSRF and uses our custom UserDetailsService
-    static class TestSecurityConfig {
-        @Bean
-        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-            http.csrf(csrf -> csrf.disable())
-                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-            return http.build();
-        }
-
-        @Bean
-        public UserDetailsService userDetailsService() {
-            return username -> {
-                if ("testuser".equals(username)) {
-                    User user = new User();
-                    user.setId(UUID.randomUUID());
-                    user.setUsername("testuser");
-                    user.setPasswordHash("dummy");
-                    return UserDetailsImpl.build(user);
-                }
-                throw new UsernameNotFoundException("User not found: " + username);
-            };
-        }
-    }
+    // ===== CREATE MILESTONE =====
 
     @Test
-    @WithUserDetails("testuser")
-    void createMilestone_ShouldReturnCreated() throws Exception {
-        MilestoneRequest request = new MilestoneRequest();
-        request.setTitle("New Milestone");
-        request.setDescription("New Description");
-        request.setDueDate(LocalDate.now().plusDays(14));
-        request.setStatus(Status.PENDING);
-
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.createMilestone(any(User.class), anyString(), anyString(), any(LocalDate.class)))
-                .thenReturn(testMilestone);
+    void createMilestone_shouldReturn201() throws Exception {
+        MilestoneRequest request = new MilestoneRequest("Test Milestone", "Test Description", LocalDate.now().plusDays(7), Status.PENDING);
+        when(milestoneService.createMilestoneAsDTO(any(User.class), anyString(), anyString(), any(LocalDate.class)))
+                .thenReturn(mockResponse);
 
         mockMvc.perform(post("/api/milestones")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -135,233 +145,162 @@ class MilestoneControllerTest {
     }
 
     @Test
-    @WithUserDetails("testuser")
-    void createMilestone_UserNotFound_ShouldReturnUnauthorized() throws Exception {
-        MilestoneRequest request = new MilestoneRequest();
-        request.setTitle("New Milestone");
-
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.empty());
-
+    void createMilestone_shouldReturn400_whenTitleMissing() throws Exception {
+        MilestoneRequest request = new MilestoneRequest(null, "Description", null, null);
         mockMvc.perform(post("/api/milestones")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("User not found"));
+                .andExpect(status().isBadRequest());
     }
 
+    // ===== GET ALL MILESTONES =====
+
     @Test
-    @WithUserDetails("testuser")
-    void getAllMilestones_ShouldReturnOk() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.getAllMilestonesForUser(testUser)).thenReturn(List.of(testMilestone));
+    void getAllMilestones_shouldReturn200() throws Exception {
+        List<MilestoneResponse> responses = List.of(mockResponse);
+        when(milestoneService.getAllMilestonesForUserAsDTO(any(User.class))).thenReturn(responses);
 
         mockMvc.perform(get("/api/milestones"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(milestoneId.toString()))
-                .andExpect(jsonPath("$[0].title").value("Test Milestone"));
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(milestoneId.toString()));
     }
 
-    @Test
-    @WithUserDetails("testuser")
-    void getAllMilestones_UserNotFound_ShouldReturnUnauthorized() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/api/milestones"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("User not found"));
-    }
+    // ===== GET MILESTONE BY ID =====
 
     @Test
-    @WithUserDetails("testuser")
-    void getMilestoneById_ShouldReturnOk() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.getMilestoneByIdForUser(milestoneId, testUser)).thenReturn(Optional.of(testMilestone));
+    void getMilestoneById_shouldReturn200() throws Exception {
+        // Mock the actual method called by the controller
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenReturn(Optional.of(mockMilestone));
+        when(milestoneMapper.toResponse(any(Milestone.class))).thenReturn(mockResponse);
 
         mockMvc.perform(get("/api/milestones/{id}", milestoneId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(milestoneId.toString()))
-                .andExpect(jsonPath("$.title").value("Test Milestone"));
+                .andExpect(jsonPath("$.id").value(milestoneId.toString()));
     }
 
-    @Test
-    @WithUserDetails("testuser")
-    void getMilestoneById_NotFound_ShouldReturnNotFound() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.getMilestoneByIdForUser(milestoneId, testUser)).thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/api/milestones/{id}", milestoneId))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string("Milestone not found or not owned"));
-    }
 
     @Test
-    @WithUserDetails("testuser")
-    void updateMilestone_ShouldReturnOk() throws Exception {
-        MilestoneRequest request = new MilestoneRequest();
-        request.setTitle("Updated Title");
-        request.setDescription("Updated Description");
-        request.setDueDate(LocalDate.now().plusDays(21));
-        request.setStatus(Status.IN_PROGRESS);
-
-        Milestone updatedMilestone = new Milestone();
-        updatedMilestone.setId(milestoneId);
-        updatedMilestone.setTitle("Updated Title");
-        updatedMilestone.setDescription("Updated Description");
-        updatedMilestone.setDueDate(request.getDueDate());
-        updatedMilestone.setStatus(Status.IN_PROGRESS);
-        updatedMilestone.setUser(testUser);
-
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.updateMilestone(eq(milestoneId), eq(testUser), anyString(), anyString(), any(LocalDate.class), any(Status.class)))
-                .thenReturn(updatedMilestone);
-
-        mockMvc.perform(put("/api/milestones/{id}", milestoneId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Updated Title"))
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
-    }
-
-    @Test
-    @WithUserDetails("testuser")
-    void updateMilestone_NotFound_ShouldReturnNotFound() throws Exception {
-        MilestoneRequest request = new MilestoneRequest();
-        request.setTitle("Updated Title");
-
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.updateMilestone(any(), any(), any(), any(), any(), any()))
+    void getMilestoneById_shouldReturn404_whenNotFound() throws Exception {
+        when(milestoneService.getMilestoneResponseById(eq(milestoneId), any(User.class)))
                 .thenThrow(new IllegalArgumentException("Milestone not found"));
 
+        mockMvc.perform(get("/api/milestones/{id}", milestoneId))
+                .andExpect(status().isNotFound());
+    }
+
+    // ===== UPDATE MILESTONE =====
+
+    @Test
+    void updateMilestone_shouldReturn200() throws Exception {
+        MilestoneRequest request = new MilestoneRequest("Updated Title", "Updated Description", LocalDate.now().plusDays(14), Status.IN_PROGRESS);
+        when(milestoneService.updateMilestoneAsDTO(eq(milestoneId), any(User.class), anyString(), anyString(), any(LocalDate.class), any(Status.class)))
+                .thenReturn(mockResponse);
+
         mockMvc.perform(put("/api/milestones/{id}", milestoneId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string("Milestone not found"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(milestoneId.toString()));
     }
 
     @Test
-    @WithUserDetails("testuser")
-    void deleteMilestone_ShouldReturnOk() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        doNothing().when(milestoneService).deleteMilestone(milestoneId, testUser);
+    void updateMilestone_shouldReturn400_whenTitleMissing() throws Exception {
+        MilestoneRequest request = new MilestoneRequest(null, "Description", null, null);
+        mockMvc.perform(put("/api/milestones/{id}", milestoneId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ===== DELETE MILESTONE =====
+
+    @Test
+    void deleteMilestone_shouldReturn200() throws Exception {
+        doNothing().when(milestoneService).deleteMilestone(eq(milestoneId), any(User.class));
 
         mockMvc.perform(delete("/api/milestones/{id}", milestoneId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Milestone deleted successfully!"));
     }
 
-    @Test
-    @WithUserDetails("testuser")
-    void deleteMilestone_NotFound_ShouldReturnNotFound() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        doThrow(new IllegalArgumentException("Milestone not found")).when(milestoneService).deleteMilestone(milestoneId, testUser);
-
-        mockMvc.perform(delete("/api/milestones/{id}", milestoneId))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Milestone not found"));
-    }
+    // ===== GET MILESTONE INSIGHTS =====
 
     @Test
-    @WithUserDetails("testuser")
-    void getMilestoneInsights_ShouldReturnOk() throws Exception {
-        MilestoneInsightResponse insights = new MilestoneInsightResponse(
-                "Remaining work",
-                "Good performance",
-                List.of("Tip 1", "Tip 2"),
-                "Encouragement",
-                List.of("New task"),
-                InsightStatus.SUCCESS
-        );
-
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.getMilestoneByIdForUser(milestoneId, testUser)).thenReturn(Optional.of(testMilestone));
-        when(milestoneInsightService.getMilestoneInsights(testMilestone)).thenReturn(Mono.just(insights));
+    void getMilestoneInsights_shouldReturn200() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenReturn(Optional.of(mockMilestone));
+        when(milestoneInsightService.getMilestoneInsights(any(Milestone.class))).thenReturn(mockInsightResponse);
 
         mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.performanceAssessment").value("Good performance"))
-                .andExpect(jsonPath("$.status").value("SUCCESS"));
+                .andExpect(jsonPath("$.remainingWork").value("Remaining work"));
     }
 
     @Test
-    @WithUserDetails("testuser")
-    void getMilestoneInsights_MilestoneNotFound_ShouldReturnNotFound() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.getMilestoneByIdForUser(milestoneId, testUser)).thenReturn(Optional.empty());
+    void getMilestoneInsights_shouldReturn404_whenMilestoneNotFound() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string("Milestone not found or not owned."));
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithUserDetails("testuser")
-    void getMilestoneInsights_ServiceError_ShouldReturnInternalServerError() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.getMilestoneByIdForUser(milestoneId, testUser)).thenReturn(Optional.of(testMilestone));
-        when(milestoneInsightService.getMilestoneInsights(testMilestone)).thenThrow(new RuntimeException("ML service error"));
+    void getMilestoneInsights_shouldReturn500_whenServiceThrowsException() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenReturn(Optional.of(mockMilestone));
+        when(milestoneInsightService.getMilestoneInsights(any(Milestone.class)))
+                .thenThrow(new RuntimeException("AI service unavailable"));
 
         mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Failed to generate milestone insights."));
+                .andExpect(status().isInternalServerError());
     }
 
-    @Test
-    @WithUserDetails("testuser")
-    void deleteMilestone_UserNotFound_ShouldReturnUnauthorized() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.empty());
-
-        mockMvc.perform(delete("/api/milestones/{id}", milestoneId))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("User not found"));
-    }
+    // ===== IMPORT GROWTH TIP =====
 
     @Test
-    @WithUserDetails("testuser")
-    void deleteMilestone_GenericException_ShouldReturnInternalServerError() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        doThrow(new RuntimeException("Database error")).when(milestoneService).deleteMilestone(milestoneId, testUser);
+    void importGrowthTip_shouldReturn200() throws Exception {
+        ImportGrowthTipRequest request = new ImportGrowthTipRequest("Test growth tip text");
+        List<Task> tasks = List.of(mockTask);
+        when(milestoneService.importGrowthTipAsTask(any(User.class), anyString())).thenReturn(tasks);
 
-        mockMvc.perform(delete("/api/milestones/{id}", milestoneId))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message").value("Internal Server Error"));
-    }
-
-    @Test
-    @WithUserDetails("testuser")
-    void updateMilestone_GenericException_ShouldReturnInternalServerError() throws Exception {
-        MilestoneRequest request = new MilestoneRequest();
-        request.setTitle("Updated Title");
-
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(milestoneService.updateMilestone(any(), any(), any(), any(), any(), any()))
-                .thenThrow(new RuntimeException("Unexpected error"));
-
-        mockMvc.perform(put("/api/milestones/{id}", milestoneId)
+        mockMvc.perform(post("/api/milestones/import-growth-tip")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Internal Server Error"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("1 tasks added to Milestones"));
     }
 
     @Test
-    @WithUserDetails("testuser")
-    void getMilestoneById_UserNotFound_ShouldReturnUnauthorized() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/api/milestones/{id}", milestoneId))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("User not found"));
+    void importGrowthTip_shouldReturn400_whenTipTextMissing() throws Exception {
+        ImportGrowthTipRequest request = new ImportGrowthTipRequest(null);
+        mockMvc.perform(post("/api/milestones/import-growth-tip")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithUserDetails("testuser")
-    void getMilestoneInsights_UserNotFound_ShouldReturnUnauthorized() throws Exception {
-        when(userService.findById(any(UUID.class))).thenReturn(Optional.empty());
+    void getMilestoneInsights_shouldReturn503_whenDatabaseUnavailable() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("DB down"));
 
         mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("User not found"));
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    @DisplayName("getMilestoneInsights → 200 with fallback when AI service fails")
+    void getMilestoneInsights_returnsFallbackWhenAiFails() throws Exception {
+        when(milestoneService.getMilestoneByIdForUser(eq(milestoneId), any(User.class)))
+                .thenReturn(Optional.of(mockMilestone));
+        when(milestoneInsightService.getMilestoneInsights(any(Milestone.class)))
+                .thenReturn(MilestoneInsightResponse.createFallback());
+
+        mockMvc.perform(get("/api/milestones/{id}/insights", milestoneId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ERROR"));
     }
 }

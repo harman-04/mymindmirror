@@ -1,192 +1,124 @@
 package com.mymindmirror.backend.controller;
 
+import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.MilestoneApi;
+import com.mymindmirror.backend.mapper.MilestoneMapper;
 import com.mymindmirror.backend.model.Milestone;
 import com.mymindmirror.backend.model.Task;
 import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.payload.request.ImportGrowthTipRequest;
 import com.mymindmirror.backend.payload.request.MilestoneRequest;
 import com.mymindmirror.backend.payload.response.MessageResponse;
 import com.mymindmirror.backend.payload.response.MilestoneInsightResponse;
 import com.mymindmirror.backend.payload.response.MilestoneResponse;
-import com.mymindmirror.backend.security.services.UserDetailsImpl;
-import com.mymindmirror.backend.service.*;
+import com.mymindmirror.backend.service.MilestoneInsightService;
+import com.mymindmirror.backend.service.MilestoneService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/milestones")
 @RequiredArgsConstructor
 @Slf4j
-public class MilestoneController {
+public class MilestoneController implements MilestoneApi {
 
     private final MilestoneService milestoneService;
-    private final UserService userService;
     private final MilestoneInsightService milestoneInsightService;
-    private final TaskService taskService;
-    private final ApiKeyService apiKeyService;
+    private final MilestoneMapper milestoneMapper;
 
-
+    @Override
     @PostMapping
-    public ResponseEntity<?> createMilestone(@AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-                                             @RequestBody MilestoneRequest milestoneRequest) {
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
+    public ResponseEntity<MilestoneResponse> createMilestone(
+            @CurrentUser User currentUser,
+            @Valid @RequestBody MilestoneRequest milestoneRequest) {
+
         MilestoneResponse response = milestoneService.createMilestoneAsDTO(
-                userOpt.get(),
-                milestoneRequest.getTitle(),
-                milestoneRequest.getDescription(),
-                milestoneRequest.getDueDate()
+                currentUser,
+                milestoneRequest.title(),
+                milestoneRequest.description(),
+                milestoneRequest.dueDate()
         );
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-
+    @Override
     @GetMapping
-    public ResponseEntity<?> getAllMilestones(@AuthenticationPrincipal UserDetailsImpl authenticatedUser) {
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
-        List<MilestoneResponse> milestones = milestoneService.getAllMilestonesForUserAsDTO(userOpt.get());
+    public ResponseEntity<List<MilestoneResponse>> getAllMilestones(@CurrentUser User currentUser) {
+        List<MilestoneResponse> milestones = milestoneService.getAllMilestonesForUserAsDTO(currentUser);
         return ResponseEntity.ok(milestones);
     }
 
-
-//    @GetMapping("/{id}")
-//    public ResponseEntity<?> getMilestoneById(
-//            @AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-//            @PathVariable UUID id) {
-//
-//        UUID currentUserId = authenticatedUser.getId();
-//        Optional<User> userOpt = userService.findById(currentUserId);
-//
-//        if (userOpt.isEmpty()) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-//        }
-//
-//        Optional<Milestone> milestoneOpt = milestoneService.getMilestoneByIdForUser(id, userOpt.get());
-//
-//        return milestoneOpt
-//                .<ResponseEntity<?>>map(ResponseEntity::ok)
-//                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Milestone not found or not owned"));
-//    }
-
+    @Override
     @GetMapping("/{id}")
-    public ResponseEntity<?> getMilestoneById(@AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-                                              @PathVariable UUID id) {
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
-        try {
-            MilestoneResponse response = milestoneService.getMilestoneResponseById(id, userOpt.get());
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+    public ResponseEntity<MilestoneResponse> getMilestoneById(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id) {
+
+        MilestoneResponse response = milestoneService.getMilestoneByIdForUser(id, currentUser)
+                .map(milestoneMapper::toResponse)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
+
+        return ResponseEntity.ok(response);
     }
 
+    @Override
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMilestone(@AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-                                             @PathVariable UUID id,
-                                             @RequestBody MilestoneRequest milestoneRequest) {
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
-        try {
-            MilestoneResponse response = milestoneService.updateMilestoneAsDTO(
-                    id, userOpt.get(),
-                    milestoneRequest.getTitle(),
-                    milestoneRequest.getDescription(),
-                    milestoneRequest.getDueDate(),
-                    milestoneRequest.getStatus()
-            );
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Error updating milestone", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal Server Error");
-        }
+    public ResponseEntity<MilestoneResponse> updateMilestone(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id,
+            @Valid @RequestBody MilestoneRequest milestoneRequest) {
+
+        MilestoneResponse response = milestoneService.updateMilestoneAsDTO(
+                id, currentUser,
+                milestoneRequest.title(),
+                milestoneRequest.description(),
+                milestoneRequest.dueDate(),
+                milestoneRequest.status()
+        );
+        return ResponseEntity.ok(response);
     }
 
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteMilestone(@AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-                                             @PathVariable UUID id) {
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
+    public ResponseEntity<MessageResponse> deleteMilestone(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id) {
 
-        try {
-            milestoneService.deleteMilestone(id, userOpt.get());
-            return ResponseEntity.ok(new MessageResponse("Milestone deleted successfully!"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse(e.getMessage()));
-        } catch (Exception e) {
-            log.error("Error deleting milestone: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Internal Server Error"));
-        }
+        milestoneService.deleteMilestone(id, currentUser);
+        return ResponseEntity.ok(new MessageResponse("Milestone deleted successfully!"));
     }
 
+    @Override
     @GetMapping("/{id}/insights")
-    public ResponseEntity<?> getMilestoneInsights(@AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-                                                  @PathVariable UUID id) {
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
+    public ResponseEntity<MilestoneInsightResponse> getMilestoneInsights(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id) {
 
-        Optional<Milestone> milestoneOpt = milestoneService.getMilestoneByIdForUser(id, userOpt.get());
-        if (milestoneOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Milestone not found or not owned.");
-        }
+        Milestone milestone = milestoneService.getMilestoneByIdForUser(id, currentUser)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Milestone not found or not owned."));
 
-        try {
-            MilestoneInsightResponse insights = milestoneInsightService.getMilestoneInsights(milestoneOpt.get()).block();
-            return ResponseEntity.ok(insights);
-        } catch (Exception e) {
-            log.error("Error fetching insights: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to generate milestone insights.");
-        }
+        MilestoneInsightResponse insights = milestoneInsightService.getMilestoneInsights(milestone);
+        return ResponseEntity.ok(insights);
     }
 
-
+    @Override
     @PostMapping("/import-growth-tip")
-    public ResponseEntity<?> importGrowthTip(@AuthenticationPrincipal UserDetailsImpl authenticatedUser,
-                                             @RequestBody Map<String, String> request) {
-        String tipText = request.get("tipText");
-        if (tipText == null || tipText.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Tip text is required");
-        }
-        UUID userId = authenticatedUser.getId();
-        Optional<User> userOpt = userService.findById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
-        User user = userOpt.get();
+    public ResponseEntity<MessageResponse> importGrowthTip(
+            @CurrentUser User currentUser,
+            @Valid @RequestBody ImportGrowthTipRequest request) {
 
-        List<Task> tasks = milestoneService.importGrowthTipAsTask(user, tipText);
-
-        return ResponseEntity.ok(Map.of("message", tasks.size() + " tasks added to Milestones"));
+        List<Task> tasks = milestoneService.importGrowthTipAsTask(currentUser, request.tipText());
+        return ResponseEntity.ok(new MessageResponse(tasks.size() + " tasks added to Milestones"));
     }
-
-
 }

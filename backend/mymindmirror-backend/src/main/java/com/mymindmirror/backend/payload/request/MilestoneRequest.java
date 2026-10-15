@@ -1,15 +1,22 @@
 package com.mymindmirror.backend.payload.request;
 
 import com.mymindmirror.backend.enums.Status;
-import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
 
-@Data
-public class MilestoneRequest {
-    private String title;
-    private String description;
-    private LocalDate dueDate;
-    private Status status;
+public record MilestoneRequest(
+        @NotBlank(message = "Milestone title cannot be empty") //  Ensures title isn't null or blank
+        String title,
 
-}
+        String description, // Optional
+
+        LocalDate dueDate,  // Optional
+
+        @Schema(
+                description = "Optional new status.",
+                allowableValues = {"PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE", "CANCELLED"},
+                nullable = true)
+        Status status
+) {}

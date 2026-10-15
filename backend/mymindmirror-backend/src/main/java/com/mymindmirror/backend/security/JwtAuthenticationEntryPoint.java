@@ -1,9 +1,10 @@
 package com.mymindmirror.backend.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
+import com.mymindmirror.backend.payload.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -11,31 +12,35 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
+/**
+ * Handles authentication failures that happen at the filter chain level
+ * (before the request reaches the controller). Returns a 401 Unauthorized
+ * with the unified ErrorResponse shape.
+ */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper = new ObjectMapper(); // For converting map to JSON
+    private final ObjectMapper objectMapper;
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException, ServletException {
-        log.error("Unauthorized error: {}", authException.getMessage());
+    public void commence(HttpServletRequest request,
+                         HttpServletResponse response,
+                         AuthenticationException authException) throws IOException {
 
+        log.warn("Authentication failed for {}: {}", request.getRequestURI(), authException.getMessage());
+
+        ErrorResponse body = ErrorResponse.of(
+                401,
+                "Unauthorized",
+                authException.getMessage(),
+                request.getRequestURI()
+        );
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
-
-        final Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", System.currentTimeMillis());
-        body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
-        body.put("error", "Unauthorized");
-        body.put("message", authException.getMessage()); // Message from the AuthenticationException
-        body.put("path", request.getServletPath());
-
-        // Write the JSON response to the client
         objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

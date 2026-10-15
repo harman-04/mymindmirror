@@ -13,6 +13,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mymindmirror.backend.payload.response.ErrorResponse;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.io.IOException;
 
@@ -28,6 +34,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final UserDetailsService userDetailsService; // To load user details by username
     private final JwtUtil jwtUtil; // Our JWT utility class
+    private final ObjectMapper objectMapper;
 
 
     @Override
@@ -53,9 +60,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = null;
             try {
-                // Load UserDetails from our custom UserDetailsService
                 userDetails = this.userDetailsService.loadUserByUsername(username);
-            } catch (Exception e) {
+            } catch (DataAccessResourceFailureException e) {
+                // DB is unreachable — treat as a service outage, not an auth failure.
+                log.error("Database unavailable during JWT validation for user {}: {}", username, e.getMessage());
+                writeServiceUnavailable(response, request);
+                return;   // Do NOT continue the chain — we've already written the response.
+            } catch (UsernameNotFoundException e) {
+                // User genuinely doesn't exist (deleted, wrong username) — proceed unauthenticated.
                 log.warn("User not found for username from JWT: {}", username);
             }
 
@@ -76,5 +88,18 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         // Continue the filter chain
         chain.doFilter(request, response);
+    }
+
+    private void writeServiceUnavailable(HttpServletResponse response, HttpServletRequest request)
+            throws IOException {
+        ErrorResponse body = ErrorResponse.of(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
+                "Authentication service is temporarily unavailable. Please try again in a moment.",
+                request.getRequestURI());
+
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

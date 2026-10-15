@@ -7,6 +7,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
@@ -72,7 +73,9 @@ public class EncryptionUtil {
         try {
             // Use a portion of the userSecret as a consistent salt for key derivation
             // This assumes userSecret (password hash) is long enough (e.g., from BCrypt, it's 60 chars)
-            byte[] salt = Arrays.copyOf(userSecret.getBytes(), SALT_LENGTH);
+//            byte[] salt = Arrays.copyOf(userSecret.getBytes(), SALT_LENGTH);
+            byte[] salt = Arrays.copyOf(userSecret.getBytes(StandardCharsets.UTF_8), SALT_LENGTH);
+
             SecretKeySpec secretKey = deriveKey(userSecret, salt);
 
             SecureRandom secureRandom = new SecureRandom();
@@ -83,7 +86,8 @@ public class EncryptionUtil {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
 
-            byte[] encryptedBytes = cipher.doFinal(actualPlaintext.getBytes());
+//            byte[] encryptedBytes = cipher.doFinal(actualPlaintext.getBytes());
+            byte[] encryptedBytes = cipher.doFinal(actualPlaintext.getBytes(StandardCharsets.UTF_8));
 
             // Prepend IV to ciphertext for storage
             byte[] combined = new byte[iv.length + encryptedBytes.length];
@@ -134,14 +138,16 @@ public class EncryptionUtil {
             byte[] encryptedBytes = new byte[combined.length - IV_LENGTH];
             System.arraycopy(combined, IV_LENGTH, encryptedBytes, 0, encryptedBytes.length);
 
-            byte[] salt = Arrays.copyOf(userSecret.getBytes(), SALT_LENGTH);
+//            byte[] salt = Arrays.copyOf(userSecret.getBytes(), SALT_LENGTH);
+            byte[] salt = Arrays.copyOf(userSecret.getBytes(StandardCharsets.UTF_8), SALT_LENGTH);
             SecretKeySpec secretKey = deriveKey(userSecret, salt);
 
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec);
 
             byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-            return new String(decryptedBytes);
+//            return new String(decryptedBytes);
+            return new String(decryptedBytes, StandardCharsets.UTF_8);
 
         } catch (IllegalArgumentException e) {
             // This catches "Illegal base64 character" errors.

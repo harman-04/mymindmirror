@@ -1,4 +1,3 @@
-// src/components/ExportButtons.jsx
 import React, { useState } from 'react';
 import { FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -6,6 +5,7 @@ import { useJournalEntries } from '../hooks/useJournalData';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import { toast } from 'sonner';
+import { SkeletonExportButtons } from './Skeleton';
 
 function ExportButtons() {
     const { theme } = useTheme();
@@ -161,7 +161,6 @@ function ExportButtons() {
                     doc.text(`Page ${pageNumber}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
                 };
 
-                // Title
                 doc.setFontSize(18);
                 doc.setTextColor(139, 92, 246);
                 doc.text('MyMindMirror Journal Export', leftMargin, yOffset);
@@ -229,14 +228,17 @@ function ExportButtons() {
         }, 50);
     };
 
-    if (isLoading || !entries || entries.length === 0) return null;
+    if (isLoading) {
+        return <SkeletonExportButtons />;
+    }
+
+    if (!entries || entries.length === 0) return null;
 
     return (
-        <div className="flex items-center gap-1.5 lg:gap-2">
-            {/* 💡 FIX: Removed the outer generic box. Now the buttons act as native pills! */}
+        <div className="flex items-center gap-2 lg:gap-3">
             <div className="flex items-center gap-2 px-2 hidden lg:flex mr-1">
                 <div className="w-2 h-2 rounded-full bg-purple-500 dark:bg-teal-400 animate-pulse" />
-                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 dark:text-gray-400 font-poppins">
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 dark:text-slate-400 font-poppins">
                     Export
                 </span>
             </div>
@@ -244,10 +246,11 @@ function ExportButtons() {
             <button
                 onClick={exportToCSV}
                 disabled={isExportingCSV || isExportingPDF}
-                className={`group relative flex items-center justify-center gap-2 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl transition-all duration-300 min-w-[80px] lg:min-w-[100px] outline-none shadow-sm
+                // 🌟 UX UPGRADE: Jewel Button treatment!
+                className={`group relative flex items-center justify-center gap-2 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl transition-all duration-200 min-w-[80px] lg:min-w-[100px] outline-none shadow-sm border
                             ${isDarkMode
-                                ? 'bg-transparent text-teal-400 hover:bg-white/10 hover:text-white'
-                                : 'bg-transparent text-emerald-600 hover:bg-black/5 hover:text-emerald-800'}
+                                ? 'bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20'
+                                : 'bg-emerald-50 text-emerald-600 border-emerald-200/80 hover:bg-emerald-100'}
                             disabled:opacity-50 active:scale-95`}
             >
                 {isExportingCSV ? (
@@ -263,10 +266,11 @@ function ExportButtons() {
             <button
                 onClick={exportToPDF}
                 disabled={isExportingCSV || isExportingPDF}
-                className={`group relative flex items-center justify-center gap-2 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl transition-all duration-300 min-w-[80px] lg:min-w-[100px] outline-none shadow-sm
+                // 🌟 UX UPGRADE: Jewel Button treatment!
+                className={`group relative flex items-center justify-center gap-2 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl transition-all duration-200 min-w-[80px] lg:min-w-[100px] outline-none shadow-sm border
                             ${isDarkMode
-                                ? 'bg-transparent text-purple-400 hover:bg-white/10 hover:text-white'
-                                : 'bg-transparent text-rose-600 hover:bg-black/5 hover:text-rose-800'}
+                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20'
+                                : 'bg-rose-50 text-rose-600 border-rose-200/80 hover:bg-rose-100'}
                             disabled:opacity-50 active:scale-95`}
             >
                 {isExportingPDF ? (

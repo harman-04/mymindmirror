@@ -1,431 +1,227 @@
-// src/main/java/com/mymindmirror.backend/controller/JournalController.java
-
 package com.mymindmirror.backend.controller;
 
+import com.mymindmirror.backend.annotation.CurrentUser;
+import com.mymindmirror.backend.api.JournalApi;
+import com.mymindmirror.backend.mapper.JournalMapper;
 import com.mymindmirror.backend.model.JournalEntry;
-import com.mymindmirror.backend.model.KeyPhrase;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.JournalEntryRequest;
-import com.mymindmirror.backend.payload.request.ClusterRequest;
 import com.mymindmirror.backend.payload.response.JournalEntryResponse;
 import com.mymindmirror.backend.payload.response.MoodDataResponse;
-import com.mymindmirror.backend.payload.response.ClusterResult;
 import com.mymindmirror.backend.payload.response.PageResponse;
 import com.mymindmirror.backend.service.JournalService;
-import com.mymindmirror.backend.service.UserService;
+import com.mymindmirror.backend.util.DateRange;
+import com.mymindmirror.backend.util.DateUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * REST Controller for managing journal entries.
- * Handles API requests related to creating, retrieving, updating, and deleting journal data.
- */
 @RestController
 @RequestMapping("/api/journal")
 @RequiredArgsConstructor
 @Slf4j
-public class JournalController {
+public class JournalController implements JournalApi {
 
     private final JournalService journalService;
-    private final UserService userService;
+    private final JournalMapper journalMapper;
 
-
-
-    /**
-     * Helper method to retrieve the authenticated User entity from the SecurityContext.
-     * @return The User entity.
-     * @throws RuntimeException if authenticated user is not found in the database.
-     */
-    private User getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        log.debug("Attempting to retrieve current user: {}", username);
-        return userService.findByUsername(username)
-                .orElseThrow(() -> {
-                    log.error("Authenticated user '{}' not found in database. This indicates a security misconfiguration.", username);
-                    return new RuntimeException("Authenticated user not found.");
-                });
-    }
-
-    /**
-     * Creates a new journal entry. Each call creates a distinct entry.
-     * @param request JournalEntryRequest containing the raw text.
-     * @return ResponseEntity with the created JournalEntryResponse.
-     */
+    @Override
     @PostMapping
-    public ResponseEntity<JournalEntryResponse> createJournalEntry(@RequestBody JournalEntryRequest request) {
+    public ResponseEntity<JournalEntryResponse> createJournalEntry(
+            @CurrentUser User currentUser,
+            @Valid @RequestBody JournalEntryRequest request) {
+
         log.info("Received request to create journal entry.");
-        try {
-            User currentUser = getCurrentUser();
-            JournalEntry savedEntry = journalService.saveJournalEntry(currentUser, request.getRawText());
-            log.info("New journal entry saved successfully for user {}.", currentUser.getUsername());
-            return ResponseEntity.status(HttpStatus.CREATED).body(new JournalEntryResponse(savedEntry));
-        } catch (IllegalArgumentException e) {
-            log.error("Error creating journal entry: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Return 400 without body for simplicity
-        } catch (IllegalStateException e) {
-            log.error("Server configuration error for encryption: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        } catch (Exception e) {
-            log.error("Unexpected error creating journal entry: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        JournalEntry savedEntry = journalService.saveJournalEntry(currentUser, request.rawText());
+        log.info("New journal entry saved successfully for user {}.", currentUser.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(journalMapper.toResponse(savedEntry));
     }
 
-    /**
-     * Updates an existing journal entry for the authenticated user.
-     * @param id The UUID of the journal entry to update.
-     * @param request JournalEntryRequest containing the updated raw text.
-     * @return ResponseEntity with the updated JournalEntryResponse.
-     */
+    @Override
     @PutMapping("/{id}")
-    public ResponseEntity<JournalEntryResponse> updateJournalEntry(@PathVariable UUID id, @RequestBody JournalEntryRequest request) {
+    public ResponseEntity<JournalEntryResponse> updateJournalEntry(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id,
+            @Valid @RequestBody JournalEntryRequest request) {
+
         log.info("Received request to update journal entry with ID: {}", id);
-        try {
-            User currentUser = getCurrentUser();
-            JournalEntry updatedEntry = journalService.updateJournalEntry(id, currentUser, request.getRawText());
-            log.info("Journal entry with ID {} updated successfully for user {}.", id, currentUser.getUsername());
-            return ResponseEntity.ok(new JournalEntryResponse(updatedEntry));
-        } catch (IllegalArgumentException e) {
-            log.warn("Update failed for entry ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Or more specific status based on e.getMessage()
-        } catch (IllegalStateException e) {
-            log.error("Server configuration error for encryption during update: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        } catch (Exception e) {
-            log.error("Error updating journal entry with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        JournalEntry updatedEntry = journalService.updateJournalEntry(id, currentUser, request.rawText());
+        log.info("Journal entry with ID {} updated successfully for user {}.", id, currentUser.getUsername());
+        return ResponseEntity.ok(journalMapper.toResponse(updatedEntry));
     }
 
-    /**
-     * Deletes a journal entry for the authenticated user.
-     * @param id The UUID of the journal entry to delete.
-     * @return ResponseEntity with no content on success.
-     */
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteJournalEntry(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteJournalEntry(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id) {
+
         log.info("Received request to delete journal entry with ID: {}", id);
-        try {
-            User currentUser = getCurrentUser();
-            journalService.deleteJournalEntry(id, currentUser);
-            log.info("Journal entry with ID {} deleted successfully for user {}.", id, currentUser.getUsername());
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } catch (IllegalArgumentException e) {
-            log.warn("Delete failed for entry ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Or more specific status based on e.getMessage()
-        } catch (Exception e) {
-            log.error("Error deleting journal entry with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        journalService.deleteJournalEntry(id, currentUser);
+        log.info("Journal entry with ID {} deleted successfully for user {}.", id, currentUser.getUsername());
+        return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Retrieves journal history for the authenticated user.
-     * @param startDate Optional start date for filtering.
-     * @param endDate Optional end date for filtering.
-     * @return List of JournalEntryResponse objects.
-     */
+    @Override
     @GetMapping("/history")
     public ResponseEntity<List<JournalEntryResponse>> getJournalHistory(
+            @CurrentUser User currentUser,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        log.info("Received request for journal history.");
-        User currentUser = getCurrentUser();
 
-        LocalDate start;
-        LocalDate end;
+        log.info("Received request for journal history for user: {}", currentUser.getUsername());
 
-        if (startDate == null && endDate == null) {
-            // No filters → return all entries (use very wide range)
-            start = LocalDate.of(1900, 1, 1);
-            end = LocalDate.of(2100, 12, 31);
-            log.info("No date range provided – fetching all entries for user: {}", currentUser.getUsername());
-        } else {
-            try {
-                start = (startDate != null) ? LocalDate.parse(startDate) : LocalDate.now().minusDays(30);
-                end = (endDate != null) ? LocalDate.parse(endDate) : LocalDate.now();
-            } catch (DateTimeParseException e) {
-                log.error("Invalid date format: {}", e.getMessage());
-                return ResponseEntity.badRequest().build();
-            }
-        }
-
-        List<JournalEntry> entries = journalService.getJournalEntriesForUser(currentUser, start, end);
-        log.info("Found {} journal entries for user {} in range {} to {}.", entries.size(), currentUser.getUsername(), start, end);
+        DateRange range = DateUtil.parseHistoryDateRange(startDate, endDate);
+        List<JournalEntry> entries = journalService.getJournalEntriesForUser(
+                currentUser, range.start(), range.end()
+        );
         List<JournalEntryResponse> responses = entries.stream()
-                .map(JournalEntryResponse::new)
+                .map(journalMapper::toResponse)
                 .collect(Collectors.toList());
+
+        log.info("Found {} journal entries for user {}.", responses.size(), currentUser.getUsername());
         return ResponseEntity.ok(responses);
     }
-    /**
-     * Retrieves mood data for charts for the authenticated user.
-     * This method will need to be adapted later to handle multiple entries per day for aggregation.
-     * For now, it still fetches all entries within the range.
-     */
+
+    @Override
     @GetMapping("/mood-data")
     public ResponseEntity<List<MoodDataResponse>> getMoodData(
+            @CurrentUser User currentUser,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        log.info("Received request for mood data for chart.");
-        User currentUser = getCurrentUser();
-        LocalDate start = LocalDate.now().minusDays(30);
-        LocalDate end = LocalDate.now();
 
-        try {
-            if (startDate != null) {
-                start = LocalDate.parse(startDate);
-            }
-            if (endDate != null) {
-                end = LocalDate.parse(endDate);
-            }
-        } catch (DateTimeParseException e) {
-            log.error("Invalid date format provided: {}. Using default date range.", e.getMessage());
-            return ResponseEntity.badRequest().build(); // Changed to build()
-        }
+        log.info("Received request for mood data for chart for user: {}", currentUser.getUsername());
 
-        List<MoodDataResponse> moodData = journalService.getMoodDataForChart(currentUser, start, end);
-        log.info("Found {} mood data points for user {} in range {} to {}.", moodData.size(), currentUser.getUsername(), start, end);
+        DateRange range = DateUtil.parseDateRange(startDate, endDate, 30);
+        List<MoodDataResponse> moodData = journalService.getMoodDataForChart(
+                currentUser, range.start(), range.end()
+        );
+
+        log.info("Found {} mood data points for user {}.", moodData.size(), currentUser.getUsername());
         return ResponseEntity.ok(moodData);
     }
 
-    /**
-     * Retrieves a single journal entry by ID for the authenticated user.
-     */
+    @Override
     @GetMapping("/{id}")
-    public ResponseEntity<JournalEntryResponse> getJournalEntry(@PathVariable UUID id) {
+    public ResponseEntity<JournalEntryResponse> getJournalEntry(
+            @CurrentUser User currentUser,
+            @PathVariable UUID id) {
+
         log.info("Received request for journal entry with ID: {}.", id);
-        User currentUser = getCurrentUser();
-        return journalService.getJournalEntryById(id)
-                .filter(entry -> entry.getUser().getId().equals(currentUser.getId())) // Ensure ownership
-                .map(JournalEntryResponse::new)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> {
-                    log.warn("Journal entry with ID {} not found or not owned by user {}.", id, currentUser.getUsername());
-                    return ResponseEntity.notFound().build();
-                });
+        JournalEntry entry = journalService.getJournalEntryById(id)
+                .filter(e -> e.getUser().getId().equals(currentUser.getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Journal entry not found or not owned."));
+
+        return ResponseEntity.ok(journalMapper.toResponse(entry));
     }
 
-    /**
-     * Retrieves recurring themes/keyword trends for the authenticated user.
-     * This endpoint aggregates key phrases from all entries within a date range.
-     */
+    @Override
     @GetMapping("/trends")
     public ResponseEntity<Map<String, Long>> getJournalTrends(
+            @CurrentUser User currentUser,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
-            @RequestParam(defaultValue = "10") int limit) { // Limit for top N themes
-        log.info("Received request for journal trends.");
-        User currentUser = getCurrentUser();
-        LocalDate start = LocalDate.now().minusDays(90); // Default to last 90 days for trends
-        LocalDate end = LocalDate.now();
+            @RequestParam(defaultValue = "10") int limit) {
 
-        try {
-            if (startDate != null) {
-                start = LocalDate.parse(startDate);
-            }
-            if (endDate != null) {
-                end = LocalDate.parse(endDate);
-            }
-        } catch (DateTimeParseException e) {
-            log.error("Invalid date format provided for trends: {}. Using default date range.", e.getMessage());
-            return ResponseEntity.badRequest().build(); // Changed to build()
-        }
+        log.info("Received request for journal trends for user: {}", currentUser.getUsername());
 
-        List<JournalEntry> entries = journalService.getJournalEntriesForUser(currentUser, start, end);
+        //  Parse dates in the controller using DateUtil
+        DateRange range = DateUtil.parseDateRange(startDate, endDate, 90);
+        Map<String, Long> trends = journalService.getTopKeyPhrases(
+                currentUser, range.start(), range.end(), limit
+        );
 
-        // Inside getJournalTrends method
-        Map<String, Long> trendCounts = entries.stream()
-                .filter(entry -> entry.getKeyPhrases() != null)
-                .flatMap(entry -> entry.getKeyPhrases().stream())
-                .map(KeyPhrase::getPhrase) //  Extract the string from the entity
-                .collect(Collectors.groupingBy(phrase -> phrase, Collectors.counting()));
-        Map<String, Long> topTrends = trendCounts.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .limit(limit)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        java.util.LinkedHashMap::new
-                ));
-
-        log.info("Found {} top trends for user {} in range {} to {}.", topTrends.size(), currentUser.getUsername(), start, end);
-        return ResponseEntity.ok(topTrends);
+        log.info("Returning {} top trends for user {}.", trends.size(), currentUser.getUsername());
+        return ResponseEntity.ok(trends);
     }
 
-    /**
-     * Triggers journal entry clustering for the authenticated user.
-     * This will train/update a personalized clustering model and assign cluster IDs to entries.
-     *
-     * @param clusterRequest The request body containing the desired number of clusters and journal texts.
-     * @return A ClusterResult object containing cluster themes and entry-to-cluster mappings.
-     */
-    // Inside clusterJournalEntries method
-//    @PostMapping("/cluster-entries")
-//    public ResponseEntity<ClusterResult> clusterJournalEntries(
-//            @RequestBody ClusterRequest clusterRequest) {
-//        log.info("Received request to cluster journal entries for current user.");
-//        // This log already exists and is good:
-//        log.info("ClusterRequest received: numClusters={}, userId={}, journalTextsSize={}",
-//                clusterRequest.getNClusters(), clusterRequest.getUserId(), clusterRequest.getJournalTexts() != null ? clusterRequest.getJournalTexts().size() : 0);
-//
-//        log.info("NClusters from ClusterRequest before passing to service: {}", clusterRequest.getNClusters());
-//
-//        User currentUser = getCurrentUser();
-//        try {
-//            ClusterResult result = journalService.triggerJournalClustering(
-//                    currentUser,
-//                    clusterRequest.getJournalTexts(),
-//                    clusterRequest.getNClusters()
-//            );
-//            return ResponseEntity.ok(result);
-//        } catch (Exception e) {
-//            log.error("Error triggering journal clustering: {}", e.getMessage(), e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-//                    new ClusterResult(0, Collections.emptyMap(), Collections.emptyList())
-//            );
-//        }
-//    }
-
-    /**
-     * Searches journal entries for the authenticated user by a keyword in the raw text.
-     * @param keyword The keyword to search for.
-     * @return ResponseEntity with a list of matching JournalEntryResponse objects.
-     */
+    @Override
     @GetMapping("/search/keyword")
     public ResponseEntity<List<JournalEntryResponse>> searchJournalEntriesByKeyword(
+            @CurrentUser User currentUser,
             @RequestParam String keyword) {
+
         log.info("Received request to search journal entries by keyword: '{}'", keyword);
-        try {
-            User currentUser = getCurrentUser();
-            List<JournalEntry> entries = journalService.searchJournalEntriesByKeyword(currentUser, keyword);
-            log.info("Found {} journal entries matching keyword '{}' for user {}.", entries.size(), keyword, currentUser.getUsername());
-            List<JournalEntryResponse> responses = entries.stream()
-                    .map(JournalEntryResponse::new)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(responses);
-        } catch (IllegalArgumentException e) {
-            log.error("Error during keyword search: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (Exception e) {
-            log.error("Unexpected error during keyword search: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<JournalEntry> entries = journalService.searchJournalEntriesByKeyword(currentUser, keyword);
+        List<JournalEntryResponse> responses = entries.stream()
+                .map(journalMapper::toResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
     }
 
-    /**
-     * Searches journal entries for the authenticated user by a mood score range.
-     * @param minMood Optional minimum mood score.
-     * @param maxMood Optional maximum mood score.
-     * @return ResponseEntity with a list of matching JournalEntryResponse objects.
-     */
+    @Override
     @GetMapping("/search/mood")
     public ResponseEntity<List<JournalEntryResponse>> searchJournalEntriesByMood(
+            @CurrentUser User currentUser,
             @RequestParam(required = false) Double minMood,
             @RequestParam(required = false) Double maxMood) {
-        log.info("Received request to search journal entries by mood range: min={} max={}", minMood, maxMood);
-        try {
-            User currentUser = getCurrentUser();
 
-            Double actualMinMood = (minMood != null) ? minMood : -1.0;
-            Double actualMaxMood = (maxMood != null) ? maxMood : 1.0;
+        log.info("Received request to search journal entries by mood range.");
+        Double actualMinMood = (minMood != null) ? minMood : -1.0;
+        Double actualMaxMood = (maxMood != null) ? maxMood : 1.0;
 
-            if (actualMinMood > actualMaxMood) {
-                log.warn("Minimum mood score ({}) cannot be greater than maximum mood score ({}).", actualMinMood, actualMaxMood);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-            }
-
-            List<JournalEntry> entries = journalService.searchJournalEntriesByMoodScore(currentUser, actualMinMood, actualMaxMood);
-            log.info("Found {} journal entries matching mood range for user {}.", entries.size(), currentUser.getUsername());
-            List<JournalEntryResponse> responses = entries.stream()
-                    .map(JournalEntryResponse::new)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(responses);
-        } catch (IllegalArgumentException e) {
-            log.error("Error during mood search: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (Exception e) {
-            log.error("Unexpected error during mood search: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        if (actualMinMood > actualMaxMood) {
+            throw new IllegalArgumentException("Minimum mood cannot be greater than maximum mood.");
         }
+
+        List<JournalEntry> entries = journalService.searchJournalEntriesByMoodScore(currentUser, actualMinMood, actualMaxMood);
+        List<JournalEntryResponse> responses = entries.stream()
+                .map(journalMapper::toResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
     }
 
-    /**
-     * Searches journal entries based on semantic meaning/concepts using AI Vector RAG.
-     * @param concept The natural language concept to search for.
-     * @return ResponseEntity with a list of matching JournalEntryResponse objects.
-     */
+    @Override
     @GetMapping("/search/semantic")
     public ResponseEntity<List<JournalEntryResponse>> searchJournalEntriesSemantically(
+            @CurrentUser User currentUser,
             @RequestParam String concept) {
+
         log.info("Received request for semantic search: '{}'", concept);
-        try {
-            User currentUser = getCurrentUser();
-            List<JournalEntry> entries = journalService.searchJournalEntriesSemantically(currentUser, concept);
+        List<JournalEntry> entries = journalService.searchJournalEntriesSemantically(currentUser, concept);
+        List<JournalEntryResponse> responses = entries.stream()
+                .map(journalMapper::toResponse)
+                .collect(Collectors.toList());
 
-            log.info("Found {} journal entries matching concept '{}' for user {}.",
-                    entries.size(), concept, currentUser.getUsername());
-
-            List<JournalEntryResponse> responses = entries.stream()
-                    .map(JournalEntryResponse::new)
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(responses);
-        } catch (Exception e) {
-            log.error("Unexpected error during semantic search: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.ok(responses);
     }
 
+    @Override
     @GetMapping("/key-phrases")
-    public ResponseEntity<Map<String, Long>> getKeyPhraseFrequencies() {
-        User currentUser = getCurrentUser();
+    public ResponseEntity<Map<String, Long>> getKeyPhraseFrequencies(@CurrentUser User currentUser) {
         Map<String, Long> freq = journalService.getKeyPhraseFrequencies(currentUser);
         return ResponseEntity.ok(freq);
     }
 
-
-
+    @Override
     @GetMapping("/history/paginated")
     public ResponseEntity<PageResponse<JournalEntryResponse>> getJournalHistoryPaginated(
+            @CurrentUser User currentUser,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        log.info("Received request for paginated journal history.");
-        User currentUser = getCurrentUser();
+        log.info("Received request for paginated journal history for user: {}", currentUser.getUsername());
 
-        LocalDate start, end;
-        if (startDate == null && endDate == null) {
-            start = LocalDate.of(1900, 1, 1);
-            end = LocalDate.of(2100, 12, 31);
-        } else {
-            try {
-                start = (startDate != null) ? LocalDate.parse(startDate) : LocalDate.now().minusDays(30);
-                end = (endDate != null) ? LocalDate.parse(endDate) : LocalDate.now();
-            } catch (DateTimeParseException e) {
-                log.error("Invalid date format: {}", e.getMessage());
-                return ResponseEntity.badRequest().build();
-            }
-        }
+        DateRange range = DateUtil.parseHistoryDateRange(startDate, endDate);
+        PageResponse<JournalEntryResponse> page = journalService.getJournalEntriesPageResponse(
+                currentUser, range.start(), range.end(), pageable
+        );
 
-        PageResponse<JournalEntryResponse> response = journalService.getJournalEntriesPageResponse(currentUser, start, end, pageable);
-
-        return ResponseEntity.ok(response);
+        log.info("Returning page {}/{} for user {}.", page.pageNumber(), page.totalPages(), currentUser.getUsername());
+        return ResponseEntity.ok(page);
     }
 
 }

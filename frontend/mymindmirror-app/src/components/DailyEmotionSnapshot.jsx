@@ -1,11 +1,10 @@
-// src/components/DailyEmotionSnapshot.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import { useTheme } from '../contexts/ThemeContext';
 import DownloadChartButton from './DownloadChartButton';
-import { Smile } from 'lucide-react'; // 💡 Uses existing Smile icon
-
+import { Smile } from 'lucide-react';
+import { SkeletonDoughnutChart } from './Skeleton';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const EMOTION_DOUGHNUT_COLORS = {
@@ -26,22 +25,28 @@ const EMOTION_DOUGHNUT_COLORS_DARK = {
     contentment: '#C0FFC0', frustration: '#FF7F50', gratitude: '#D0FF80', hope: '#C0E0FF',
 };
 
-
-function DailyEmotionSnapshot({ todayEntries }) {
+function DailyEmotionSnapshot({ todayEntries , isLoading}) {
     const { theme } = useTheme();
     const isDarkMode = theme === 'dark';
     const chartContainerRef = useRef(null);
     const [chartData, setChartData] = useState({ labels: [], datasets: [] });
     const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
+    // ==========================================================================
+    // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+    // ==========================================================================
+    const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+    const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+    const sectionBg = isDarkMode ? 'bg-[#131127]/80' : 'bg-slate-50/80';
+    const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+    const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+    const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
+
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 640);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-
-    const cardBg = isDarkMode ? 'bg-[#1A162F]/60' : 'bg-white/70';
-    const cardBorder = isDarkMode ? 'border-white/10' : 'border-gray-200/50';
 
     useEffect(() => {
         if (!todayEntries || todayEntries.length === 0) {
@@ -92,8 +97,9 @@ function DailyEmotionSnapshot({ todayEntries }) {
                 label: 'Emotion Intensity',
                 data,
                 backgroundColor: backgroundColors,
-                borderColor: isDarkMode ? '#131127' : '#ffffff',
-                borderWidth: isDarkMode ? 1 : 2,
+                // 🌟 FIX: Border color perfectly matches the new cardBg so the cutout looks seamless!
+                borderColor: isDarkMode ? '#1A162F' : '#ffffff',
+                borderWidth: isDarkMode ? 2 : 2,
                 hoverOffset: 6
             }],
         });
@@ -131,16 +137,21 @@ function DailyEmotionSnapshot({ todayEntries }) {
         cutout: isMobile ? '60%' : '65%',
     };
 
+    if (isLoading) {
+        return <SkeletonDoughnutChart />;
+    }
     const hasData = chartData.datasets.length > 0 && chartData.datasets[0].data.some(v => v > 0);
 
     if (!hasData) {
         return (
-            <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg overflow-hidden ${cardBg} backdrop-blur-xl h-full flex flex-col`}>
-                <div className={`flex flex-wrap justify-between items-center p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50`}>
-                    {/* 💡 Icon added to Empty State Header */}
+            <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} overflow-hidden ${cardBg} h-full flex flex-col transition-shadow duration-300 hover:shadow-lg`}>
+                <div className={`flex flex-wrap justify-between items-center p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
                     <div className="flex-1 min-w-[200px]">
-                        <h3 className="text-lg sm:text-xl lg:text-2xl font-poppins font-bold tracking-tight text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                            <Smile className="w-5 h-5 lg:w-6 lg:h-6 text-pink-500" />
+                        <h3 className={`text-lg sm:text-xl lg:text-2xl font-poppins font-bold tracking-tight ${textPrimary} flex items-center gap-3`}>
+                            {/* 🌟 RESTORED: The Beautiful Gradient Jewel Icon */}
+                            <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-pink-100 to-rose-50 dark:from-pink-900/40 dark:to-rose-800/20 text-pink-500 dark:text-pink-400 shrink-0 shadow-sm border border-pink-200/50 dark:border-pink-700/30">
+                                <Smile className="w-5 h-5 lg:w-6 lg:h-6" />
+                            </div>
                             Today's Emotion Breakdown
                         </h3>
                     </div>
@@ -151,16 +162,16 @@ function DailyEmotionSnapshot({ todayEntries }) {
                         className="opacity-50 pointer-events-none mt-2 sm:mt-0 shrink-0"
                     />
                 </div>
+                {/* 🌟 FIX: Removed hardcoded background so it sits transparently over the cardBg */}
                 <div
                     ref={chartContainerRef}
-                    className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center"
-                    style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff', minHeight: '260px' }}
+                    className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center min-h-[260px]"
                 >
-                    <div className="p-4 rounded-full bg-gray-100 dark:bg-gray-800/50 mb-4">
-                       <Smile className="w-8 h-8 lg:w-10 lg:h-10 text-gray-400 dark:text-gray-500" />
+                    <div className="p-4 rounded-full bg-slate-100 dark:bg-[#131127] border border-slate-200/80 dark:border-white/5 mb-4 shadow-inner">
+                       <Smile className={`w-8 h-8 lg:w-10 lg:h-10 ${textSecondary}`} />
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300 font-bold text-sm lg:text-base">No emotion data available for today</p>
-                    <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    <p className={`font-bold text-sm lg:text-base ${textPrimary}`}>No emotion data available for today</p>
+                    <p className={`text-xs lg:text-sm mt-2 ${textSecondary}`}>
                         Journal an entry to see your emotion breakdown!
                     </p>
                 </div>
@@ -169,16 +180,18 @@ function DailyEmotionSnapshot({ todayEntries }) {
     }
 
     return (
-        <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} backdrop-blur-xl h-full flex flex-col transition-all duration-300 hover:shadow-xl`}>
+        <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5`}>
             {/* Header */}
-            <div className={`flex flex-wrap justify-between items-start gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50`}>
+            <div className={`flex flex-wrap justify-between items-start gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
                 <div className="flex-1 min-w-[200px]">
-                    {/* 💡 Icon added to Populated State Header */}
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-poppins font-bold tracking-tight text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                        <Smile className="w-5 h-5 lg:w-6 lg:h-6 text-pink-500" />
+                    <h3 className={`text-lg sm:text-xl lg:text-2xl font-poppins font-bold tracking-tight ${textPrimary} flex items-center gap-3`}>
+                        {/* 🌟 RESTORED: The Beautiful Gradient Jewel Icon */}
+                        <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-pink-100 to-rose-50 dark:from-pink-900/40 dark:to-rose-800/20 text-pink-500 dark:text-pink-400 shrink-0 shadow-sm border border-pink-200/50 dark:border-pink-700/30">
+                            <Smile className="w-5 h-5 lg:w-6 lg:h-6" />
+                        </div>
                         Today's Emotion Breakdown
                     </h3>
-                    <p className="text-[11px] lg:text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                    <p className={`text-[11px] lg:text-xs mt-1 font-medium ${textSecondary}`}>
                         Aggregated distribution of emotions from today's inputs.
                     </p>
                 </div>
@@ -190,10 +203,10 @@ function DailyEmotionSnapshot({ todayEntries }) {
                 />
             </div>
             {/* Chart container */}
+            {/* 🌟 FIX: Removed hardcoded background so it sits transparently over the cardBg */}
             <div
                 ref={chartContainerRef}
                 className="p-4 sm:p-6 flex-grow flex items-center justify-center"
-                style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff' }}
             >
                 <div className="relative w-full h-[220px] sm:h-[260px] lg:h-[300px]">
                     <Doughnut data={chartData} options={options} />

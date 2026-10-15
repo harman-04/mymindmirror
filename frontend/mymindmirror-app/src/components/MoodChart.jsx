@@ -1,10 +1,9 @@
-// src/components/MoodChart.jsx
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-import { SkeletonChart } from './Skeleton';
+import { SkeletonLineChart } from './Skeleton';
 import { useTheme } from '../contexts/ThemeContext';
 import DownloadChartButton from './DownloadChartButton';
-import { Activity } from 'lucide-react'; // 💡 NEW: Imported Icon
+import { Activity } from 'lucide-react';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -16,7 +15,6 @@ import {
     Legend,
     Filler,
 } from 'chart.js';
-
 import zoomPlugin from 'chartjs-plugin-zoom';
 
 ChartJS.register(
@@ -32,7 +30,7 @@ ChartJS.register(
 );
 
 const EMOTION_COLORS_LIGHT = {
-    'overall mood score': '#9333EA', // Stronger purple for main line
+    'overall mood score': '#9333EA',
     'joy': '#5CC8C2', 'sadness': '#FF8A7A', 'anger': '#A93226', 'anxiety': '#F7DC6F',
     'fear': '#6C3483', 'surprise': '#85C1E9', 'neutral': '#E0E0E0', 'disgust': '#D35400',
     'disappointment': '#283747', 'remorse': '#7F8C8D', 'grief': '#17202A', 'optimism': '#F1C40F',
@@ -42,7 +40,7 @@ const EMOTION_COLORS_LIGHT = {
 };
 
 const EMOTION_COLORS_DARK = {
-    'overall mood score': '#C084FC', // Bright purple for main line
+    'overall mood score': '#C084FC',
     'joy': '#8DE2DD', 'sadness': '#C7B3E6', 'anger': '#FFB0A4', 'fear': '#D45E4D',
     'surprise': '#B0D9F7', 'neutral': '#A0A0A0', 'love': '#FF7F7F', 'disgust': '#9B6EB4',
     'anxiety': '#FFF0B3', 'optimism': '#FFD750', 'relief': '#8CE0B0', 'caring': '#58D68D',
@@ -57,7 +55,6 @@ const MoodChart = ({ entries, isLoading }) => {
     const emotionColors = isDarkMode ? EMOTION_COLORS_DARK : EMOTION_COLORS_LIGHT;
     const chartContainerRef = useRef(null);
 
-    // Track window size to conditionally enable/disable zoom plugin
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
     useEffect(() => {
@@ -66,9 +63,15 @@ const MoodChart = ({ entries, isLoading }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // 💡 Premium Glassmorphism Theme Sync
-    const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-    const cardBorder = isDarkMode ? 'border-white/10' : 'border-white/50';
+    // ==========================================================================
+    // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+    // ==========================================================================
+    const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+    const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+    const sectionBg = isDarkMode ? 'bg-[#131127]/80' : 'bg-slate-50/80';
+    const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+    const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+    const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
     const { moodData, emotionTrendData } = useMemo(() => {
         if (!entries || entries.length === 0) return { moodData: [], emotionTrendData: {} };
@@ -112,6 +115,9 @@ const MoodChart = ({ entries, isLoading }) => {
 
         const emotionsToShow = ['joy', 'sadness', 'anger', 'anxiety', 'fear', 'neutral'];
 
+        // 🌟 FIX: Match point cutout colors to the new background
+        const pointCutoutColor = isDarkMode ? '#1A162F' : '#ffffff';
+
         emotionsToShow.forEach(emotionLabel => {
             if (allEmotionLabels.has(emotionLabel)) {
                 emotionDatasets.push({
@@ -123,7 +129,7 @@ const MoodChart = ({ entries, isLoading }) => {
                     borderDash: [5, 5],
                     tension: 0.4,
                     pointBackgroundColor: emotionColors[emotionLabel] || '#CCCCCC',
-                    pointBorderColor: isDarkMode ? '#131127' : '#ffffff',
+                    pointBorderColor: pointCutoutColor,
                     pointBorderWidth: 1,
                     pointRadius: 3,
                     pointHoverRadius: 6,
@@ -158,7 +164,7 @@ const MoodChart = ({ entries, isLoading }) => {
             borderWidth: window.innerWidth < 640 ? 3 : 4,
             tension: 0.4,
             pointBackgroundColor: emotionColors['overall mood score'],
-            pointBorderColor: isDarkMode ? '#131127' : '#ffffff',
+            pointBorderColor: pointCutoutColor,
             pointBorderWidth: 2,
             pointRadius: window.innerWidth < 640 ? 4 : 5,
             pointHoverRadius: window.innerWidth < 640 ? 6 : 8,
@@ -172,7 +178,6 @@ const MoodChart = ({ entries, isLoading }) => {
         const axisColor = isDarkMode ? '#94A3B8' : '#475569';
         const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
 
-        // Anti-squish logic forces horizontal scrolling
         const minWidthPerPoint = isMobile ? 45 : 60;
         const totalMinWidth = allDates.length * minWidthPerPoint;
         const finalWidth = `max(100%, ${totalMinWidth}px)`;
@@ -206,16 +211,8 @@ const MoodChart = ({ entries, isLoading }) => {
                     },
                 },
                 zoom: isMobile ? {} : {
-                    pan: {
-                        enabled: true,
-                        mode: 'x',
-                        modifierKey: 'ctrl', // Requires holding Ctrl to pan, prevents page scroll hijacking!
-                    },
-                    zoom: {
-                        wheel: { enabled: true, modifierKey: 'ctrl' }, // Requires holding Ctrl to zoom via wheel
-                        pinch: { enabled: false }, // Pinch disabled to stop trackpad/touchscreen collision
-                        mode: 'x',
-                    }
+                    pan: { enabled: true, mode: 'x', modifierKey: 'ctrl' },
+                    zoom: { wheel: { enabled: true, modifierKey: 'ctrl' }, pinch: { enabled: false }, mode: 'x' }
                 }
             },
             scales: {
@@ -238,16 +235,18 @@ const MoodChart = ({ entries, isLoading }) => {
         return { chartData: { labels: allDates, datasets }, chartOptions: options, calculatedWidth: finalWidth };
     }, [moodData, emotionTrendData, emotionColors, isDarkMode, isMobile]);
 
-    if (isLoading) return <SkeletonChart />;
+    if (isLoading) return <SkeletonLineChart />;
 
     if (!chartData?.labels?.length) {
         return (
-            <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg overflow-hidden ${cardBg} flex flex-col h-full`}>
-                <div className="flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+            <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm overflow-hidden ${cardBg} flex flex-col h-full`}>
+                <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
                     <div className="flex-1 min-w-[200px]">
-                        {/* 💡 Empty State Header Icon */}
-                        <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                            <Activity className="w-5 h-5 lg:w-6 lg:h-6 text-purple-500" />
+                        <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                            {/* 🌟 RESTORED: Purple Jewel Icon */}
+                            <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-purple-100 to-fuchsia-50 dark:from-purple-900/40 dark:to-fuchsia-800/20 text-purple-600 dark:text-purple-400 shrink-0 shadow-sm border border-purple-200/50 dark:border-purple-700/30">
+                                <Activity className="w-5 h-5 lg:w-6 lg:h-6" />
+                            </div>
                             Mood & Emotion Trends
                         </h3>
                     </div>
@@ -258,8 +257,11 @@ const MoodChart = ({ entries, isLoading }) => {
                         className="opacity-50 pointer-events-none mt-2 sm:mt-0 shrink-0"
                     />
                 </div>
-                <div className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center" style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff', minHeight: '260px' }}>
-                    <p className="text-sm lg:text-base font-medium text-gray-600 dark:text-gray-400">
+                <div className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center min-h-[260px]">
+                    <div className="p-4 rounded-full bg-slate-100 dark:bg-[#131127] border border-slate-200/80 dark:border-white/5 mb-4 shadow-inner">
+                       <Activity className={`w-8 h-8 lg:w-10 lg:h-10 ${textSecondary}`} />
+                    </div>
+                    <p className={`text-sm lg:text-base font-medium ${textSecondary}`}>
                         Not enough data to display chart. Keep journaling!
                     </p>
                 </div>
@@ -268,17 +270,18 @@ const MoodChart = ({ entries, isLoading }) => {
     }
 
     return (
-        <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5`}>
-
+        <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}>
             {/* Header */}
-            <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-black/10`}>
+            <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
                 <div className="flex-1 min-w-[200px]">
-                    {/* 💡 Populated State Header Icon */}
-                    <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                        <Activity className="w-5 h-5 lg:w-6 lg:h-6 text-purple-500" />
+                    <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                        {/* 🌟 RESTORED: Purple Jewel Icon */}
+                        <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-purple-100 to-fuchsia-50 dark:from-purple-900/40 dark:to-fuchsia-800/20 text-purple-600 dark:text-purple-400 shrink-0 shadow-sm border border-purple-200/50 dark:border-purple-700/30">
+                            <Activity className="w-5 h-5 lg:w-6 lg:h-6" />
+                        </div>
                         Mood & Emotion Trends
                     </h3>
-                    <p className="text-[11px] lg:text-xs text-gray-500 dark:text-gray-400 mt-0.5 lg:mt-1 font-medium">
+                    <p className={`text-[11px] lg:text-xs mt-0.5 lg:mt-1 font-medium ${textSecondary}`}>
                         {isMobile
                             ? "Swipe horizontally to see history."
                             : "Scroll horizontally to see history. Hold Ctrl/Cmd + Scroll to Zoom."}
@@ -295,9 +298,7 @@ const MoodChart = ({ entries, isLoading }) => {
             <div
                 ref={chartContainerRef}
                 className="w-full flex-grow overflow-x-auto custom-scrollbar"
-                style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff' }}
             >
-                {/* 💡 Container height scales perfectly from phone to desktop */}
                 <div className="h-[300px] sm:h-[350px] lg:h-[450px] p-4 pr-6 lg:pr-8 pb-4 lg:pb-6" style={{ width: calculatedWidth }}>
                     <Line data={chartData} options={chartOptions} />
                 </div>

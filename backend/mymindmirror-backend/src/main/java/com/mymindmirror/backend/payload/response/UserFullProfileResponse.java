@@ -1,35 +1,47 @@
-// src/main/java/com/mymindmirror/backend/payload/response/UserFullProfileResponse.java
 package com.mymindmirror.backend.payload.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserFullProfileResponse {
-    private UUID id;
-    private String username;
-    private String email;
+public record UserFullProfileResponse(
+        UUID id,
+        String username,
+        String email,
 
-    // API key status
-    private boolean usingOwnKey;
-    private String maskedKey;
+        @Schema(description = "True when the user has stored their own Gemini API key.")
+        boolean usingOwnKey,
 
-    // Roadmap preferences
-    private UserRoadmapPreferencesDto roadmapPreferences;
+        @Schema(
+                description = "Masked form of the user's API key: last 4 characters visible, prefixed " +
+                        "with '••••••••'. Null when the user has no personal key stored.",
+                nullable = true)
+        String maskedKey,
 
-    // User scheduling preferences
-    private String availableHoursJson;
-    private String timezone;
+        UserRoadmapPreferencesDto roadmapPreferences,
 
-    // --- NEW: Lifestyle fields for Smart AI Timetable ---
-    private String energyPeak;
-    private String wakeTime;
-    private String sleepTime;
-    private String lunchTime;
-    private String dailyHabitsJson;
-}
+        @Schema(
+                description = "Weekly availability as JSON. Format: " +
+                        "{\"monday\":[[\"09:00\",\"12:00\"],[\"13:00\",\"17:00\"]],...}.",
+                nullable = true)
+        String availableHoursJson,
+
+        @Schema(description = "IANA timezone identifier.", nullable = true)
+        String timezone,
+
+        @Schema(description = "User's energy peak.",
+                allowableValues = {"MORNING", "AFTERNOON", "EVENING"},
+                nullable = true)
+        String energyPeak,
+
+        @Schema(description = "Wake time as HH:mm:ss string.", nullable = true)
+        String wakeTime,
+
+        @Schema(description = "Sleep time as HH:mm:ss string.", nullable = true)
+        String sleepTime,
+
+        @Schema(description = "Lunch time as HH:mm:ss string.", nullable = true)
+        String lunchTime,
+
+        @Schema(description = "Daily habits as a JSON array of strings.", nullable = true)
+        String dailyHabitsJson
+) {}

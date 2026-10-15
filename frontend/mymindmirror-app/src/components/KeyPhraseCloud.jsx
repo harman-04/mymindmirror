@@ -5,16 +5,17 @@ import { useKeyPhraseFrequencies } from '../hooks/useJournalData';
 import { Cloud, ChevronDown } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import DownloadChartButton from './DownloadChartButton';
+import { SkeletonCloud } from './Skeleton';
 
-const KeyPhraseCloud = ({ onWordClick }) => {
+const KeyPhraseCloud = ({ onWordClick, isLoading: parentIsLoading }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
-  const { data: freqMap, isLoading, isError } = useKeyPhraseFrequencies();
+
+  const { data: freqMap, isLoading: isFetchingData, isError } = useKeyPhraseFrequencies();
   const cardRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Track window size for responsive font sizing
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
       const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -22,9 +23,15 @@ const KeyPhraseCloud = ({ onWordClick }) => {
       return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Premium Glassmorphism Theme Sync
-  const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-  const cardBorder = isDarkMode ? 'border-white/10' : 'border-white/50';
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+  // ==========================================================================
+  const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+  const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const sectionBg = isDarkMode ? 'bg-[#131127]/80' : 'bg-slate-50/80';
+  const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   const words = useMemo(() => {
     if (!freqMap) return [];
@@ -35,7 +42,6 @@ const KeyPhraseCloud = ({ onWordClick }) => {
     const minCount = Math.min(...counts);
     const maxCount = Math.max(...counts);
 
-    // 💡 FIX: Scale down font sizes on mobile to prevent overflow
     const minFontSize = isMobile ? 12 : 16;
     const maxFontSize = isMobile ? 40 : 56;
 
@@ -47,7 +53,6 @@ const KeyPhraseCloud = ({ onWordClick }) => {
 
         const hue = (index * 137) % 360;
         const sat = isDarkMode ? 90 : 75;
-        // 💡 Adjusted Lightness so neon colors pop on the new #131127 background
         const light = isDarkMode ? 70 : 45;
 
         return {
@@ -61,7 +66,6 @@ const KeyPhraseCloud = ({ onWordClick }) => {
       .sort(() => Math.random() - 0.5);
   }, [freqMap, isDarkMode, isMobile]);
 
-  // Handle custom image download (since this isn't a ChartJS canvas)
   const handleDownload = async (e) => {
     e?.stopPropagation();
     if (isDownloading) return;
@@ -75,7 +79,6 @@ const KeyPhraseCloud = ({ onWordClick }) => {
     const originalMaxHeight = scrollEl.style.maxHeight;
     const originalOverflow = scrollEl.style.overflow;
 
-    // Temporarily expand to capture full content
     scrollEl.style.maxHeight = 'none';
     scrollEl.style.overflow = 'visible';
 
@@ -83,6 +86,7 @@ const KeyPhraseCloud = ({ onWordClick }) => {
 
     try {
       const dataUrl = await toPng(cardEl, {
+        // 🌟 FIX: We keep the solid background color ONLY for the exported PNG!
         backgroundColor: isDarkMode ? '#131127' : '#ffffff',
         cacheBust: true,
         fontEmbedCSS: '',
@@ -95,59 +99,42 @@ const KeyPhraseCloud = ({ onWordClick }) => {
     } catch (error) {
       console.error('Failed to download cloud:', error);
     } finally {
-      // Restore styles
       scrollEl.style.maxHeight = originalMaxHeight;
       scrollEl.style.overflow = originalOverflow;
       setIsDownloading(false);
     }
   };
 
+  const isLoading = parentIsLoading || isFetchingData;
+
   if (isLoading) {
-    return (
-      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col`}>
-        <div className="flex justify-between items-center p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100">
-            Key Phrase Cloud
-          </h3>
-          <DownloadChartButton filename="key_phrase_cloud" darkMode={isDarkMode} className="opacity-50 pointer-events-none" />
-        </div>
-        <div className="p-6 lg:p-8 flex items-center justify-center min-h-[300px]" style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff' }}>
-          <div className="flex flex-wrap justify-center items-center gap-4 lg:gap-6 animate-pulse">
-            {[...Array(15)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-300 dark:bg-gray-700/50 rounded-full"
-                style={{
-                  width: `${Math.floor(Math.random() * 60 + 60)}px`,
-                  height: `${Math.floor(Math.random() * 15 + 20)}px`,
-                  opacity: 1 - (i * 0.04),
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+      return <SkeletonCloud />;
   }
 
   if (isError || words.length === 0) {
     return (
-      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full`}>
-        <div className="flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100">
-            Key Phrase Cloud
-          </h3>
+      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full`}>
+        <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
+          <div className="flex-1 min-w-[200px]">
+              <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                  {/* 🌟 RESTORED: Sky Blue Jewel Icon */}
+                  <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-50 dark:from-sky-900/40 dark:to-indigo-800/20 text-sky-500 dark:text-sky-400 shrink-0 shadow-sm border border-sky-200/50 dark:border-sky-700/30">
+                      <Cloud className="w-5 h-5 lg:w-6 lg:h-6" />
+                  </div>
+                  Key Phrase Cloud
+              </h3>
+          </div>
           <DownloadChartButton filename="key_phrase_cloud" darkMode={isDarkMode} className="opacity-50 pointer-events-none shrink-0" />
         </div>
-        <div className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center" style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff', minHeight: '300px' }}>
-          <div className="relative mb-4 lg:mb-6">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-teal-400/20 rounded-full blur-2xl" />
-              <Cloud className="w-12 h-12 lg:w-16 lg:h-16 relative text-gray-400 dark:text-gray-500" />
+        {/* 🌟 FIX: Removed hardcoded background color */}
+        <div className="flex-grow flex flex-col items-center justify-center p-6 lg:p-10 text-center min-h-[300px]">
+          <div className="p-4 rounded-full bg-slate-100 dark:bg-[#131127] border border-slate-200/80 dark:border-white/5 mb-4 shadow-inner">
+              <Cloud className={`w-8 h-8 lg:w-10 lg:h-10 ${textSecondary}`} />
           </div>
-          <p className="text-lg lg:text-xl font-bold text-gray-700 dark:text-gray-300">
+          <p className={`text-lg lg:text-xl font-bold ${textPrimary}`}>
             {isError ? "Couldn't load patterns" : "No patterns detected yet."}
           </p>
-          <p className="text-sm lg:text-base text-gray-500 dark:text-gray-400 mt-2">
+          <p className={`text-sm lg:text-base mt-2 ${textSecondary}`}>
             Start journaling to see your key phrases appear here!
           </p>
         </div>
@@ -156,16 +143,18 @@ const KeyPhraseCloud = ({ onWordClick }) => {
   }
 
   return (
-    <div ref={cardRef} className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5`}>
-
+    <div ref={cardRef} className={`relative w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}>
       {/* Header */}
-      <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-black/10`}>
+      <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
           <div className="flex-1 min-w-[200px]">
-              <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                  <Cloud className="w-5 h-5 lg:w-6 lg:h-6 text-indigo-400" />
+              <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                  {/* 🌟 RESTORED: Sky Blue Jewel Icon */}
+                  <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-50 dark:from-sky-900/40 dark:to-indigo-800/20 text-sky-500 dark:text-sky-400 shrink-0 shadow-sm border border-sky-200/50 dark:border-sky-700/30">
+                      <Cloud className="w-5 h-5 lg:w-6 lg:h-6" />
+                  </div>
                   Key Phrase Cloud
               </h3>
-              <p className="text-[11px] lg:text-xs text-gray-500 dark:text-gray-400 mt-0.5 lg:mt-1 font-medium">
+              <p className={`text-[11px] lg:text-xs mt-0.5 lg:mt-1 font-medium ${textSecondary}`}>
                  Common themes from your journaling. Click words to filter your history.
               </p>
           </div>
@@ -179,14 +168,14 @@ const KeyPhraseCloud = ({ onWordClick }) => {
           />
       </div>
 
+      {/* 🌟 FIX: Removed hardcoded backgroundColor string here so cardBg shows through! */}
       <div
         ref={scrollContainerRef}
         className="p-4 sm:p-6 lg:p-8 overflow-y-auto relative"
         style={{
-          backgroundColor: isDarkMode ? '#131127' : '#ffffff',
           maxHeight: isMobile ? '350px' : '450px',
           scrollbarWidth: 'thin',
-          scrollbarColor: isDarkMode ? '#4B5563 #131127' : '#CBD5E1 #ffffff',
+          scrollbarColor: isDarkMode ? '#4B5563 transparent' : '#CBD5E1 transparent',
         }}
       >
         <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 z-10 pb-4">
@@ -215,8 +204,9 @@ const KeyPhraseCloud = ({ onWordClick }) => {
 
       {scrollContainerRef.current && scrollContainerRef.current.scrollHeight > scrollContainerRef.current.clientHeight && (
         <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none pb-2">
-          <div className="bg-gradient-to-t from-white/90 via-white/50 dark:from-[#131127]/90 dark:via-[#131127]/50 to-transparent w-full h-12 flex items-end justify-center pb-2">
-            <ChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500 animate-bounce" />
+          {/* 🌟 FIX: Gradient matched to the new cardBg colors */}
+          <div className={`bg-gradient-to-t ${isDarkMode ? 'from-[#1A162F]/90 via-[#1A162F]/50' : 'from-white/90 via-white/50'} to-transparent w-full h-12 flex items-end justify-center pb-2`}>
+            <ChevronDown className={`w-5 h-5 ${textSecondary} animate-bounce`} />
           </div>
         </div>
       )}

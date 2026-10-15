@@ -1,10 +1,9 @@
-// src/components/AverageEmotionChart.jsx
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { SkeletonChart } from './Skeleton';
+import { SkeletonBarChart } from './Skeleton';
 import { useTheme } from '../contexts/ThemeContext';
 import DownloadChartButton from './DownloadChartButton';
-import { BarChart3 } from 'lucide-react'; // 💡 NEW: Imported Icon
+import { BarChart3 } from 'lucide-react';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -14,7 +13,6 @@ import {
     Tooltip,
     Legend,
 } from 'chart.js';
-
 import zoomPlugin from 'chartjs-plugin-zoom';
 
 ChartJS.register(
@@ -60,8 +58,15 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-    const cardBorder = isDarkMode ? 'border-white/10' : 'border-white/50';
+    // ==========================================================================
+    // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+    // ==========================================================================
+    const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+    const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+    const sectionBg = isDarkMode ? 'bg-[#131127]/80' : 'bg-slate-50/80';
+    const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+    const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+    const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
     const { chartData, chartOptions, calculatedWidth, error } = useMemo(() => {
         if (!entries || entries.length === 0) {
@@ -163,16 +168,8 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
                         },
                     },
                     zoom: isMobile ? {} : {
-                        pan: {
-                            enabled: true,
-                            mode: 'x',
-                            modifierKey: 'ctrl',
-                        },
-                        zoom: {
-                            wheel: { enabled: true, modifierKey: 'ctrl' },
-                            pinch: { enabled: false },
-                            mode: 'x',
-                        }
+                        pan: { enabled: true, mode: 'x', modifierKey: 'ctrl' },
+                        zoom: { wheel: { enabled: true, modifierKey: 'ctrl' }, pinch: { enabled: false }, mode: 'x' }
                     }
                 },
                 scales: {
@@ -190,7 +187,6 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
                         border: { dash: [4, 4] }
                     },
                 },
-                animation: { duration: 800, easing: 'easeInOutQuart' },
             };
 
             return { chartData: dataObj, chartOptions: options, calculatedWidth: finalWidth, error: null };
@@ -201,12 +197,12 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
     }, [entries, emotionColors, isDarkMode, isMobile]);
 
     if (isLoading) {
-        return <SkeletonChart />;
+        return <SkeletonBarChart />;
     }
 
     if (error) {
         return (
-            <div className="h-64 sm:h-80 w-full flex items-center justify-center font-inter text-red-500 dark:text-red-400 bg-white/50 dark:bg-gray-800/50 rounded-2xl lg:rounded-3xl border border-gray-200 dark:border-gray-700">
+            <div className={`h-64 sm:h-80 w-full flex items-center justify-center font-inter text-red-500 dark:text-red-400 ${sectionBg} rounded-2xl lg:rounded-3xl border ${cardBorder}`}>
                 {error}
             </div>
         );
@@ -214,12 +210,14 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
 
     if (!chartData || chartData.labels.length === 0) {
         return (
-            <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg overflow-hidden ${cardBg} flex flex-col h-full`}>
-                <div className="flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-                    {/* 💡 Icon added to Empty State Header */}
+            <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm overflow-hidden ${cardBg} flex flex-col h-full`}>
+                <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
                     <div className="flex-1 min-w-[200px]">
-                        <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                            <BarChart3 className="w-5 h-5 lg:w-6 lg:h-6 text-blue-500" />
+                        <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                            {/* 🌟 RESTORED: Blue/Cyan Jewel Icon */}
+                            <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-blue-100 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-800/20 text-blue-500 dark:text-cyan-400 shrink-0 shadow-sm border border-blue-200/50 dark:border-blue-700/30">
+                                <BarChart3 className="w-5 h-5 lg:w-6 lg:h-6" />
+                            </div>
                             Top Primary Emotions
                         </h3>
                     </div>
@@ -230,8 +228,11 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
                         className="opacity-50 pointer-events-none mt-2 sm:mt-0 shrink-0"
                     />
                 </div>
-                <div className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center" style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff', minHeight: '260px' }}>
-                    <p className="text-sm lg:text-base font-medium text-gray-600 dark:text-gray-400">
+                <div className="p-6 lg:p-10 flex-grow flex flex-col items-center justify-center text-center min-h-[260px]">
+                    <div className="p-4 rounded-full bg-slate-100 dark:bg-[#131127] border border-slate-200/80 dark:border-white/5 mb-4 shadow-inner">
+                       <BarChart3 className={`w-8 h-8 lg:w-10 lg:h-10 ${textSecondary}`} />
+                    </div>
+                    <p className={`text-sm lg:text-base font-medium ${textSecondary}`}>
                         No emotion data available yet. Keep journaling to see your primary emotional drivers!
                     </p>
                 </div>
@@ -240,17 +241,18 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
     }
 
     return (
-        <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5`}>
-
+        <div className={`rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} h-full flex flex-col transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}>
             {/* Header */}
-            <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-black/10`}>
+            <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
                 <div className="flex-1 min-w-[200px]">
-                    {/* 💡 Icon added to Populated State Header */}
-                    <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 lg:w-6 lg:h-6 text-blue-500" />
+                    <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                        {/* 🌟 RESTORED: Blue/Cyan Jewel Icon */}
+                        <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-blue-100 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-800/20 text-blue-500 dark:text-cyan-400 shrink-0 shadow-sm border border-blue-200/50 dark:border-blue-700/30">
+                            <BarChart3 className="w-5 h-5 lg:w-6 lg:h-6" />
+                        </div>
                         Top Primary Emotions
                     </h3>
-                    <p className="text-[11px] lg:text-xs text-gray-500 dark:text-gray-400 mt-0.5 lg:mt-1 font-medium">
+                    <p className={`text-[11px] lg:text-xs mt-0.5 lg:mt-1 font-medium ${textSecondary}`}>
                         {isMobile
                             ? "Swipe horizontally to explore your top drivers."
                             : "Your strongest drivers. Hold Ctrl/Cmd + Scroll to Zoom."}
@@ -268,7 +270,6 @@ const AverageEmotionChart = ({ entries, isLoading }) => {
             <div
                 ref={chartContainerRef}
                 className="w-full flex-grow overflow-x-auto custom-scrollbar flex flex-col"
-                style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff' }}
             >
                 <div className="h-[250px] sm:h-[300px] lg:h-[350px] p-4 pr-6 lg:pr-8 pb-4 lg:pb-6 flex-grow flex items-center justify-center" style={{ width: calculatedWidth }}>
                     <Bar data={chartData} options={chartOptions} />

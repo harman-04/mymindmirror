@@ -27,20 +27,19 @@ describe("JournalInput", () => {
   it("renders textarea and submit button", () => {
     render(<JournalInput />);
     expect(screen.getByPlaceholderText(/Write your thoughts here/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Analyze & Save Entry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Analyze & Save/i })).toBeInTheDocument();
   });
 
-  it("shows error when submitting empty text", async () => {
+  it("disables the submit button when text is empty", () => {
     render(<JournalInput />);
-    const button = screen.getByRole("button", { name: /Analyze & Save Entry/i });
-    fireEvent.click(button);
-    expect(await screen.findByText(/Journal entry cannot be empty/i)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /Analyze & Save/i });
+    expect(button).toBeDisabled();
   });
 
   it("calls mutateAsync with text when submitted", async () => {
     render(<JournalInput />);
     const textarea = screen.getByPlaceholderText(/Write your thoughts here/i);
-    const button = screen.getByRole("button", { name: /Analyze & Save Entry/i });
+    const button = screen.getByRole("button", { name: /Analyze & Save/i });
 
     await userEvent.type(textarea, "My test journal entry");
     fireEvent.click(button);

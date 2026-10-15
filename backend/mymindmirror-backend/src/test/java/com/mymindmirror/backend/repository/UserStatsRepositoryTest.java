@@ -3,15 +3,15 @@ package com.mymindmirror.backend.repository;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.model.UserStats;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,90 +20,153 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UserStatsRepositoryTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private UserStatsRepository repository;
 
     @Autowired
-    private UserStatsRepository userStatsRepository;
+    private UserRepository userRepository;
 
-    private User testUser;
-    private UserStats testStats;
+    @Autowired
+    private TestEntityManager em;
+
+    private User user;
+    private User otherUser;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setUsername("statsuser");
-        testUser.setEmail("stats@example.com");
-        testUser.setPasswordHash("encoded");
-        entityManager.persistAndFlush(testUser);
+        user = new User();
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setPasswordHash("hashed");
+        user = userRepository.save(user);
 
-        testStats = new UserStats();
-        testStats.setUser(testUser);
-        testStats.setCurrentStreak(3);
-        testStats.setLongestStreak(5);
-        testStats.setLastActiveDate(LocalDate.now());
-        testStats.setBadgesJson("[\"FIRST_STEP\",\"THREE_DAY_STREAK\"]");
-        testStats.setTotalTasksCompleted(8);
-        entityManager.persistAndFlush(testStats);
+        otherUser = new User();
+        otherUser.setUsername("otheruser");
+        otherUser.setEmail("other@example.com");
+        otherUser.setPasswordHash("hashed");
+        otherUser = userRepository.save(otherUser);
+    }
+
+    private UserStats persist(User owner) {
+        UserStats stats = new UserStats();
+        stats.setUser(owner);
+        stats.setBadgesJson("[]");
+        return repository.save(stats);
     }
 
     @Test
-    void findByUser_ShouldReturnStats_WhenExists() {
-        Optional<UserStats> found = userStatsRepository.findByUser(testUser);
-        assertThat(found).isPresent();
-        assertThat(found.get().getCurrentStreak()).isEqualTo(3);
-        assertThat(found.get().getLongestStreak()).isEqualTo(5);
-        assertThat(found.get().getBadgesJson()).contains("FIRST_STEP");
+    @DisplayName("findByUser returns stats for the matching user")
+    void findByUser_found() {
+        UserStats saved = persist(user);
+
+        Optional<UserStats> result = repository.findByUser(user);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(saved.getId());
     }
 
     @Test
-    void findByUser_ShouldReturnEmpty_WhenNoStats() {
-        User anotherUser = new User();
-        anotherUser.setUsername("another");
-        anotherUser.setEmail("another@example.com");
-        anotherUser.setPasswordHash("encoded");
-        entityManager.persistAndFlush(anotherUser);
-
-        Optional<UserStats> found = userStatsRepository.findByUser(anotherUser);
-        assertThat(found).isEmpty();
+    @DisplayName("findByUser returns empty when user has no stats")
+    void findByUser_empty() {
+        assertThat(repository.findByUser(user)).isEmpty();
     }
 
     @Test
-    void save_ShouldPersistStats() {
-        User newUser = new User();
-        newUser.setUsername("newuser");
-        newUser.setEmail("new@example.com");
-        newUser.setPasswordHash("encoded");
-        entityManager.persistAndFlush(newUser);
-
-        UserStats newStats = new UserStats();
-        newStats.setUser(newUser);
-        newStats.setCurrentStreak(1);
-        newStats.setLongestStreak(1);
-        newStats.setLastActiveDate(LocalDate.now());
-        newStats.setBadgesJson("[]");
-        newStats.setTotalTasksCompleted(0);
-
-        UserStats saved = userStatsRepository.save(newStats);
-        assertThat(saved.getId()).isNotNull();
-        assertThat(saved.getUser().getId()).isEqualTo(newUser.getId());
+    @DisplayName("findByUser isolates by user")
+    void findByUser_isolatesByUser() {
+        persist(otherUser);
+        assertThat(repository.findByUser(user)).isEmpty();
     }
 
     @Test
-    void update_ShouldModifyStats() {
-        testStats.setCurrentStreak(10);
-        testStats.setLongestStreak(10);
-        testStats.setTotalTasksCompleted(15);
-        UserStats updated = userStatsRepository.save(testStats);
+    @DisplayName("Unique constraint prevents two stats rows for the same user")
+    void duplicateUserStats_throws() {
+        persist(user);
 
-        assertThat(updated.getCurrentStreak()).isEqualTo(10);
-        assertThat(updated.getLongestStreak()).isEqualTo(10);
-        assertThat(updated.getTotalTasksCompleted()).isEqualTo(15);
+        UserStats dup = new UserStats();
+        dup.setUser(user);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> repository.saveAndFlush(dup))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test
-    void delete_ShouldRemoveStats() {
-        userStatsRepository.delete(testStats);
-        Optional<UserStats> deleted = userStatsRepository.findByUser(testUser);
-        assertThat(deleted).isEmpty();
+    @DisplayName("onPostLoad() backfills null Integer fields to their defaults (legacy rows)")
+    void onPostLoad_backfillsNulls() {
+        UUID userId = UUID.randomUUID();
+        UUID statsId = UUID.randomUUID();
+
+        // 1. Insert a user (required for FK)
+        em.getEntityManager().createNativeQuery(
+                        "INSERT INTO users (id, username, email, password_hash) " +
+                                "VALUES (:id, :u, :e, :p)")
+                .setParameter("id", userId)
+                .setParameter("u", "legacyuser")
+                .setParameter("e", "legacy@example.com")
+                .setParameter("p", "hashed")
+                .executeUpdate();
+
+        // 2. Insert a stats row with NULL Integer fields (simulating legacy data)
+        em.getEntityManager().createNativeQuery(
+                        "INSERT INTO user_stats " +
+                                "(id, user_id, current_streak, longest_streak, total_tasks_completed, " +
+                                " experience_points, level, total_journal_entries, total_chats, schedules_generated, badges) " +
+                                "VALUES (:id, :uid, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, '[]')")
+                .setParameter("id", statsId)
+                .setParameter("uid", userId)
+                .executeUpdate();
+
+        em.flush();
+        em.clear();
+
+        // 3. Load the entity → @PostLoad fires
+        UserStats loaded = em.find(UserStats.class, statsId);
+
+        assertThat(loaded).isNotNull();
+        assertThat(loaded.getExperiencePoints()).isZero();
+        assertThat(loaded.getLevel()).isEqualTo(1);
+        assertThat(loaded.getTotalJournalEntries()).isZero();
+        assertThat(loaded.getTotalChats()).isZero();
+        assertThat(loaded.getSchedulesGenerated()).isZero();
+    }
+
+    @Test
+    @DisplayName("onPostLoad() preserves existing non-null Integer fields")
+    void onPostLoad_preservesNonNulls() {
+        UUID userId = UUID.randomUUID();
+        UUID statsId = UUID.randomUUID();
+
+        // 1. Insert a user (required for FK)
+        em.getEntityManager().createNativeQuery(
+                        "INSERT INTO users (id, username, email, password_hash) " +
+                                "VALUES (:id, :u, :e, :p)")
+                .setParameter("id", userId)
+                .setParameter("u", "modernuser")
+                .setParameter("e", "modern@example.com")
+                .setParameter("p", "hashed")
+                .executeUpdate();
+
+        // 2. Insert a stats row with NON-NULL Integer fields
+        em.getEntityManager().createNativeQuery(
+                        "INSERT INTO user_stats " +
+                                "(id, user_id, current_streak, longest_streak, total_tasks_completed, " +
+                                " experience_points, level, total_journal_entries, total_chats, schedules_generated, badges) " +
+                                "VALUES (:id, :uid, 0, 0, 0, 500, 2, 10, 5, 3, '[]')")
+                .setParameter("id", statsId)
+                .setParameter("uid", userId)
+                .executeUpdate();
+
+        em.flush();
+        em.clear();
+
+        // 3. Load the entity → @PostLoad fires, but the 'if' checks will evaluate to false
+        UserStats loaded = em.find(UserStats.class, statsId);
+
+        assertThat(loaded).isNotNull();
+        // Verify that the existing data was preserved, not reset to defaults
+        assertThat(loaded.getExperiencePoints()).isEqualTo(500);
+        assertThat(loaded.getLevel()).isEqualTo(2);
+        assertThat(loaded.getTotalJournalEntries()).isEqualTo(10);
+        assertThat(loaded.getTotalChats()).isEqualTo(5);
+        assertThat(loaded.getSchedulesGenerated()).isEqualTo(3);
     }
 }

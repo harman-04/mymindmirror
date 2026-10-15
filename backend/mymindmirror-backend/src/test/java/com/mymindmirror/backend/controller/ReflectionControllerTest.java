@@ -1,120 +1,135 @@
-//package com.mymindmirror.backend.controller;
-//
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.mymindmirror.backend.model.User;
-//import com.mymindmirror.backend.security.JwtUtil;
-//import com.mymindmirror.backend.service.JournalService;
-//import com.mymindmirror.backend.service.UserService;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-//import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-//import org.springframework.http.MediaType;
-//import org.springframework.security.test.context.support.WithMockUser;
-//import org.springframework.test.context.bean.override.mockito.MockitoBean;
-//import org.springframework.test.web.servlet.MockMvc;
-//
-//import java.util.Map;
-//import java.util.Optional;
-//import java.util.UUID;
-//
-//import static org.mockito.ArgumentMatchers.eq;
-//import static org.mockito.Mockito.when;
-//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-//import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-//
-//@WebMvcTest(ReflectionController.class)
-//@AutoConfigureMockMvc(addFilters = false)
-//class ReflectionControllerTest {
-//
-//    @Autowired
-//    private MockMvc mockMvc;
-//
-//    @Autowired
-//    private ObjectMapper objectMapper;
-//
-//    @MockitoBean
-//    private JournalService journalService;
-//
-//    @MockitoBean
-//    private UserService userService;
-//
-//    @MockitoBean
-//    private JwtUtil jwtUtil;
-//
-//    private User testUser;
-//
-//    @BeforeEach
-//    void setUp() {
-//        testUser = new User();
-//        testUser.setId(UUID.randomUUID());
-//        testUser.setUsername("testuser");
-//        testUser.setEmail("test@example.com");
-//        testUser.setPasswordHash("hashed");
-//
-//        // Default mock for user lookup - will be overridden in specific tests if needed
-//        when(userService.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "testuser")
-//    void generateDailyReflection_Success_ReturnsReflection() throws Exception {
-//        String promptText = "What made me happy today?";
-//        String expectedReflection = "You felt joy because you spent time with family.";
-//
-//        when(journalService.generateReflectionFromMlService(eq(promptText), eq(testUser)))
-//                .thenReturn(expectedReflection);
-//
-//        mockMvc.perform(post("/api/reflection/generate")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(Map.of("prompt_text", promptText))))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.reflection").value(expectedReflection));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "testuser")
-//    void generateDailyReflection_MissingPromptText_ReturnsBadRequest() throws Exception {
-//        mockMvc.perform(post("/api/reflection/generate")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(Map.of())))
-//                .andExpect(status().isBadRequest())
-//                .andExpect(jsonPath("$.error").value("Prompt text is required."));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "testuser")
-//    void generateDailyReflection_UserNotFound_ReturnsNotFound() throws Exception {
-//        // Override the default mock for this test only
-//        when(userService.findByUsername("testuser")).thenReturn(Optional.empty());
-//
-//        mockMvc.perform(post("/api/reflection/generate")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(Map.of("prompt_text", "Hello"))))
-//                .andExpect(status().isNotFound())
-//                .andExpect(jsonPath("$.error").value("User not found."));
-//    }
-//
-//    @Test
-//    @WithMockUser(username = "testuser")
-//    void generateDailyReflection_ServiceThrowsException_ReturnsInternalServerError() throws Exception {
-//        String promptText = "Hello";
-//        when(journalService.generateReflectionFromMlService(eq(promptText), eq(testUser)))
-//                .thenThrow(new RuntimeException("AI service down"));
-//
-//        mockMvc.perform(post("/api/reflection/generate")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(Map.of("prompt_text", promptText))))
-//                .andExpect(status().isInternalServerError())
-//                .andExpect(jsonPath("$.error").value("Failed to generate reflection: AI service down"));
-//    }
-//
-//    @Test
-//    void generateDailyReflection_Unauthenticated_ReturnsUnauthorized() throws Exception {
-//        mockMvc.perform(post("/api/reflection/generate")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(Map.of("prompt_text", "Hello"))))
-//                .andExpect(status().isUnauthorized());
-//    }
-//}
+package com.mymindmirror.backend.controller;
+
+import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.security.JwtUtil;
+import com.mymindmirror.backend.security.services.UserDetailsImpl;
+import com.mymindmirror.backend.service.JournalService;
+import com.mymindmirror.backend.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(ReflectionController.class)
+class ReflectionControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private JournalService journalService;
+
+    @MockitoBean
+    private UserService userService; // for @CurrentUser resolver
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    private User currentUser;
+    private UUID userId;
+
+    @BeforeEach
+    void setUp() {
+        userId = UUID.randomUUID();
+
+        currentUser = new User();
+        currentUser.setId(userId);
+        currentUser.setUsername("testuser");
+        currentUser.setEmail("test@example.com");
+        currentUser.setPasswordHash("hashed");
+
+        when(userService.findById(eq(userId))).thenReturn(Optional.of(currentUser));
+
+        UserDetailsImpl userDetails = new UserDetailsImpl(
+                userId, currentUser.getUsername(), currentUser.getEmail(), currentUser.getPasswordHash(), null);
+        Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    // ===== GENERATE DAILY REFLECTION =====
+
+    @Test
+    void generateDailyReflection_shouldReturn200() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenReturn("You have grown immensely this week. Keep going!");
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reflection").value("You have grown immensely this week. Keep going!"));
+    }
+
+    @Test
+    void generateDailyReflection_shouldReturn200_whenNoEntries() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenReturn("Journal an entry today to get your daily reflection!");
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reflection").value("Journal an entry today to get your daily reflection!"));
+    }
+
+    @Test
+    void generateDailyReflection_shouldReturn500_whenServiceThrowsException() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenThrow(new RuntimeException("AI service error"));
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("generateDailyReflection → 503 when DB is unreachable")
+    void generateDailyReflection_shouldReturn503_whenDatabaseUnavailable() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("DB down"));
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message")
+                        .value("A backend service is temporarily unavailable. Please try again in a moment."));
+    }
+
+    @Test
+    @DisplayName("generateDailyReflection → 503 when Redis is unreachable")
+    void generateDailyReflection_shouldReturn503_whenRedisUnavailable() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenThrow(new org.springframework.data.redis.RedisConnectionFailureException("Redis down"));
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message")
+                        .value("Cache service is temporarily unavailable. Please try again in a moment."));
+    }
+
+    @Test
+    @DisplayName("generateDailyReflection → 200 with fallback when the service catches Redis internally")
+    void generateDailyReflection_returns200WithFallback_whenServiceReturnsFallbackString() throws Exception {
+        when(journalService.generateDailyReflection(any(User.class)))
+                .thenReturn("Failed to generate reflection due to an internal error.");
+
+        mockMvc.perform(post("/api/reflection/generate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reflection")
+                        .value("Failed to generate reflection due to an internal error."));
+    }
+}

@@ -9,18 +9,19 @@ import java.util.UUID;
 @Entity
 @Table(name = "roadmap_resources" ,
         indexes = @Index(name = "idx_roadmap_res_roadmap", columnList = "roadmap_id"))
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class RoadmapResource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
+    @EqualsAndHashCode.Include
     private UUID id;
 
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "roadmap_id", nullable = false)
     @JsonIgnore
@@ -33,5 +34,5 @@ public class RoadmapResource {
     private String url;
 
     @Column(nullable = false)
-    private String type; // "article", "video", "course", "tool"
+    private String type;
 }

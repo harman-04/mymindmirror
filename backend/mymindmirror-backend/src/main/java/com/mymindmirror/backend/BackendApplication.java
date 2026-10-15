@@ -9,12 +9,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-@SpringBootApplication(exclude = PgVectorStoreAutoConfiguration.class)
+import java.time.Clock;
 
-@EnableRetry
+@SpringBootApplication(exclude = PgVectorStoreAutoConfiguration.class)
 @EnableAsync
 @EnableConfigurationProperties({MySqlDataSourceProperties.class, VectorDataSourceProperties.class})
 public class BackendApplication {
@@ -27,5 +26,10 @@ public class BackendApplication {
         // Registering this module because you use Java 8+ Dates (LocalDate, etc.)
         mapper.registerModule(new JavaTimeModule());
         return mapper;
+    }
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemDefaultZone(); // Uses real time in production
     }
 }

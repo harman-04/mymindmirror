@@ -7,6 +7,7 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -44,6 +45,7 @@ body {
   background-clip: padding-box;
 }
 
+/*
 .dark ::-webkit-scrollbar-thumb,
 .dark .custom-scrollbar::-webkit-scrollbar-thumb,
 .dark .overflow-y-auto::-webkit-scrollbar-thumb {
@@ -59,7 +61,24 @@ body {
   border: 2px solid transparent;
   background-clip: padding-box;
 }
+*/
 
+/* 🌟 AESTHETIC UPGRADE: Translucent white matches the Enterprise Slate background perfectly */
+.dark ::-webkit-scrollbar-thumb,
+.dark .custom-scrollbar::-webkit-scrollbar-thumb,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
 /* ==========================================================================
    UNIVERSAL AI MARKDOWN / RICH TEXT STYLES
    ========================================================================== */
@@ -77,7 +96,7 @@ body {
 .roadmap-heading, .guide-heading, .chat-heading {
   font-family: 'Poppins', sans-serif;
   font-weight: 800;
-  color: #111827;
+  color: #0F172A; /* slate-900 */
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
   letter-spacing: -0.025em;
@@ -89,7 +108,7 @@ body {
 .dark .growth-tip-content h1, .dark .growth-tip-content h2, .dark .growth-tip-content h3, .dark .growth-tip-content h4, .dark .growth-tip-content h5, .dark .growth-tip-content h6,
 .dark .guide-content h1, .dark .guide-content h2, .dark .guide-content h3, .dark .guide-content h4, .dark .guide-content h5, .dark .guide-content h6,
 .dark .roadmap-heading, .dark .guide-heading, .dark .chat-heading {
-  color: #F3F4F6;
+  color: #F1F5F9; /* slate-100 */
 }
 
 .roadmap-details h1, .chat-content h1, .growth-tip-content h1, .guide-content h1 { font-size: 1.75rem; }
@@ -98,10 +117,10 @@ body {
 
 .roadmap-details p, .chat-content p, .growth-tip-content p, .guide-content p, .guide-paragraph, .chat-paragraph {
   margin-bottom: 1rem;
-  color: #374151;
+  color: #334155; /* slate-700 */
 }
 .dark .roadmap-details p, .dark .chat-content p, .dark .growth-tip-content p, .dark .guide-content p, .dark .guide-paragraph, .dark .chat-paragraph {
-  color: #D1D5DB;
+  color: #CBD5E1; /* slate-300 */
 }
 
 .roadmap-details ul, .chat-content ul, .growth-tip-content ul, .guide-content ul, .guide-list {
@@ -125,10 +144,10 @@ body {
 
 .roadmap-details strong, .chat-content strong, .growth-tip-content strong, .guide-content strong {
   font-weight: 700;
-  color: #111827;
+  color: #0F172A; /* slate-900 */
 }
 .dark .roadmap-details strong, .dark .chat-content strong, .dark .growth-tip-content strong, .dark .guide-content strong {
-  color: #F3F4F6;
+  color: #F8FAFC; /* slate-50 */
 }
 .roadmap-details em, .chat-content em, .growth-tip-content em, .guide-content em {
   font-style: italic;
@@ -145,12 +164,12 @@ body {
   padding: 1rem 1.25rem;
   border-radius: 0 0.75rem 0.75rem 0;
   font-style: italic;
-  color: #4B5563;
+  color: #475569; /* slate-600 */
 }
 .dark .roadmap-details blockquote, .dark .chat-content blockquote, .dark .growth-tip-content blockquote, .dark .guide-content blockquote, .dark .guide-blockquote, .dark .chat-blockquote {
   border-left-color: #2DD4BF;
   background-color: rgba(45, 212, 191, 0.05);
-  color: #9CA3AF;
+  color: #94A3B8; /* slate-400 */
 }
 
 .roadmap-details code, .chat-content code, .growth-tip-content code, .guide-content code, .guide-code {
@@ -164,24 +183,28 @@ body {
   border: 1px solid rgba(0,0,0,0.1);
   word-break: break-word;
 }
+
 .dark .roadmap-details code, .dark .chat-content code, .dark .growth-tip-content code, .dark .guide-content code, .dark .guide-code {
-  background-color: rgba(0,0,0,0.3);
+  background-color: rgba(255, 255, 255, 0.08);
   color: #F0ABFC;
-  border-color: rgba(255,255,255,0.1);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .roadmap-details pre, .chat-content pre, .growth-tip-content pre, .guide-content pre {
-  background-color: rgba(0,0,0,0.05);
+  background-color: rgba(248, 250, 252, 0.8); /* slate-50 */
   padding: 1rem;
   border-radius: 0.75rem;
   overflow-x: auto;
   border: 1px solid rgba(0,0,0,0.1);
   margin: 1rem 0;
 }
+
 .dark .roadmap-details pre, .dark .chat-content pre, .dark .growth-tip-content pre, .dark .guide-content pre {
-  background-color: rgba(0,0,0,0.4);
-  border-color: rgba(255,255,255,0.1);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
 }
+
 .roadmap-details pre code, .chat-content pre code, .growth-tip-content pre code, .guide-content pre code {
   background: none;
   padding: 0;
@@ -226,23 +249,21 @@ body {
 }
 .dark .resource-link:hover {
   background-color: #2DD4BF;
-  color: #0F172A !important;
+  color: #0F172A !important; /* slate-900 */
 }
 
 .roadmap-details hr, .chat-content hr, .growth-tip-content hr, .guide-content hr, .guide-hr, .chat-hr {
   margin: 1.5rem 0;
   border: none;
   height: 1px;
-  background-color: #E5E7EB;
+  background-color: #E2E8F0; /* slate-200 */
 }
 .dark .roadmap-details hr, .dark .chat-content hr, .dark .growth-tip-content hr, .dark .guide-content hr, .dark .guide-hr, .dark .chat-hr {
   background-color: rgba(255,255,255,0.1);
 }
 
 /* Mobile Markdown Adjustments */
-/* Mobile Markdown Adjustments */
 @media (max-width: 640px) {
-  /* Headings */
   .growth-tip-content h1,
   .growth-tip-content h2,
   .growth-tip-content h3,
@@ -254,8 +275,6 @@ body {
     line-height: 1.25 !important;
     font-size: 1.15rem !important;
   }
-
-  /* Paragraphs */
   .growth-tip-content p,
   .guide-content p,
   .guide-paragraph {
@@ -263,8 +282,6 @@ body {
     font-size: 0.95rem !important;
     line-height: 1.6 !important;
   }
-
-  /* Blockquotes */
   .growth-tip-content blockquote,
   .guide-content blockquote,
   .guide-blockquote {
@@ -273,14 +290,12 @@ body {
     border-radius: 0 0.5rem 0.5rem 0 !important;
     font-size: 0.9rem !important;
   }
-
-  /* Lists */
   .growth-tip-content ul,
   .growth-tip-content ol,
   .guide-content ul,
   .guide-content ol,
   .guide-list {
-    padding-left: 1rem !important;  /* reduced from 1.25rem */
+    padding-left: 1rem !important;
     margin-top: 0.4rem !important;
     margin-bottom: 0.4rem !important;
   }
@@ -290,25 +305,19 @@ body {
     margin-bottom: 0.2rem !important;
     font-size: 0.95rem !important;
   }
-
-  /* Inline code */
   .growth-tip-content code,
   .guide-content code,
   .guide-code {
     font-size: 0.8em !important;
     padding: 0.1em 0.3em !important;
   }
-
-  /* Resource Links (chips) */
   .resource-link {
     padding: 1px 6px !important;
     font-size: 0.75rem !important;
     border-radius: 4px !important;
     margin: 1px 0 !important;
-    white-space: nowrap;           /* prevents breaking across lines */
+    white-space: nowrap;
   }
-
-  /* Horizontal rules */
   .growth-tip-content hr,
   .guide-content hr,
   .guide-hr {
@@ -348,57 +357,9 @@ body {
   transform-origin: center;
   cursor: pointer;
 }
-.dark .react-calendar-heatmap .day:hover { stroke: #F3F4F6; }
-.light .react-calendar-heatmap .day:hover { stroke: #1F2937; }
-
-/* ==========================================================================
-   GLOBAL UTILITIES & ANIMATIONS
-   ========================================================================== */
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-@keyframes pulse-slow {
-  0%, 100% { opacity: 0.15; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.05); }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(5deg); }
-}
-@keyframes indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes slideInFromTop {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideInFromBottom {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-.animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }
-.animate-float { animation: float 6s ease-in-out infinite; }
-.animate-float-delayed { animation: float 6s ease-in-out infinite 3s; }
-.animate-float-slow { animation: float 8s ease-in-out infinite 1.5s; }
-.animate-progress-indeterminate { animation: indeterminate 1.5s infinite cubic-bezier(0.65, 0, 0.35, 1); }
-
-.animate-in { animation-duration: 0.5s; animation-fill-mode: both; }
-.fade-in { animation-name: fadeIn; }
-.slide-in-from-top-5 { animation-name: slideInFromTop; }
-.slide-in-from-bottom-5 { animation-name: slideInFromBottom; }
-.delay-100 { animation-delay: 0.1s; }
-.delay-200 { animation-delay: 0.2s; }
-.delay-1000 { animation-delay: 1s; }
-
-
+/* 🌟 FIX: Default to Slate-900, Dark mode to Slate-50 */
+.react-calendar-heatmap .day:hover { stroke: #0F172A; }
+.dark .react-calendar-heatmap .day:hover { stroke: #F8FAFC; }
 /* ==========================================================================
    JAVA / C# / TECHNICAL ANNOTATIONS (@Override, @Bean, etc.)
    ========================================================================== */
@@ -407,14 +368,107 @@ body {
   font-weight: 700;
   padding: 0.125rem 0.375rem;
   border-radius: 0.375rem;
-  background-color: #F5F3FF; /* Tailwind purple-50 */
-  color: #9333EA; /* Tailwind purple-600 */
+  background-color: #F5F3FF;
+  color: #9333EA;
   border: 1px solid rgba(168, 85, 247, 0.2);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .dark .code-annotation {
-  background-color: rgba(19, 78, 74, 0.2); /* Tailwind teal-900/20 */
-  color: #2DD4BF; /* Tailwind teal-400 */
-  border-color: rgba(20, 184, 166, 0.2); /* Tailwind teal-500/20 */
+  background-color: rgba(19, 78, 74, 0.2);
+  color: #2DD4BF;
+  border-color: rgba(20, 184, 166, 0.2);
+}
+
+/* ==========================================================================
+   UTILITY CLASSES (Stripped of animations)
+   ========================================================================== */
+.mask-border { -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+
+/* ==========================================================================
+   CHROMIUM TILE RENDERING FIX (The "Blank Box" Bug)
+   ========================================================================== */
+/*
+  Forces the browser to allocate dedicated hardware layers for large structural
+  boundaries. This prevents the rendering engine from dropping tiles and leaving
+  unpainted "blank boxes" over the UI when scrolling rapidly.
+
+#root, body, main, header {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  Hint to the browser to prioritize this layer
+  will-change: transform;
+}
+
+/* GPU Lock for Scroll Flash Prevention
+header, main, .backdrop-blur-xl {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+*/
+
+/* ==========================================================================
+   SAFE AMBIENT & CONTINUOUS ANIMATIONS (Restored)
+   ========================================================================== */
+/* These do not cause layout-thrashing and are safe for the GPU */
+
+@keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+@keyframes pulse-slow { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.05); } }
+@keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-15px) rotate(5deg); } }
+@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse-subtle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
+@keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(1.2); opacity: 0; } }
+@keyframes ping-slow { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slide-down-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down-fade {
+  animation: slide-down-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+/* Apply Safe Animation Classes */
+.animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-delayed { animation: float 6s ease-in-out infinite 3s; }
+.animate-float-slow { animation: float 8s ease-in-out infinite 1.5s; }
+.animate-progress-indeterminate { animation: indeterminate 1.5s infinite cubic-bezier(0.65, 0, 0.35, 1); }
+.animate-spin-slow { animation: spin-slow 12s linear infinite; }
+.animate-pulse-subtle { animation: pulse-subtle 0.8s ease-in-out; }
+.animate-pulse-ring { animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+.animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Utility Delays */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-1000 { animation-delay: 1s; }
+
+
+/* ==========================================================================
+   UTILITY: HIDE SCROLLBAR (Used in Mobile Tab Docks)
+   ========================================================================== */
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

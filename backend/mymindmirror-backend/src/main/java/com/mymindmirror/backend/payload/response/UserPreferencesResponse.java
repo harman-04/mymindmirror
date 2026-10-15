@@ -1,21 +1,37 @@
-// src/main/java/com/mymindmirror/backend/payload/response/UserPreferencesResponse.java
 package com.mymindmirror.backend.payload.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserPreferencesResponse {
-    private String availableHoursJson;
-    private String timezone;
+public record UserPreferencesResponse(
+        @Schema(
+                description = "Weekly availability as JSON. Format: " +
+                        "{\"monday\":[[\"09:00\",\"12:00\"],[\"13:00\",\"17:00\"]],\"tuesday\":[],...}. " +
+                        "Keys are lowercase day names; values are arrays of [start,end] time pairs.",
+                nullable = true)
+        String availableHoursJson,
 
-    // NEW LIFESTYLE FIELDS
-    private String energyPeak;
-    private String wakeTime;
-    private String sleepTime;
-    private String lunchTime;
-    private String dailyHabitsJson;
-}
+        @Schema(
+                description = "IANA timezone identifier, e.g. 'Asia/Kolkata', 'America/New_York'.",
+                nullable = true)
+        String timezone,
+
+        @Schema(
+                description = "User's energy peak.",
+                allowableValues = {"MORNING", "AFTERNOON", "EVENING"},
+                nullable = true)
+        String energyPeak,
+
+        @Schema(description = "Wake time as HH:mm:ss string.", nullable = true)
+        String wakeTime,
+
+        @Schema(description = "Sleep time as HH:mm:ss string.", nullable = true)
+        String sleepTime,
+
+        @Schema(description = "Lunch time as HH:mm:ss string.", nullable = true)
+        String lunchTime,
+
+        @Schema(
+                description = "Daily habits as a JSON array of strings, e.g. [\"30 min workout\", \"Read 10 pages\"].",
+                nullable = true)
+        String dailyHabitsJson
+) {}

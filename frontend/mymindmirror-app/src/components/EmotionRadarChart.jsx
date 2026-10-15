@@ -1,7 +1,6 @@
-// src/components/EmotionRadarChart.jsx
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Radar } from 'react-chartjs-2';
-import { SkeletonChart } from './Skeleton';
+import { SkeletonRadarChart } from './Skeleton';
 import { useTheme } from '../contexts/ThemeContext';
 import DownloadChartButton from './DownloadChartButton';
 import { Activity, TrendingUp, Radar as RadarIcon } from 'lucide-react';
@@ -37,31 +36,17 @@ const EMOTION_LABELS = {
   frustration: 'Frustration', gratitude: 'Gratitude', hope: 'Hope'
 };
 
-// 💡 NEW: A completely distinct, vivid "Jewel & Neon" palette for maximum contrast
 const EMOTION_COLORS_VIVID = {
-  joy: '#FFE600',        // Vivid Yellow
-  sadness: '#3B82F6',    // Bright Blue
-  anger: '#FF3333',      // Bright Red
-  fear: '#9D4EDD',       // Deep Purple
-  surprise: '#FF8A00',   // Vivid Orange
-  love: '#FF42A1',       // Hot Pink
-  anxiety: '#D97706',    // Amber/Bronze
-  relief: '#14B8A6',     // Teal
-  neutral: '#A8A29E',    // Silver/Gray
-  excitement: '#00D4FF', // Cyan/Neon Blue
-  contentment: '#22C55E',// Green
-  frustration: '#E11D48',// Rose/Crimson
-  gratitude: '#84CC16',  // Lime
-  hope: '#0EA5E9'        // Sky Blue
+  joy: '#FFE600', sadness: '#3B82F6', anger: '#FF3333', fear: '#9D4EDD',
+  surprise: '#FF8A00', love: '#FF42A1', anxiety: '#D97706', relief: '#14B8A6',
+  neutral: '#A8A29E', excitement: '#00D4FF', contentment: '#22C55E',
+  frustration: '#E11D48', gratitude: '#84CC16', hope: '#0EA5E9'
 };
 
 const EmotionRadarChart = ({ entries, isLoading }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
-
   const chartContainerRef = useRef(null);
-
-  // Track window size for responsive sizing inside ChartJS config
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
   useEffect(() => {
@@ -70,8 +55,15 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
       return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const cardBg = isDarkMode ? 'bg-[#1A162F]/60 backdrop-blur-xl' : 'bg-white/70 backdrop-blur-xl';
-  const cardBorder = isDarkMode ? 'border-white/10' : 'border-white/50';
+  // ==========================================================================
+  // 🌟 MASTER ELEVATION PALETTE (Single Source of Truth)
+  // ==========================================================================
+  const cardBg = isDarkMode ? 'bg-[#1A162F]/95 shadow-sm' : 'bg-white/95 shadow-sm';
+  const cardBorder = isDarkMode ? 'border-white/10' : 'border-slate-200/80';
+  const sectionBg = isDarkMode ? 'bg-[#131127]/80' : 'bg-slate-50/80';
+  const sectionBorder = isDarkMode ? 'border-white/5' : 'border-slate-200/60';
+  const textPrimary = isDarkMode ? 'text-gray-100' : 'text-slate-900';
+  const textSecondary = isDarkMode ? 'text-gray-400' : 'text-slate-500';
 
   const chartDataRaw = useMemo(() => {
     if (!entries || entries.length === 0) return [];
@@ -115,7 +107,8 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
     const radarColorStr = isDarkMode ? '141, 226, 221' : '179, 153, 212';
     const radarColorHex = isDarkMode ? '#8DE2DD' : '#B399D4';
 
-    // 💡 Map to the new vivid palette
+    // 🌟 FIX: Match point cutout colors to the new background
+    const pointCutoutColor = isDarkMode ? '#1A162F' : '#ffffff';
     const pointColors = chartDataRaw.map(d => EMOTION_COLORS_VIVID[d.fullName] || radarColorHex);
 
     const data = {
@@ -141,9 +134,8 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
           borderColor: radarColorHex,
           borderWidth: 2,
           pointBackgroundColor: pointColors,
-          pointBorderColor: isDarkMode ? '#131127' : '#ffffff',
+          pointBorderColor: pointCutoutColor,
           pointBorderWidth: 2,
-          // 💡 Bumped up radius to make the beautiful colors extremely visible
           pointRadius: isMobile ? 4 : 5,
           pointHoverBackgroundColor: isDarkMode ? '#ffffff' : '#1f2937',
           pointHoverBorderColor: pointColors,
@@ -185,7 +177,7 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
           grid: { color: gridColor, circular: false, borderDash: [4, 4] },
           pointLabels: {
             color: axisColor,
-            font: { family: 'Inter', size: isMobile ? 10 : 12, weight: 600 }, // 💡 Bolder text for readability
+            font: { family: 'Inter', size: isMobile ? 10 : 12, weight: 600 },
           },
           ticks: {
             display: true,
@@ -204,15 +196,21 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
     return { chartData: data, chartOptions: options };
   }, [chartDataRaw, isDarkMode, isMobile]);
 
-  if (isLoading) return <SkeletonChart />;
+  if (isLoading) return <SkeletonRadarChart />;
 
   if (!chartDataRaw || chartDataRaw.length === 0 || chartDataRaw.every(d => d.intensity === 0)) {
     return (
-      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full`}>
-          <div className="flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-              <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">
-                  Emotion Radar
-              </h3>
+      <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full`}>
+          <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
+              <div className="flex-1 min-w-[200px]">
+                  <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                      {/* 🌟 RESTORED: Indigo Jewel Icon */}
+                      <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-50 dark:from-indigo-900/40 dark:to-violet-800/20 text-indigo-500 dark:text-indigo-400 shrink-0 shadow-sm border border-indigo-200/50 dark:border-indigo-700/30">
+                          <RadarIcon className="w-5 h-5 lg:w-6 lg:h-6" />
+                      </div>
+                      Emotion Radar
+                  </h3>
+              </div>
               <DownloadChartButton
                   chartRef={chartContainerRef}
                   filename="emotion_radar_chart"
@@ -220,16 +218,16 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
                   className="opacity-50 pointer-events-none mt-2 sm:mt-0 shrink-0"
               />
           </div>
-          <div className="w-full flex-grow flex flex-col items-center justify-center p-6 lg:p-10 text-center" style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff', minHeight: '300px' }}>
+          <div className="w-full flex-grow flex flex-col items-center justify-center p-6 lg:p-10 text-center min-h-[300px]">
              <div className="relative mb-4 lg:mb-6">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-teal-400/20 rounded-full blur-2xl" />
                 <Activity className="w-12 h-12 lg:w-16 lg:h-16 relative text-purple-400 dark:text-teal-400 animate-pulse" />
               </div>
-              <p className="text-lg lg:text-xl font-bold text-gray-700 dark:text-gray-300">Not enough emotional data yet</p>
-              <p className="text-sm lg:text-base text-center max-w-md mt-2 text-gray-500 dark:text-gray-400">
+              <p className={`text-lg lg:text-xl font-bold ${textPrimary}`}>Not enough emotional data yet</p>
+              <p className={`text-sm lg:text-base text-center max-w-md mt-2 ${textSecondary}`}>
                 Your emotion radar will appear here once you have journal entries with detected emotions.
               </p>
-              <div className="flex items-center justify-center gap-2 text-xs lg:text-sm font-medium text-gray-400 mt-4 lg:mt-6">
+              <div className="flex items-center justify-center gap-2 text-xs lg:text-sm font-medium text-purple-500 mt-4 lg:mt-6">
                 <TrendingUp className="w-4 h-4" />
                 <span>The more you journal, the clearer your patterns become</span>
               </div>
@@ -239,15 +237,18 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
   }
 
   return (
-    <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5`}>
-
-      <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-black/10`}>
+    <div className={`w-full rounded-2xl lg:rounded-3xl border ${cardBorder} shadow-sm ring-1 ring-black/5 dark:ring-white/5 overflow-hidden ${cardBg} flex flex-col h-full transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}>
+      {/* Header */}
+      <div className={`flex flex-wrap justify-between items-center gap-4 p-4 lg:p-6 border-b ${sectionBorder} ${sectionBg}`}>
           <div className="flex-1 min-w-[200px]">
-              <h3 className="text-lg lg:text-xl font-poppins font-extrabold text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                  <RadarIcon className="w-5 h-5 lg:w-6 lg:h-6 text-indigo-500" />
+              <h3 className={`text-lg lg:text-xl font-poppins font-extrabold ${textPrimary} tracking-tight flex items-center gap-3`}>
+                  {/* 🌟 RESTORED: Indigo Jewel Icon */}
+                  <div className="p-2 lg:p-2.5 rounded-xl lg:rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-50 dark:from-indigo-900/40 dark:to-violet-800/20 text-indigo-500 dark:text-indigo-400 shrink-0 shadow-sm border border-indigo-200/50 dark:border-indigo-700/30">
+                      <RadarIcon className="w-5 h-5 lg:w-6 lg:h-6" />
+                  </div>
                   Emotion Radar
               </h3>
-              <p className="text-[11px] lg:text-xs text-gray-500 dark:text-gray-400 mt-0.5 lg:mt-1 font-medium">
+              <p className={`text-[11px] lg:text-xs mt-0.5 lg:mt-1 font-medium ${textSecondary}`}>
                   The interconnected web of your emotional state.
               </p>
           </div>
@@ -263,7 +264,6 @@ const EmotionRadarChart = ({ entries, isLoading }) => {
       <div
         ref={chartContainerRef}
         className="w-full flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8"
-        style={{ backgroundColor: isDarkMode ? '#131127' : '#ffffff' }}
       >
         <div className="relative w-full max-w-3xl mx-auto h-[300px] sm:h-[400px] lg:h-[450px]">
           <Radar data={chartData} options={chartOptions} />

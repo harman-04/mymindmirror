@@ -40,6 +40,25 @@ export const ThemeProvider = ({ children }) => {
   }, []);
 
   // 💡 UPGRADE 2: DOM Manipulation & Transition Fix
+//   useEffect(() => {
+//     const root = window.document.documentElement;
+//
+//     // Swap classes instantly
+//     root.classList.remove('light', 'dark');
+//     root.classList.add(theme);
+//
+//     // Save preference
+//     localStorage.setItem('theme', theme);
+//
+//     // Add transitions AFTER initial load to prevent a "flashing" screen on reload
+//     const timeoutId = setTimeout(() => {
+//         root.classList.add('transition-colors', 'duration-500');
+//     }, 50);
+//
+//     return () => clearTimeout(timeoutId);
+//   }, [theme]);
+
+// 💡 UPGRADE 2: DOM Manipulation & Transition Fix
   useEffect(() => {
     const root = window.document.documentElement;
 
@@ -47,11 +66,16 @@ export const ThemeProvider = ({ children }) => {
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
 
+    // 🌟 ENTERPRISE FIX: Native Browser Element Sync
+    // Forces the browser's native engine (scrollbars, input carets, select arrows) to instantly match the theme
+    root.style.colorScheme = theme;
+
     // Save preference
     localStorage.setItem('theme', theme);
 
     // Add transitions AFTER initial load to prevent a "flashing" screen on reload
     const timeoutId = setTimeout(() => {
+        // 🌟 SAFE: transition-colors ensures ONLY colors animate across the app, protecting global layout
         root.classList.add('transition-colors', 'duration-500');
     }, 50);
 
