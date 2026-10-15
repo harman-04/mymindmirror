@@ -310,7 +310,8 @@ Every screen in MyMindMirror, organized by module. Click any heading to expand. 
 <img src="docs/screenshots/analytics-charts/chart-mood-timeline.webp" alt="Line chart of mood score over time with ctrl+scroll zoom" width="100%" />
 
 **Key phrase cloud — floating animation**
-<video src="https://raw.githubusercontent.com/harman-04/mymindmirror/main/docs/screenshots/analytics-charts/chart-word-cloud.mp4" autoplay loop muted playsinline width="100%"></video>
+**Key phrase cloud — floating animation**
+<img src="docs/screenshots/analytics-charts/chart-word-cloud.gif" alt="Animated key phrase cloud with floating words" width="100%" />
 
 **Key phrase cloud — interactive click-to-filter**
 <img src="docs/screenshots/analytics-charts/chart-word-cloud.webp" alt="Key phrase cloud with click-to-filter applied, showing filtered journal entries below" width="100%" />
