@@ -77,7 +77,12 @@ export const useUpdateApiKey = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (apiKey) => {
-            await axios.put(`${API_BASE_URL}/users/api-key`, { apiKey }, { headers: getAuthHeader() });
+            const { data } = await axios.put(
+                `${API_BASE_URL}/users/api-key`,
+                { apiKey },
+                { headers: getAuthHeader() }
+            );
+            return data; // { status, message }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['userFullProfile'] });

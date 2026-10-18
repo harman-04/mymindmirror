@@ -4,9 +4,11 @@ import com.mymindmirror.backend.annotation.CurrentUser;
 import com.mymindmirror.backend.api.ApiKeyApi;
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.ApiKeyRequest;
+import com.mymindmirror.backend.payload.response.ApiKeySaveResponse;
 import com.mymindmirror.backend.payload.response.ApiKeyStatusResponse;
 import com.mymindmirror.backend.service.ApiKeyService;
 import com.mymindmirror.backend.service.ai.DynamicAiClientService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,24 +25,24 @@ public class ApiKeyController implements ApiKeyApi {
 
     @Override
     @PutMapping("/api-key")
-    public ResponseEntity<Void> updateApiKey(
+    public ResponseEntity<ApiKeySaveResponse> updateApiKey(
             @CurrentUser User currentUser,
-            @RequestBody ApiKeyRequest request) {
+            @Valid @RequestBody ApiKeyRequest request) {
 
-        String newKey = request.apiKey();
+        ApiKeySaveResponse response =
+                apiKeyService.validateAndSaveApiKey(currentUser, request.apiKey());
 
-        if (newKey == null || newKey.isBlank()) {
-            apiKeyService.saveApiKey(currentUser, null);
-            log.info("Cleared API key for user {}", currentUser.getUsername());
-        } else {
-            apiKeyService.saveApiKey(currentUser, newKey);
-            log.info("Updated API key for user {}", currentUser.getUsername());
+        // Only evict cached models if the stored key actually changed.
+        // A REJECTED outcome leaves the existing key untouched, so the
+        // cached model instances are still valid.
+        if (!"REJECTED".equals(response.status())) {
+            dynamicAiClientService.evictUserModel(currentUser.getId());
         }
 
-        //  Controller safely orchestrates the cache clear!
-        dynamicAiClientService.evictUserModel(currentUser.getId());
+        log.info("API key update for user {}: {}",
+                currentUser.getUsername(), response.status());
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(response);
     }
 
     @Override

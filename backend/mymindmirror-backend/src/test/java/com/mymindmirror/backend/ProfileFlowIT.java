@@ -1,18 +1,32 @@
 package com.mymindmirror.backend;
 
+import com.mymindmirror.backend.enums.ValidationStatus;
 import com.mymindmirror.backend.payload.request.ApiKeyRequest;
 import com.mymindmirror.backend.payload.request.ChangePasswordRequest;
 import com.mymindmirror.backend.payload.request.UpdateRoadmapPreferencesRequest;
 import com.mymindmirror.backend.payload.request.UpdateUserPreferencesRequest;
 import com.mymindmirror.backend.payload.request.UserProfileRequest;
+import com.mymindmirror.backend.payload.response.ValidationResult;
+import com.mymindmirror.backend.service.ApiKeyValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalTime;
+import java.util.List;
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,6 +38,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProfileFlowIT extends AbstractIntegrationTest {
 
     private String aliceJwt;
+
+    @MockitoBean
+    private ApiKeyValidator apiKeyValidator;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private VectorStore vectorStore; // This is the mock from TestVectorStoreConfig
 
     @BeforeEach
     void loginAlice() throws Exception {
@@ -264,15 +287,20 @@ class ProfileFlowIT extends AbstractIntegrationTest {
     // =================================================================
 
     @Test
-    @DisplayName("PUT /api-key with valid key → 204, status flips to usingOwnKey=true")
+    @DisplayName("PUT /api-key with valid key → 200 VERIFIED, status flips to usingOwnKey=true")
     void updateApiKey_setsOwnKey() throws Exception {
+        when(apiKeyValidator.validate(anyString()))
+                .thenReturn(new ValidationResult(
+                        ValidationStatus.VERIFIED));
+
         ApiKeyRequest request = new ApiKeyRequest("my-fake-gemini-key-1234");
 
         mockMvc.perform(put("/api/users/api-key")
                         .header("Authorization", "Bearer " + aliceJwt)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VERIFIED"));
 
         mockMvc.perform(get("/api/users/api-key/status")
                         .header("Authorization", "Bearer " + aliceJwt))
@@ -281,21 +309,27 @@ class ProfileFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /api-key with blank key → 204, clears the stored key")
+    @DisplayName("PUT /api-key with blank key → 200 CLEARED, clears the stored key")
     void updateApiKey_blankClears() throws Exception {
+        when(apiKeyValidator.validate(anyString()))
+                .thenReturn(new ValidationResult(
+                       ValidationStatus.VERIFIED));
+
         // First set a key
         mockMvc.perform(put("/api/users/api-key")
                         .header("Authorization", "Bearer " + aliceJwt)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ApiKeyRequest("fake-key"))))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VERIFIED"));
 
         // Then clear it
         mockMvc.perform(put("/api/users/api-key")
                         .header("Authorization", "Bearer " + aliceJwt)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ApiKeyRequest(""))))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLEARED"));
 
         mockMvc.perform(get("/api/users/api-key/status")
                         .header("Authorization", "Bearer " + aliceJwt))

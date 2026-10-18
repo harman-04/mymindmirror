@@ -1,8 +1,11 @@
 package com.mymindmirror.backend.service;
 
 import com.mymindmirror.backend.constants.CacheConstants;
+import com.mymindmirror.backend.enums.ValidationStatus;
 import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.payload.response.ApiKeySaveResponse;
 import com.mymindmirror.backend.payload.response.ApiKeyStatusResponse;
+import com.mymindmirror.backend.payload.response.ValidationResult;
 import com.mymindmirror.backend.util.FieldEncryptionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -16,7 +19,7 @@ public class ApiKeyService {
 
     private final FieldEncryptionUtil encryptionUtil;
     private final UserService userService;
-    // ❌ REMOVED DynamicAiClientService
+    private final ApiKeyValidator apiKeyValidator;
 
     public String getDecryptedApiKey(User user) {
         if (user.getGeminiApiKeyEncrypted() == null) {
@@ -25,10 +28,6 @@ public class ApiKeyService {
         return encryptionUtil.decrypt(user.getGeminiApiKeyEncrypted());
     }
 
-    @Caching(evict = {
-            @CacheEvict(value = CacheConstants.API_KEY_STATUS, key = "#user.id"),
-            @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
-    })
     public void saveApiKey(User user, String plainApiKey) {
         if (plainApiKey == null || plainApiKey.isBlank()) {
             user.setGeminiApiKeyEncrypted(null);
@@ -36,7 +35,37 @@ public class ApiKeyService {
             user.setGeminiApiKeyEncrypted(encryptionUtil.encrypt(plainApiKey));
         }
         userService.save(user);
-        // ❌ REMOVED the evictUserModel call from here
+    }
+
+    /**
+     * Validates the key with Google, then saves it. See {@link ApiKeyValidator}
+     * for the semantics of each status.
+     *
+     * <p>The key is saved for VERIFIED and UNVERIFIED outcomes. It is NOT saved
+     * for REJECTED — a definitively bad key must never overwrite the user's
+     * existing stored key.
+     */
+    @Caching(evict = {
+            @CacheEvict(value = CacheConstants.API_KEY_STATUS, key = "#user.id"),
+            @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
+    })
+    public ApiKeySaveResponse validateAndSaveApiKey(User user, String plainApiKey) {
+        if (plainApiKey == null || plainApiKey.isBlank()) {
+            saveApiKey(user, null);
+            return ApiKeySaveResponse.cleared();
+        }
+
+        ValidationResult result = apiKeyValidator.validate(plainApiKey);
+
+        if (result.status() == ValidationStatus.REJECTED) {
+            return ApiKeySaveResponse.rejected();
+        }
+
+        saveApiKey(user, plainApiKey);
+
+        return result.status() == ValidationStatus.VERIFIED
+                ? ApiKeySaveResponse.verified()
+                : ApiKeySaveResponse.unverified();
     }
 
     @Cacheable(value = CacheConstants.API_KEY_STATUS, key = "#user.id")
