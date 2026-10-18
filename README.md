@@ -94,6 +94,7 @@
 - [Security Model](#security-model)
     - [Encryption at Rest](#encryption-at-rest)
     - [Authentication Flow](#authentication-flow)
+    - [Hard Deletion & Data Erasure](#hard-deletion--data-erasure)
     - [Known Gaps](#known-gaps)
 - [Configuration Profiles](#configuration-profiles)
 - [Deployment](#deployment)
@@ -111,7 +112,7 @@ Most journaling tools fall into one of two traps. Either they're **too shallow**
 
 MyMindMirror is built on a different premise: **your journal is the most personal data you have, and it should be treated that way.** That principle drives three concrete architectural choices:
 
-**1. Privacy is the default, not a feature.** Journal text is encrypted at rest with AES-CBC before it ever hits disk, using a key derived from your own password hash via PBKDF2. Your Gemini API key — if you choose to supply one — is stored with AES-GCM under an independent server master key and never returned in plaintext. Full data export (PDF, CSV, PNG) is available from day one with no paywall, no rate limit, and no "contact us for enterprise data access."
+**1. Privacy is the default, not a feature.** Journal text is encrypted at rest with AES-CBC before it ever hits disk, using a key derived from your own password hash via PBKDF2. Your Gemini API key — if you choose to supply one — is stored with AES-GCM under an independent server master key and never returned in plaintext. Full data export (PDF, CSV, PNG) is available from day one with no paywall. And if you ever leave, one click executes a **6-layer hard delete** — wiping your data from MySQL, PostgreSQL, Redis, and JVM memory with zero retention.
 
 **2. The AI actually remembers what you wrote.** Every journal entry is embedded into a 3072-dimensional vector and stored in PostgreSQL/pgvector. When you ask the AI Coach a question, the backend retrieves your most semantically relevant past entries — not generic advice from a chatbot that's never read your history. RAG is the default, not a bolt-on.
 
@@ -583,10 +584,16 @@ Eight custom Chart.js engines, all theme-aware and exportable:
 
 #### 🔐 Bring Your Own Key (BYOK)
 - **Paste your own Gemini API key** for dedicated quotas and higher rate limits
+- **Pre-save validation** — the key is tested against Google's API before saving. You get instant feedback:
+    - `VERIFIED` → Key works perfectly.
+    - `REJECTED` → Key is invalid/revoked. (The save is blocked so you don't accidentally overwrite a working key).
+    - `UNVERIFIED` → Google is unreachable. (Key saves anyway so you aren't blocked during an outage).
+    - `CLEARED` → The input was blank, so the stored key was deleted.
 - **AES-GCM encryption at rest** with an independent server master key
 - **Masked status badge** (e.g., `••••••••12ab`) — plaintext never returned
 - **Instant model cache eviction** on key update — new key takes effect immediately
 - **Fallback to shared key** when no personal key is set
+- **Safe operation** — a rejected key never overwrites your existing working key
 
 #### 📱 Installable PWA & Offline
 - **Install to home screen** — runs in its own window on desktop and mobile
@@ -599,6 +606,11 @@ Eight custom Chart.js engines, all theme-aware and exportable:
 - **Sticky sidebar navigation** with scroll-to-section on click
 - **Collapsible accordions** — technical detail on demand
 - **Written for both audiences** — product depth for evaluators, implementation detail for developers
+
+#### 🛡️ Privacy & Absolute Data Deletion
+- **Absolute Right to be Forgotten** — One-click account deletion executes a cascading hard-delete across **all 6 storage layers**. No soft-deletes, no "archived" states, and no hidden backups.
+- **Complete Erasure Guarantee** — When you delete your account, we don't just delete your login. We wipe your journals, roadmaps, stats, and encrypted API keys from MySQL; purge your 3072-dim vector embeddings from PostgreSQL; scan and `UNLINK` your AI chat sessions from Redis; evict your cached DTOs; and remove your decrypted ChatModels and reflection prompts from JVM memory.
+- **Atomic Safety** — The database operations execute inside a strict single transaction. Once the `200 OK` returns, your data is cryptographically and permanently gone from every storage medium.
 
 ### Engineering Highlights
 
@@ -628,14 +640,15 @@ Three databases, each chosen for a specific workload:
     - `ROADMAP_*` → 5 models (starting from `gemini-3.5-flash-lite`)
     - `TODAY_REFLECTION` / `REFLECTIVE_QUESTION` / `REFLECTION_CHAT` → 4 models (mixing Gemma and Gemini)
 - **Dual-family strategy** — Gemma models (`gemma-4-31b-it`, `gemma-4-26b-a4b-it`) handle plain-text generation; Gemini models handle structured JSON and complex reasoning
+- **Startup Observability** — a `@PostConstruct` method logs every task's cascade to the console on boot, so the active routing matrix is always visible in production logs.
 - **Cooldown strategy**:
     - Rate limit / parsing error → locked for **60 seconds**
     - 404 Not Found (deprecated model) → locked for **24 hours**
     - Success → cleared
-- **Fast-path skip** via `ConcurrentHashMap` — cooldown check is O(1) and pre-flight
+- **Fast-path skip** via `ConcurrentHashMap` — cooldown check is O(1) and pre-flight. If **all** models in a cascade are on cooldown, the client skips the network entirely and instantly returns a graceful fallback (or a 503 with a key-aware message), logging a critical alert.
 - **Thinking-model aware** — for models that emit internal reasoning tokens, the client always takes the **final result index** to surface the synthesized answer instead of intermediate thoughts
 - **Zero user-visible interruption** on model failure
-- 
+
 #### Native Database Triggers & Procedures
 - `daily_journal_summary` is **auto-maintained by MySQL triggers** on `INSERT`, `UPDATE`, and `DELETE` of `journal_entries`
 - **Zero runtime aggregation** for analytics endpoints — the summary table is always pre-computed
@@ -677,6 +690,7 @@ Updates propagate automatically across related aggregates so the client never ha
 - Marking a `Task` complete → the linked `RoadmapTask` is marked complete too
 - Deleting a `CustomTask` → every `ScheduledTask` pointing at it is deleted in the same transaction
 - Completing a `ScheduledTask` linked to a custom task → the master `CustomTask` (and any sibling scheduled entries) are marked complete
+- **Deleting a `User`** → triggers a multi-database cascade that wipes relational tables, vector embeddings, Redis sessions, and JVM memory caches in a single orchestrated flow
 
 Consistency holds even if the client only knows about one of the entities.
 
@@ -711,6 +725,7 @@ Nine user-facing modules, one coherent SPA. Every interaction is optimized for p
 - **Smart polling** — when a journal entry is awaiting AI analysis, the history query polls every 3 seconds until `moodScore` appears, then stops. Zero wasted requests when idle.
 - **Skeleton loaders** — 15+ distinct skeleton variants match each surface's real layout. No generic spinners. The UI paints the "shape" of the incoming content, then swaps in real data.
 - **Toast notifications** — Sonner handles success, error, and promise toasts with deduplication (`id: 'error-${status}-${message}'`). No stacking spam from repeated failures.
+- **API Key quick-access popover** — The navbar's "Own key / Shared key" indicator is a clickable popover. From here, users can see their masked key, jump directly to the Profile settings, or clear their key with one click — without navigating away from their current page.
 
 #### Adaptive DOM Virtualization
 Rendering thousands of rich journal entries with embedded charts would crash a mobile browser's RAM. The `JournalHistory` component uses a **dynamic rendering router**:
@@ -866,7 +881,7 @@ Rather than aggregate `AVG(mood_score)` and `SUM(word_count)` on every analytics
     - `after_journal_entry_update` → calls `update_journal_entry_summary`
     - `after_journal_entry_delete` → calls `recalc_daily_summary`
 
-The result: analytics reads hit a table that already contains the answer. No aggregation logic runs in the request path.
+The result: analytics reads hit a table that already contains the answer. No aggregation logic runs in the request path. During full account deletion, the backend explicitly executes `dailyJournalSummaryRepository.deleteByUserId()` to guarantee zero orphaned aggregate rows, bypassing any reliance on trigger execution for GDPR compliance.
 
 #### Vector schema layout
 
@@ -1055,6 +1070,16 @@ static class CachedQuestion {
 ```
 
 If you refresh the page, reload, or navigate away and back within 5 minutes, the same question is served from memory — no LLM call, no quota spent. After 5 minutes, the next request generates a fresh question.
+
+#### API Key Validation Cascade
+
+When a user saves a new Gemini API key via the profile page, it isn't saved blindly. The `ApiKeyValidator` makes a minimal "ping" call to Google to ensure the key is active.
+
+To keep this fast and resilient:
+- **Mini-cascade:** It tries the first 2 models from the `JOURNAL_ANALYSIS` cascade.
+- **7-second timeout:** Combined connect/read timeout prevents the save button from hanging.
+- **No temperature:** Validates without `temperature(0.0)` (which breaks Gemini 3.5+ lite models).
+- **Auth-failure short-circuit:** If Google returns `401 Unauthorized` or `403 Forbidden`, the loop stops immediately and returns `REJECTED` — no need to try the second model.
 
 #### Per-user API key resolution
 
@@ -1980,7 +2005,8 @@ mymindmirror/
 │           │   │   │   ├── AITask.java                    # Model cascade per task
 │           │   │   │   ├── GamificationAction.java        # XP triggers
 │           │   │   │   ├── InsightStatus.java
-│           │   │   │   └── Status.java                    # PENDING/IN_PROGRESS/COMPLETED/...
+│           │   │   │   ├── Status.java                    # PENDING/IN_PROGRESS/COMPLETED/...
+│           │   │   │   └── ValidationStatus.java          # API key validation outcomes
 │           │   │   │
 │           │   │   ├── exception/
 │           │   │   │   └── RestExceptionHandler.java      # Unified ErrorResponse shape
@@ -2014,7 +2040,9 @@ mymindmirror/
 │           │   │   │
 │           │   │   ├── payload/
 │           │   │   │   ├── request/     # Java records for inbound JSON
-│           │   │   │   └── response/    # Java records for outbound JSON
+│           │   │   │   ├── response/    # Java records for outbound JSON
+│           │   │   │   │    ├── ApiKeySaveResponse.java   # VERIFIED/REJECTED/CLEARED status
+│           │   │   │   │    └── ValidationResult.java     # Wrapper for validation status
 │           │   │   │
 │           │   │   ├── repository/      # Spring Data JPA repositories
 │           │   │   │   ├── CustomTaskRepository.java
@@ -2051,6 +2079,7 @@ mymindmirror/
 │           │   │   ├── service/         # Business logic
 │           │   │   │   ├── AnomalyDetectionService.java        # EWMA z-score detector
 │           │   │   │   ├── ApiKeyService.java                  # BYOK storage + status
+│           │   │   │   ├── ApiKeyValidator.java                # Gemini key pre-save validation
 │           │   │   │   ├── AsyncJournalAnalysisService.java    # @Async AI analysis
 │           │   │   │   ├── ChatMemoryService.java              # Redis session memory
 │           │   │   │   ├── CustomTaskService.java
@@ -2390,7 +2419,7 @@ Grouped by tag. All paths are relative to `/api`.
 | Method | Path | Purpose |
 |---|---|---|
 | `PUT` | `/users/profile` | Update username and/or email |
-| `DELETE` | `/users/profile` | Delete account and all cascade data |
+| `DELETE` | `/users/profile` | Delete account. Executes a comprehensive 6-layer hard-delete across MySQL, PostgreSQL, Redis, and JVM memory. |
 | `PUT` | `/users/profile/password` | Change password + re-encrypt journal entries |
 | `GET` | `/users/profile-full` | Aggregated profile (identity + preferences + API key status) |
 | `PUT` | `/users/roadmap-preferences` | Update roadmap defaults |
@@ -2400,7 +2429,7 @@ Grouped by tag. All paths are relative to `/api`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `PUT` | `/users/api-key` | Set or clear the user's personal Gemini key |
+| `PUT` | `/users/api-key` | Set or clear the user's personal Gemini key. Returns `200 OK` with a body status (`VERIFIED`, `REJECTED`, `UNVERIFIED`, `CLEARED`). Returns `400 Bad Request` only if the key exceeds 250 characters. |
 | `GET` | `/users/api-key/status` | Get masked status of the stored key |
 
 ### Unified Error Response
@@ -2527,7 +2556,7 @@ erDiagram
     User ||--|| UserStats : "has"
 ```
 
-**Cascade behavior:** Deleting a `User` cascades through every dependent table in the correct order (`ScheduledTask` → `CustomTask` → `Roadmap` (cascades tasks/resources/milestones) → `Milestone` (cascades tasks) → `JournalEntry` (cascades key phrases) → `UserStats` → `UserPreferences` → `UserRoadmapPreferences`). This is enforced in `UserService.deleteUser()` within a single transaction.
+**Cascade behavior:** Deleting a `User` triggers a comprehensive 6-layer erasure. Inside MySQL, the `UserService.deleteUser()` method executes a strict child-to-parent deletion within a single `@Transactional` block (`ScheduledTask` → `CustomTask` → `Roadmap` → `Milestone` → `JournalEntry` → `DailyJournalSummary` → `UserStats` → `UserPreferences` → `UserRoadmapPreferences` → `User`). Simultaneously, it cascades outside MySQL to delete 3072-dim vector embeddings from PostgreSQL and purge chat sessions from Redis.
 
 ### Indexes
 
@@ -2755,6 +2784,8 @@ cd backend/mymindmirror-backend
   which blocks non-`SUPER` users from creating procedures and triggers. Without this
   flag, integration tests fail with `SQLState HY000, error code 1419` the moment
   `DatabaseBootstrap` runs.
+- **6-Layer Deletion Verification:** The `ProfileFlowIT` suite explicitly verifies that deleting an account actually purges data from all infrastructure layers, including verifying `VectorStore.delete()` calls for PostgreSQL and `SCAN`+`UNLINK` execution against the Testcontainers Redis instance.
+
 
 Containers are started **once per JVM** via a static initializer and stopped by a shutdown hook, so integration tests across all classes share the same MySQL + Redis instances.
 
@@ -2887,14 +2918,14 @@ If you're extending the project, prioritize adding:
 
 As of the current codebase:
 
-| Metric | Value |
-|---|---|
-| **Total tests** | 1,159 (1,043 unit + 116 integration) |
-| **Instructions covered** | 99% (16,553 / 16,634) |
-| **Branches covered** | 99% (1,254 / 1,263) |
-| **Lines covered** | 99% (3,252 / 3,265) |
-| **Methods covered** | 100% (585 / 585) |
-| **Classes covered** | 100% (143 / 143) |
+| Metric | Value                             |
+|---|-----------------------------------|
+| **Total tests** | 1200 (1,082 unit + 118 integration) |
+| **Instructions covered** | 99%                               |
+| **Branches covered** | 99%                               |
+| **Lines covered** | 99%                               |
+| **Methods covered** | 100%                              |
+| **Classes covered** | 100%                              |
 
 Coverage is measured by JaCoCo 0.8.15. Generate your own report with:
 
@@ -2914,6 +2945,10 @@ The only package below 99% is `util/`, driven entirely by **defensive catch bloc
 | `FieldEncryptionUtil` | 93% | `catch` blocks for JCE provider failures |
 
 These branches only execute when the JVM's cryptography provider is misconfigured or a cipher operation fails at the byte level — scenarios that require either a broken JRE or deep reflection into `Cipher`, `SecretKeyFactory`, or `SecureRandom`. Both are excluded from testing by design, not by oversight. The happy paths, invalid-secret paths, and malformed-data paths are all covered.
+
+#### Testing the SDK Boundary
+
+To achieve 100% coverage on the `ApiKeyValidator` (which communicates with the external Google GenAI SDK), the test suite uses Mockito's `mockConstruction`. This allows tests to simulate exact SDK responses (including null payloads, empty generation lists, and 401/403 auth rejections) without making real network calls to Google.
 
 Every other package — `service`, `service.ai`, `controller`, `mapper`, `security`, `exception`, `config`, `model`, `payload.*`, `enums`, `resolver`, `constants`, `config.properties` — is at **100%**.
 
@@ -3078,7 +3113,8 @@ Two independent encryption systems protect different classes of data. They use d
 
 - **Storage:** Encrypted with AES-GCM under the server master key.
 - **Exposure:** Plaintext is **never** returned by any endpoint. The status endpoint returns a masked hint (last 4 characters prefixed with `••••••••`).
-- **Cache eviction:** When a key is updated or cleared, `DynamicAiClientService.evictUserModel(userId)` clears cached model instances so the new key takes effect immediately.
+- **Pre-save validation:** Keys are validated against Google's API before being saved. If Google rejects the key (`REJECTED`), the save is aborted so a typo never overwrites a working key. If Google is unreachable (`UNVERIFIED`), the key is saved anyway to prevent third-party outages from blocking the user.
+- **Cache eviction:** When a key is updated or cleared, `DynamicAiClientService.evictUserModel(userId)` clears cached model instances so the new key takes effect immediately. (Eviction is skipped on `REJECTED` saves, since the active key didn't change).
 - **Failure modes:** If a stored key fails to decrypt (e.g., after master key rotation), the user falls back to the shared key. They must re-enter their key to restore BYOK.
 
 ### Unified Error Responses
@@ -3096,6 +3132,17 @@ Every error path — validation, auth, filter-layer rejections, unexpected runti
 - **No wildcard origins** in the default config. `allowCredentials=true` requires explicit origins.
 - Allowed methods: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`.
 - Allowed headers: `Authorization`, `Content-Type`, `Accept`, `X-Requested-With`, `Cache-Control`.
+
+### Hard Deletion & Data Erasure
+MyMindMirror operates on a strict zero-retention policy for deleted accounts. When a user triggers `DELETE /api/users/profile`, a complete 6-layer erasure is executed:
+1. **MySQL Relational Data:** Every related entity is hard-deleted (journal entries, key phrases, roadmaps, milestones, tasks, stats, preferences, and pre-aggregated daily summaries).
+2. **PostgreSQL Vectors:** All 3072-dimensional vector embeddings for the user's journal entries are deleted from pgvector.
+3. **Redis Chat Sessions:** All active AI chat sessions are scanned and purged from Redis using a non-blocking `SCAN` + `UNLINK` pattern to avoid locking the database.
+4. **Redis Application Caches:** Cached DTOs (`userFullProfile`, `gamificationStats`, `apiKeyStatus`, etc.) are instantly evicted.
+5. **JVM Memory (API Keys):** Decrypted API keys and active `ChatModel` instances are evicted from the `ConcurrentHashMap` in memory.
+6. **JVM Memory (Reflections):** Cached reflective questions are cleared from the in-memory cache.
+
+The database operations are wrapped in a single `@Transactional` block to prevent partial relational deletions. Once the response returns `200 OK`, your data is cryptographically and permanently gone from every storage medium.
 
 ### Known Gaps
 
