@@ -364,4 +364,68 @@ class ProfileFlowIT extends AbstractIntegrationTest {
         assertThat(userRepository.count()).isEqualTo(0);
         assertThat(journalEntryRepository.count()).isEqualTo(0);
     }
+
+    @Test
+    @DisplayName("DELETE /profile purges all user chat sessions from Redis")
+    void deleteProfile_purgesRedisChatSessions() throws Exception {
+        // 1. Get Alice's user ID
+        UUID aliceId = userRepository.findByUsername("alice").orElseThrow().getId();
+
+        // 2. Create a second user (Bob) to ensure we don't delete his data
+        registerAndLogin("bob", "password123");
+        UUID bobId = userRepository.findByUsername("bob").orElseThrow().getId();
+
+        // 3. Seed fake chat sessions in Redis
+        String aliceKey1 = "chat:memory:" + aliceId + ":session1";
+        String aliceKey2 = "chat:memory:" + aliceId + ":session2";
+        String bobKey1 = "chat:memory:" + bobId + ":session1";
+
+        redisTemplate.opsForValue().set(aliceKey1, "Alice's chat data");
+        redisTemplate.opsForValue().set(aliceKey2, "Alice's other chat data");
+        redisTemplate.opsForValue().set(bobKey1, "Bob's chat data");
+
+        // Verify they exist
+        assertThat(redisTemplate.hasKey(aliceKey1)).isTrue();
+        assertThat(redisTemplate.hasKey(bobKey1)).isTrue();
+
+        // 4. Delete Alice's account
+        mockMvc.perform(delete("/api/users/profile")
+                        .header("Authorization", "Bearer " + aliceJwt))
+                .andExpect(status().isOk());
+
+        // 5. Verify Alice's sessions are completely wiped from Redis
+        assertThat(redisTemplate.hasKey(aliceKey1)).isFalse();
+        assertThat(redisTemplate.hasKey(aliceKey2)).isFalse();
+
+        // 6. Verify Bob's session is untouched
+        assertThat(redisTemplate.hasKey(bobKey1)).isTrue();
+
+        // Cleanup for Bob
+        redisTemplate.delete(bobKey1);
+    }
+
+
+    @Test
+    @DisplayName("DELETE /profile triggers async deletion of journal entry vector embeddings")
+    void deleteProfile_purgesPostgresVectorEmbeddings() throws Exception {
+        // 1. Create a journal entry (which would normally trigger an embedding)
+        mockMvc.perform(post("/api/journal")
+                        .header("Authorization", "Bearer " + aliceJwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rawText\":\"This is a test entry for vector deletion.\"}"))
+                .andExpect(status().isCreated());
+
+        // Get the created entry's ID
+        UUID entryId = journalEntryRepository.findAll().get(0).getId();
+
+        // 2. Delete the user account
+        mockMvc.perform(delete("/api/users/profile")
+                        .header("Authorization", "Bearer " + aliceJwt))
+                .andExpect(status().isOk());
+
+        // 3. Verify that the EmbeddingGenerationService was triggered
+        // Note: The @Async method runs on a separate thread, so we use Mockito's timeout()
+        // to wait up to 2000ms for the vectorStore.delete() to be called.
+        verify(vectorStore, timeout(2000)).delete(List.of(entryId.toString()));
+    }
 }

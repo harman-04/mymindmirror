@@ -14,7 +14,9 @@ import com.mymindmirror.backend.payload.response.UserRoadmapPreferencesDto;
 import com.mymindmirror.backend.security.JwtUtil;
 import com.mymindmirror.backend.security.services.UserDetailsImpl;
 import com.mymindmirror.backend.service.ApiKeyService;
+import com.mymindmirror.backend.service.JournalReflectionService;
 import com.mymindmirror.backend.service.UserService;
+import com.mymindmirror.backend.service.ai.DynamicAiClientService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,12 @@ class UserControllerTest {
 
     @MockitoBean
     private UserMapper userMapper; //  Mock the mapper
+
+    @MockitoBean
+    private DynamicAiClientService dynamicAiClientService;
+
+    @MockitoBean
+    private JournalReflectionService journalReflectionService;
 
     private User currentUser;
     private UUID userId;
@@ -155,6 +163,13 @@ class UserControllerTest {
         mockMvc.perform(delete("/api/users/profile"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("User profile deleted successfully."));
+
+        // Verify DB deletion
+        verify(userService).deleteUser(eq(userId));
+
+        // Verify JVM Cache evictions
+        verify(dynamicAiClientService).evictUserModel(eq(userId));
+        verify(journalReflectionService).clearUserCache(eq(userId));
     }
 
     // ===== CHANGE PASSWORD =====

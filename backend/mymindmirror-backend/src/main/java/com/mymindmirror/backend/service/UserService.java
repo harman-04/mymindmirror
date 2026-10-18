@@ -41,6 +41,10 @@ public class UserService {
     private final RoadmapRepository roadmapRepository;
     private final CustomTaskRepository customTaskRepository;
     private final ScheduledTaskRepository scheduledTaskRepository;
+    private final EmbeddingGenerationService embeddingGenerationService;
+    private final ChatMemoryService chatMemoryService;
+    private final DailyJournalSummaryRepository dailyJournalSummaryRepository;
+
 
 
     public User registerNewUser(String username, String email, String password) {
@@ -118,9 +122,6 @@ public class UserService {
         }
     }
 
-
-
-
     @Caching(evict = {
             @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#userId"),
             @CacheEvict(value = CacheConstants.USER_PREFERENCES_DTO, key = "#userId"),
@@ -146,17 +147,27 @@ public class UserService {
         // 4. Milestones (their tasks will be cascade-deleted if `@OneToMany` has `cascade = ALL`)
         List<Milestone> milestones = milestoneRepository.findByUserOrderByCreationDateDesc(user);
         milestoneRepository.deleteAll(milestones);
-        // 5. Journal entries
+        // 5. Journal entries & Vector Embeddings
         List<JournalEntry> entries = journalEntryRepository.findByUser(user);
+        for (JournalEntry entry : entries) {
+            embeddingGenerationService.deleteEmbedding(entry.getId());
+        }
         journalEntryRepository.deleteAll(entries);
-        // 6. UserStats
+
+        // 6. Daily Journal Summary (explicit delete, in case triggers miss)
+        dailyJournalSummaryRepository.deleteByUserId(userId); // You'll need to add this method to the repository
+
+        // 6. Redis Chat Sessions
+        chatMemoryService.clearAllUserSessions(userId);
+
+        // 7. UserStats
         userStatsRepository.findByUser(user).ifPresent(stats -> userStatsRepository.delete(stats));
-        // 7. UserPreferences
+        // 8. UserPreferences
         userPreferencesRepository.findByUser(user).ifPresent(prefs -> userPreferencesRepository.delete(prefs));
-        // 8. UserRoadmapPreferences
+        // 9. UserRoadmapPreferences
         userRoadmapPreferencesRepository.findByUser(user).ifPresent(prefs -> userRoadmapPreferencesRepository.delete(prefs));
 
-        // Finally delete the user
+        //10  Finally delete the user
         userRepository.delete(user);
         log.info("User with ID {} and all associated data deleted successfully.", userId);
     }
@@ -225,8 +236,6 @@ public class UserService {
         return userRepository.save(user);
     }
 
-
-
     /**
      * Returns roadmap preferences as a DTO (cached).
      */
@@ -252,8 +261,6 @@ public class UserService {
         return userRoadmapPreferencesRepository.findByUser(user)
                 .orElseGet(() -> createDefaultRoadmapPreferences(user));
     }
-
-
 
     @Caching(evict = {
             @CacheEvict(value = CacheConstants.USER_PREFERENCES_DTO, key = "#user.id"),
@@ -355,7 +362,6 @@ public class UserService {
         return userPreferencesRepository.findByUser(user)
                 .orElseGet(() -> createDefaultPreferences(user));
     }
-
 
     @CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#user.id")
     @Transactional

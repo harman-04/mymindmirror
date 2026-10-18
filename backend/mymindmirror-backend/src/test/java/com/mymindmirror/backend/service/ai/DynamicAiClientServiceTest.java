@@ -25,8 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -682,6 +681,63 @@ class DynamicAiClientServiceTest {
         Boolean result = invokeUserHasOwnApiKey(userId);
 
         assertThat(result).isFalse();
+    }
+
+// ========================================================================
+// @PostConstruct logCascadeConfig()
+// ========================================================================
+
+    @Test
+    @DisplayName("@PostConstruct logCascadeConfig: iterates every AITask and its cascade without error")
+    void logCascadeConfig_shouldIterateAllAITasks() {
+        // With @InjectMocks the @PostConstruct is never triggered by Mockito,
+        // so we must invoke it manually to get line coverage.
+        // AITask is a real enum here (mockTask is only a mock), so values() works.
+
+        assertThatCode(() -> dynamicAiClientService.logCascadeConfig())
+                .doesNotThrowAnyException();
+
+        // Sanity: the enum must expose at least one value for the loop to execute
+        assertThat(AITask.values()).isNotEmpty();
+    }
+
+// ========================================================================
+// generate(): all models on cooldown  → log.error branch + fallback string
+// ========================================================================
+
+    @Test
+    @DisplayName("generate: all cascade models on cooldown → skips all, returns fallback (lastException == null path)")
+    void generate_shouldReturnFallback_whenAllModelsInCascadeAreOnCooldown() {
+        long future = System.currentTimeMillis() + 60_000L;
+        modelCooldownMap.put("modelA", future);
+        modelCooldownMap.put("modelB", future);
+
+        String result = dynamicAiClientService.generate("Hello", userId, mockTask);
+
+        assertThat(result).contains("exceptionally high volume");
+        verify(mockChatModelA, never()).call(any(Prompt.class));  // fast-path skip
+        verify(mockChatModelB, never()).call(any(Prompt.class));
+    }
+
+// ========================================================================
+// generateStructured(): all models on cooldown → log.error branch + 503
+// ========================================================================
+
+    @Test
+    @DisplayName("generateStructured: all cascade models on cooldown → skips all, throws 503 (lastException == null path)")
+    void generateStructured_shouldThrow_whenAllModelsInCascadeAreOnCooldown() {
+        long future = System.currentTimeMillis() + 60_000L;
+        modelCooldownMap.put("modelA", future);
+        modelCooldownMap.put("modelB", future);
+
+        assertThatThrownBy(() ->
+                dynamicAiClientService.generateStructured(
+                        "Prompt", DummyRecord.class, userId, mockTask))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("shared AI service");
+
+        verify(mockChatModelA, never()).call(any(Prompt.class));
+        verify(mockChatModelB, never()).call(any(Prompt.class));
     }
 
     // ========================================================================

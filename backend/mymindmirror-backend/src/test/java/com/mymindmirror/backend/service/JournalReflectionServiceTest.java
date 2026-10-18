@@ -483,7 +483,7 @@ class JournalReflectionServiceTest {
         // RAG search returns historical entries with a different ID
         UUID historicalId = UUID.randomUUID();
         JournalEntry historicalEntry = new JournalEntry();
-        historicalEntry.setId(historicalId); // ✅ Set a non‑null ID
+        historicalEntry.setId(historicalId); // Set a non‑null ID
         historicalEntry.setEntryDate(LocalDate.now().minusDays(3));
         historicalEntry.setSummary("Had a similar challenge last week");
         historicalEntry.setEmotions("{\"frustration\":0.6}");
@@ -815,5 +815,21 @@ class JournalReflectionServiceTest {
         String result = journalReflectionService.generateReflectiveQuestion(user);
 
         assertThat(result).isEqualTo("What's one thing you've learned about yourself recently?");
+    }
+
+    @Test
+    void clearUserCache_shouldRemoveUserFromMap() throws Exception {
+        // Given - use reflection to put a dummy object in the private map
+        java.lang.reflect.Field cacheField = JournalReflectionService.class.getDeclaredField("questionCache");
+        cacheField.setAccessible(true);
+        java.util.Map<String, Object> cache = (java.util.Map<String, Object>) cacheField.get(journalReflectionService);
+
+        cache.put(userId.toString(), "dummy-cached-question");
+
+        // When
+        journalReflectionService.clearUserCache(userId);
+
+        // Then
+        assertThat(cache).doesNotContainKey(userId.toString());
     }
 }
