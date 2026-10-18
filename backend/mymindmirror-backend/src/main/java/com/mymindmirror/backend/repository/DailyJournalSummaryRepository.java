@@ -25,4 +25,8 @@ public interface DailyJournalSummaryRepository extends JpaRepository<DailyJourna
                                @Param("avgMood") Double avgMood,
                                @Param("totalWords") Long totalWords,
                                @Param("entryCount") Integer entryCount);
+
+    @Modifying
+    @Query("DELETE FROM DailyJournalSummary d WHERE d.userId = :userId")
+    void deleteByUserId(@Param("userId") UUID userId);
 }

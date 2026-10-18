@@ -1,7 +1,10 @@
 package com.mymindmirror.backend.service;
 
+import com.mymindmirror.backend.enums.ValidationStatus;
 import com.mymindmirror.backend.model.User;
+import com.mymindmirror.backend.payload.response.ApiKeySaveResponse;
 import com.mymindmirror.backend.payload.response.ApiKeyStatusResponse;
+import com.mymindmirror.backend.payload.response.ValidationResult;
 import com.mymindmirror.backend.util.FieldEncryptionUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,10 @@ class ApiKeyServiceTest {
 
     @Mock
     private UserService userService;
+
+
+    @Mock
+    private ApiKeyValidator apiKeyValidator;
 
     @InjectMocks
     private ApiKeyService apiKeyService;
@@ -188,5 +195,81 @@ class ApiKeyServiceTest {
         assertThat(response.usingOwnKey()).isFalse();
         assertThat(response.maskedKey()).isNull();
         assertThat(response.message()).isEqualTo("Using shared API key. For better privacy, add your own key.");
+    }
+
+    // ========== validateAndSaveApiKey Tests ==========
+
+    @Test
+    void validateAndSaveApiKey_shouldSaveAndReturnVerified_whenValidatorReturnsVerified() {
+        when(apiKeyValidator.validate("good-key"))
+                .thenReturn(new ValidationResult(ValidationStatus.VERIFIED));
+        when(encryptionUtil.encrypt("good-key")).thenReturn("encrypted");
+
+        ApiKeySaveResponse response = apiKeyService.validateAndSaveApiKey(user, "good-key");
+
+        assertThat(response.status()).isEqualTo("VERIFIED");
+        assertThat(user.getGeminiApiKeyEncrypted()).isEqualTo("encrypted");
+        verify(userService).save(user);
+    }
+
+    @Test
+    void validateAndSaveApiKey_shouldNotSaveAndReturnRejected_whenValidatorRejects() {
+        when(apiKeyValidator.validate("bad-key"))
+                .thenReturn(new ValidationResult(ValidationStatus.REJECTED));
+
+        ApiKeySaveResponse response = apiKeyService.validateAndSaveApiKey(user, "bad-key");
+
+        assertThat(response.status()).isEqualTo("REJECTED");
+        assertThat(user.getGeminiApiKeyEncrypted()).isNull();
+        verify(userService, never()).save(any());
+        verify(encryptionUtil, never()).encrypt(anyString());
+    }
+
+    @Test
+    void validateAndSaveApiKey_shouldSaveAndReturnUnverified_whenValidatorCannotVerify() {
+        when(apiKeyValidator.validate("maybe-key"))
+                .thenReturn(new ValidationResult(ValidationStatus.UNVERIFIED));
+        when(encryptionUtil.encrypt("maybe-key")).thenReturn("encrypted");
+
+        ApiKeySaveResponse response = apiKeyService.validateAndSaveApiKey(user, "maybe-key");
+
+        assertThat(response.status()).isEqualTo("UNVERIFIED");
+        assertThat(user.getGeminiApiKeyEncrypted()).isEqualTo("encrypted");
+        verify(userService).save(user);
+    }
+
+    @Test
+    void validateAndSaveApiKey_shouldClearAndReturnCleared_whenKeyIsNull() {
+        ApiKeySaveResponse response = apiKeyService.validateAndSaveApiKey(user, null);
+
+        assertThat(response.status()).isEqualTo("CLEARED");
+        assertThat(user.getGeminiApiKeyEncrypted()).isNull();
+        verify(userService).save(user);
+        verify(apiKeyValidator, never()).validate(anyString());
+    }
+
+    @Test
+    void validateAndSaveApiKey_shouldClearAndReturnCleared_whenKeyIsBlank() {
+        ApiKeySaveResponse response = apiKeyService.validateAndSaveApiKey(user, "   ");
+
+        assertThat(response.status()).isEqualTo("CLEARED");
+        assertThat(user.getGeminiApiKeyEncrypted()).isNull();
+        verify(userService).save(user);
+        verify(apiKeyValidator, never()).validate(anyString());
+    }
+
+    @Test
+    void validateAndSaveApiKey_shouldPreserveExistingKey_whenNewKeyRejected() {
+        user.setGeminiApiKeyEncrypted("existing-encrypted-key");
+        when(apiKeyValidator.validate("bad-key"))
+                .thenReturn(new ValidationResult(
+                       ValidationStatus.REJECTED));
+
+        ApiKeySaveResponse response = apiKeyService.validateAndSaveApiKey(user, "bad-key");
+
+        assertThat(response.status()).isEqualTo("REJECTED");
+        assertThat(user.getGeminiApiKeyEncrypted()).isEqualTo("existing-encrypted-key");
+        verify(userService, never()).save(any());
+        verify(encryptionUtil, never()).encrypt(anyString());
     }
 }

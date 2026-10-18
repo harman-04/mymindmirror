@@ -132,7 +132,7 @@ public class JournalReflectionService {
             log.info("RAG search yielded no results, falling back to recent entries.");
             journalContext.append("Here are the user's most recent journal entries (no specific match found for the query):\n\n");
 
-            // ✅ Highly Optimized: Fetches EXACTLY 5 entries. No decryption overhead!
+            //  Highly Optimized: Fetches EXACTLY 5 entries. No decryption overhead!
             List<JournalEntry> recentEntries = journalPersistenceService.getLatestJournalTimelineWithoutDecryption(user, reflectiveTopK);
 
             for (JournalEntry entry : recentEntries) {
@@ -246,7 +246,7 @@ public class JournalReflectionService {
                 currentAnchorQuery = todayCombinedSummaries.toString().trim();
             }
         } else {
-            // ✅ FIX 1: Used Persistence Service instead of Repository
+            // Used Persistence Service instead of Repository
             Optional<JournalEntry> latestEntryOpt = journalPersistenceService.findLatestEntryByUser(user);
             if (latestEntryOpt.isPresent()) {
                 JournalEntry latestEntry = latestEntryOpt.get();
@@ -275,7 +275,7 @@ public class JournalReflectionService {
         } else {
             log.info("RAG search yielded zero historical matches. Falling back to latest timeline.");
 
-            // ✅ Highly Optimized: Fetches EXACTLY 4 entries. No decryption overhead!
+            //  Highly Optimized: Fetches EXACTLY 4 entries. No decryption overhead!
             List<JournalEntry> standardTimeline = journalPersistenceService.getLatestJournalTimelineWithoutDecryption(user, fallbackTopK);
 
             context.append("--- RECENT PAST TIMELINE ---\n");
@@ -314,5 +314,9 @@ public class JournalReflectionService {
             log.error("Error generating RAG reflective question", e);
             return "What's one thing you've learned about yourself recently?";
         }
+    }
+
+    public void clearUserCache(UUID userId) {
+        questionCache.remove(userId.toString());
     }
 }

@@ -7,8 +7,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -183,5 +183,65 @@ class ChatMemoryServiceTest {
         // Then
         String expectedKey = "chat:memory:" + userId + ":" + sessionId;
         verify(listOperations).rightPush(eq(expectedKey), any());
+    }
+
+    @Test
+    void clearAllUserSessions_shouldScanAndUnlinkKeys() {
+        // Given
+        String pattern = "chat:memory:" + userId + ":*";
+        byte[] key1 = "chat:memory:user:session1".getBytes();
+        byte[] key2 = "chat:memory:user:session2".getBytes();
+
+        RedisConnection mockConnection = mock(RedisConnection.class);
+        Cursor<byte[]> mockCursor = mock(Cursor.class);
+
+        // Mock the SCAN behavior
+        when(mockConnection.scan(any(ScanOptions.class))).thenReturn(mockCursor);
+        when(mockCursor.hasNext()).thenReturn(true, true, false); // Two items, then empty
+        when(mockCursor.next()).thenReturn(key1, key2);
+
+        // Mock the RedisTemplate execute callback to immediately invoke the connection logic
+        when(redisTemplate.execute(any(RedisCallback.class))).thenAnswer(invocation -> {
+            RedisCallback<?> callback = invocation.getArgument(0);
+            return callback.doInRedis(mockConnection);
+        });
+
+        // When
+        chatMemoryService.clearAllUserSessions(userId);
+
+        // Then
+        org.mockito.ArgumentCaptor<org.springframework.data.redis.core.ScanOptions> optionsCaptor =
+                org.mockito.ArgumentCaptor.forClass(org.springframework.data.redis.core.ScanOptions.class);
+
+        verify(mockConnection).scan(optionsCaptor.capture());
+
+        // Assert the pattern was correctly passed to Redis (getPattern() returns a String in Spring Boot 4)
+        org.springframework.data.redis.core.ScanOptions capturedOptions = optionsCaptor.getValue();
+        assertThat(capturedOptions.getPattern()).isEqualTo(pattern);
+
+        verify(mockConnection).unlink(key1);
+        verify(mockConnection).unlink(key2);
+        verify(mockCursor).close();   }
+
+    @Test
+    void clearAllUserSessions_shouldDoNothing_whenNoKeysExist() {
+        // Given
+        RedisConnection mockConnection = mock(RedisConnection.class);
+        Cursor<byte[]> mockCursor = mock(Cursor.class);
+
+        when(mockConnection.scan(any(ScanOptions.class))).thenReturn(mockCursor);
+        when(mockCursor.hasNext()).thenReturn(false); // Immediately empty
+
+        when(redisTemplate.execute(any(RedisCallback.class))).thenAnswer(invocation -> {
+            RedisCallback<?> callback = invocation.getArgument(0);
+            return callback.doInRedis(mockConnection);
+        });
+
+        // When
+        chatMemoryService.clearAllUserSessions(userId);
+
+        // Then
+        verify(mockConnection).scan(any(ScanOptions.class));
+        verify(mockConnection, never()).unlink(any(byte[].class));
     }
 }

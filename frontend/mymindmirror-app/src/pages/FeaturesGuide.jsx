@@ -4,15 +4,11 @@ import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import {
-  Sparkles, Brain, Target, Shield, Feather, ArrowRight, ChevronRight,
-  Layers, PieChart, Notebook, Hash, Clock, Zap, BookOpen, Gauge,
-  TrendingUp, Folders, HeartPulse, BarChart, Lightbulb, Trophy, Flame,
-  Cloud, LineChart, ListChecks, MapPin, Lock, Key, Download, Search,
-  Filter, AlertTriangle, CheckCircle, RefreshCw, Calendar, HelpCircle,
-  ChevronDown, ChevronUp, Activity, Smile, Frown, CircleDot, FileSpreadsheet,
-  FileText, Sparkle, Star, Award, CalendarDays, ListTree, Sigma, ScatterChart,
-  Menu, X, Video, GraduationCap, Languages, Settings, Clock as ClockIcon,
-  Loader, Calendar as CalendarIcon, Check, Database, Cpu, Server, LockKeyhole,
+  Sparkles, Brain, Target, Shield, ArrowRight,
+  Layers, Zap, HeartPulse, Trophy,
+  LineChart, ListChecks, MapPin, Download, Search,
+  ChevronDown, ChevronUp, ListTree, Menu, X, Settings, Clock as ClockIcon,
+  Calendar as CalendarIcon, Database, Cpu, Server, LockKeyhole,
   TestTube, MonitorSmartphone
 } from 'lucide-react';
 import FadeIn from '../components/FadeIn';
@@ -587,10 +583,18 @@ function FeaturesGuide() {
       **How to use:**
 
       - Navigate to your Account Settings and locate the **Gemini API Key** module.
-      - **Bring Your Own Key (BYOK):** Paste your personal token generated via Google AI Studio. The system will securely validate and store the key.
-      - **Reactive Status Badge:** The UI utilizes the \`useApiKeyStatus\` hook to constantly monitor your active key. If your custom key is active, the panel shifts to an Emerald Green status badge, securely masking your key (e.g., \`(••••12ab)\`).
+      -       - **Bring Your Own Key (BYOK):** Paste your personal token generated via Google AI Studio.
+              - **Pre-Save Validation Matrix:** The backend tests the key against Google's API *before* saving it, returning one of four distinct states:
+                - **Rapid Validation Cascade:** The validation call uses a strict 7-second combined connect/read timeout and tries up to 2 fallback models. It also bypasses the SDK's \`temperature(0.0)\` bug (which breaks Gemini 3.5+ Lite models) to guarantee a clean validation response.
+                - \`VERIFIED\`: The key works and is saved.
+                - \`REJECTED\`: Google explicitly rejected the key. The save is blocked so a typo never overwrites a working key.
+                - \`UNVERIFIED\`: Google was unreachable (timeout). The key is saved anyway to survive third-party outages.
+                - \`CLEARED\`: The input was blank, so the stored key was deleted.
+              - **Quick-Access Navbar Popover:** You don't need to open the Profile page to manage your key. Click the \`Own key\` indicator in the global navbar to view your masked key, jump directly to settings, or clear the key with one click.
+              - **Reactive Status Badge:** The UI utilizes the \`useApiKeyStatus\` hook to constantly monitor your active key. If your custom key is active, the navbar and profile panel shift to an Emerald Green status, securely masking your key (e.g., \`(••••12ab)\`).
       - **Bypass Global Shared Quotas:** By using your own personal API key, you unlock your own dedicated infrastructure limits directly from Google. This ensures your heavy roadmap generations and continuous AI chats are never throttled during high global application traffic.
       - **The Danger Zone:** If you ever choose to leave the platform, the "Delete Account Forever" option executes a true, destructive cascading hard‑delete. Your records are not soft‑deleted or hidden—they are completely wiped from existence.
+       - **The Absolute Right to be Forgotten:** When you delete your account, we don't just delete your login. A single click executes a 6-layer hard-delete across the entire stack. Your journals, roadmaps, and encrypted keys are wiped from MySQL; your AI memory vectors are purged from PostgreSQL; and your active chat sessions and caches are instantly unlinked from Redis. We hold zero soft-deletes, zero hidden backups, and zero retained metadata. Once you click delete, it's cryptographically gone.
 
       **Zero-Compromise Privacy Isolation:**
       - Journaling text data represents an extraordinary degree of personal vulnerability. MyMindMirror is engineered with a strict "Zero-Trust" data architecture. Even if the underlying primary database servers were fully compromised, your personal thoughts remain unreadable, highly encrypted cryptographic gibberish.
@@ -614,8 +618,10 @@ function FeaturesGuide() {
       content: `
               **The User & System Experience:**
               - **Zero‑Throttle Reliability:** By implementing a dynamic model cascade, you never experience total system blackout if a single AI model hits its Google AI Studio rate limit. The system automatically rotates through a pool of available models.
-              - **Intelligent Traffic Routing:** Each task is assigned a prioritized list of models. The system tries the primary model first; if it fails (due to rate limits, 404 errors, or JSON parsing issues), it instantly cascades to the next model in the list without any user‑visible interruption.
-              - **Resilient Fallback Protection:** When a model returns a \`429 Rate Limit\` or \`404 Not Found\`, the backend applies a **smart cooldown**:
+                     - **Intelligent Traffic Routing:** Each task is assigned a prioritized list of models. The system tries the primary model first; if it fails (due to rate limits, 404 errors, or JSON parsing issues), it instantly cascades to the next model in the list without any user-visible interruption.
+                     - **Startup Observability:** A \`@PostConstruct\` method logs every task's cascade to the console on boot, ensuring the active routing matrix is always visible in production logs.
+                     - **All-Models-On-Cooldown Fast-Path:** If every model in a cascade is on cooldown, the client skips the network entirely, immediately returning a graceful fallback (or 503 with a key-aware message).
+                     - **Resilient Fallback Protection:** When a model returns a \`429 Rate Limit\` or \`404 Not Found\`, the backend applies a **smart cooldown**:
                 - \`429\` / parsing errors → locked for **60 seconds**.
                 - \`404\` (deprecated model) → locked for **24 hours**.
                 This prevents retrying dead endpoints and preserves quota.
@@ -731,13 +737,14 @@ function FeaturesGuide() {
       icon: <TestTube />,
       color: 'text-emerald-500 dark:text-emerald-400',
       content: `
-  **The Numbers:**
-  - **1,159 tests** — 1,043 unit + 116 integration
-  - **99% instruction coverage**
+       **The Numbers:**
+       - **1,200 tests** — 1,082 unit + 118 integration
+       - **99% instruction coverage**
   - **99% branch coverage**
   - **100% method coverage**
   - **100% class coverage**
   - **Zero skipped tests** in CI
+  - **SDK Boundary Testing:** \`ApiKeyValidator\` achieves 100% coverage by using Mockito's \`mockConstruction\` to simulate the Google GenAI SDK (testing empty payloads, 401 auth rejections, and network timeouts) without making real network calls.
 
   **How to run them:**
   - \`./mvnw verify\` runs unit (Surefire) and integration (Failsafe) tests together.
@@ -748,6 +755,7 @@ function FeaturesGuide() {
   - **Unit tests** (\`*Test.java\`): isolated services, mappers, utilities, controllers. Mocked dependencies via Mockito.
   - **Slice tests** (\`@WebMvcTest\`, \`@DataJpaTest\`): single-layer integration with H2.
   - **Integration tests** (\`*IT.java\`): full Spring context + real MySQL 8 + real Redis 7 via Testcontainers.
+- **6-Layer Deletion Verification:** Dedicated integration tests explicitly verify that deleting a user account successfully purges data across *all* infrastructure layers — asserting that PostgreSQL vector embeddings are deleted and Redis chat sessions are purged using non-blocking \`SCAN\` + \`UNLINK\` commands.
 
   **Enterprise Architecture (How it works):**
   - **Real Datastores, Not Mocks:** Integration tests spin up real MySQL and Redis containers via Testcontainers 2.0.5. No mock-DB drift, no "works in test but fails in prod."
@@ -801,6 +809,7 @@ function FeaturesGuide() {
    This completely eliminates the Cartesian product (duplicate task rows) that previously caused massive data duplication in the UI.
  - **Pre-Aggregated Cache Invalidation Tables:** The trigger-backed \`daily_journal_summary\` table tracks daily metrics on the fly. This prevents heavy aggregate math functions from running on the primary entries table during chart paints.
  - **Multi-Layer Redis Caching Engine:** Heavy read endpoints are intercepted by Redis running in RAM. Items like your Roadmap Preferences, Achievement matrices, and Token statuses are served directly from memory, dropping query times from ~120ms to under 10ms.
+- **Non-Blocking Redis Deletion:** When a user deletes their account, we don't use the blocking \`KEYS\` and \`DEL\` commands, which would stall the single-threaded Redis server. Instead, we use a cursor-based \`SCAN\` to batch-find the user's chat sessions and \`UNLINK\` to delete them asynchronously in the background. This guarantees that wiping an account never degrades performance for other active users.
  - **Centralised Cache Keys (\`CacheConstants\`):** All cache names are defined once in \`CacheConstants\` and used throughout the codebase. Annotations like \`@CacheEvict(value = CacheConstants.USER_FULL_PROFILE, key = "#userId")\` are surgically attached to corresponding \`PUT/POST/PATCH\` mutations to instantly drop outdated data frames. This eliminates typos and ensures consistent eviction strategies.
  - **Centralised Date Parsing (\`DateUtil\`):** All date string parsing is routed through a static \`DateUtil\` utility. This handles \`DateTimeParseException\` consistently, validates date ranges, and returns clean 400 Bad Request responses via the global exception handler. No more manual \`try-catch\` blocks in controllers.
  - **Model Cascade Resilience:** Instead of using external retry frameworks, the AI client uses an internal model cascade loop. If a model hits a rate limit, it is locked for 60 seconds; if it returns a 404 (deprecated), it is locked for 24 hours. The system automatically falls back to the next available model without user‑visible interruption.
@@ -869,8 +878,8 @@ function FeaturesGuide() {
                         key={section.id}
                         onClick={() => toggleSection(section.id)}
                         className={`w-full text-left px-4 py-3 rounded-xl lg:rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-3 lg:gap-4 text-xs lg:text-sm font-bold tracking-wide group ${openSection === section.id
-                            ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}`
-                            : `${colors.textSecondary} hover:text-purple-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
+                          ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}`
+                          : `${colors.textSecondary} hover:text-purple-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
                           }`}
                       >
                         <span className={`shrink-0 transition-transform ${openSection === section.id ? 'scale-110' : 'group-hover:scale-110'}`}>
@@ -921,8 +930,8 @@ function FeaturesGuide() {
                           key={section.id}
                           onClick={() => toggleSection(section.id)}
                           className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 active:scale-95 flex items-center gap-3 text-sm font-bold ${openSection === section.id
-                              ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}` // Stripped the duplicated border!
-                              : `${colors.textSecondary} hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
+                            ? `${colors.sidebarActiveText} ${colors.sidebarActiveBg}` // Stripped the duplicated border!
+                            : `${colors.textSecondary} hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent`
                             }`}
                         >
                           <span className="shrink-0">{React.cloneElement(section.icon, { className: "w-5 h-5" })}</span>

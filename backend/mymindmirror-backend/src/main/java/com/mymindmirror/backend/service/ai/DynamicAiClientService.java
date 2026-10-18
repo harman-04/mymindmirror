@@ -5,6 +5,7 @@ import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.enums.AITask;
 import com.mymindmirror.backend.service.ApiKeyService;
 import com.mymindmirror.backend.service.UserService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
@@ -44,6 +45,14 @@ public class DynamicAiClientService {
 
     @Value("${spring.ai.google.genai.chat.options.temperature:0.4}")
     private Double defaultTemperature;
+
+    @PostConstruct
+    public void logCascadeConfig() {
+        log.info("AI Model Cascades initialized:");
+        for (AITask task : AITask.values()) {
+            log.info("  {} -> {}", task.name(), task.getModelCascade());
+        }
+    }
 
     public String generate(String prompt, UUID userId, AITask task) {
         Exception lastException = null;
@@ -129,7 +138,7 @@ public class DynamicAiClientService {
             throw new RuntimeException("AI Model failed to return a valid response object.");
         }
 
-        // 🔥 CRITICAL: Extract the actual answer, bypassing "Thoughts" from models like Gemma
+        //  Extract the actual answer, bypassing "Thoughts" from models like Gemma
         int lastIndex = chatResponse.getResults().size() - 1;
         String rawResponse = chatResponse.getResults().get(lastIndex).getOutput().getText();
 

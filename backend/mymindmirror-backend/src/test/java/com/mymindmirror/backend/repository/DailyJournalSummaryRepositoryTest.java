@@ -156,4 +156,26 @@ class DailyJournalSummaryRepositoryTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    @DisplayName("deleteByUserId removes only the target user's summaries")
+    void deleteByUserId_shouldDeleteOnlyTargetUser() {
+        // Given
+        LocalDate today = LocalDate.now();
+        persist(userId, today, 0.5, 100L, 2);
+        persist(userId, today.minusDays(1), 0.6, 150L, 3);
+        persist(otherUserId, today, 0.9, 200L, 1); // Should NOT be deleted
+
+        // When
+        repository.deleteByUserId(userId);
+        em.flush();
+        em.clear();
+
+        // Then
+        List<Object[]> remaining = repository.findByUserAndDateRange(userId, today.minusDays(7), today);
+        assertThat(remaining).isEmpty();
+
+        List<Object[]> otherUserData = repository.findByUserAndDateRange(otherUserId, today.minusDays(7), today);
+        assertThat(otherUserData).hasSize(1);
+    }
+
 }

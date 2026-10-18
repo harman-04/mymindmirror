@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import FadeIn from '../components/FadeIn';
 import {
     User, Edit, Save, X, Trash2, Loader, CheckCircle, AlertCircle,
-    KeyRound, Lock, Info, Sparkles, Eye, EyeOff, Shield, Database, Target, Clock, Activity, Coffee,
+    KeyRound, Lock, Info, Sparkles, Shield, Database, Clock, Activity, Coffee,
     MapPin, CalendarIcon, ChevronDown
 } from 'lucide-react';
 import { SkeletonProfile } from '../components/Skeleton';
@@ -271,6 +271,7 @@ function ProfilePage() {
         } catch (err) {
             // System error from backend
             //                 toast.error(err.message || 'Failed to change password.');
+            // toast handle by axiosConfig 
         } finally {
             setSavingPassword(false);
         }
@@ -280,11 +281,31 @@ function ProfilePage() {
         if (savingApiKey) return;
         setSavingApiKey(true);
         try {
-            await updateApiKey(newApiKey);
-            toast.success('API key saved successfully.');
-            setNewApiKey('');
+            const result = await updateApiKey(newApiKey);
+
+            switch (result.status) {
+                case 'VERIFIED':
+                    toast.success(result.message);
+                    setNewApiKey('');
+                    break;
+                case 'CLEARED':
+                    toast.success(result.message);
+                    setNewApiKey('');
+                    break;
+                case 'UNVERIFIED':
+                    toast.warning(result.message);
+                    setNewApiKey('');
+                    break;
+                case 'REJECTED':
+                    toast.error(result.message);
+                    // Keep the input so the user can fix the typo and retry.
+                    break;
+                default:
+                    toast.success('Saved.');
+                    setNewApiKey('');
+            }
         } catch (err) {
-            //             toast.error(err.message || 'Failed to save API key.');
+            // axios interceptor displays the error toast
         } finally {
             setSavingApiKey(false);
         }

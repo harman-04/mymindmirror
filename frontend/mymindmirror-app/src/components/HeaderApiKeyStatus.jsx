@@ -51,8 +51,16 @@ function HeaderApiKeyStatus({ compact = true }) {
     const handleClearKey = async () => {
         setClearing(true);
         try {
-            await updateApiKeyMutation.mutateAsync('');
-            toast.success('API key cleared. Falling back to the shared key.');
+            const result = await updateApiKeyMutation.mutateAsync('');
+            if (result?.status === 'CLEARED') {
+                toast.success(result.message);
+            } else if (result?.status === 'REJECTED') {
+                toast.error(result.message);
+            } else if (result?.message) {
+                toast(result.message);
+            } else {
+                toast.success('API key cleared.');
+            }
             setIsOpen(false);
         } catch (err) {
             toast.error('Failed to clear API key. Please try again.');
@@ -60,7 +68,6 @@ function HeaderApiKeyStatus({ compact = true }) {
             setClearing(false);
         }
     };
-
     // Mobile drawer variant — unchanged, always visible
     if (!compact) {
         const colorClasses = isUsingOwnKey
@@ -104,8 +111,8 @@ function HeaderApiKeyStatus({ compact = true }) {
                     ref={popoverRef}
                     role="menu"
                     className={`absolute right-0 top-full mt-2 w-64 rounded-xl border shadow-xl z-50 overflow-hidden ${isDarkMode
-                            ? 'bg-[#1A162F] border-white/10'
-                            : 'bg-white border-slate-200/80'
+                        ? 'bg-[#1A162F] border-white/10'
+                        : 'bg-white border-slate-200/80'
                         }`}
                 >
                     {/* Header */}
@@ -141,8 +148,8 @@ function HeaderApiKeyStatus({ compact = true }) {
                             onClick={() => setIsOpen(false)}
                             role="menuitem"
                             className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isDarkMode
-                                    ? 'text-gray-200 hover:bg-white/5'
-                                    : 'text-slate-700 hover:bg-slate-100'
+                                ? 'text-gray-200 hover:bg-white/5'
+                                : 'text-slate-700 hover:bg-slate-100'
                                 }`}
                         >
                             <Settings className="w-4 h-4" />
@@ -156,8 +163,8 @@ function HeaderApiKeyStatus({ compact = true }) {
                                 disabled={clearing}
                                 role="menuitem"
                                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${isDarkMode
-                                        ? 'text-rose-400 hover:bg-rose-500/10'
-                                        : 'text-rose-600 hover:bg-rose-50'
+                                    ? 'text-rose-400 hover:bg-rose-500/10'
+                                    : 'text-rose-600 hover:bg-rose-50'
                                     }`}
                             >
                                 <Trash2 className="w-4 h-4" />

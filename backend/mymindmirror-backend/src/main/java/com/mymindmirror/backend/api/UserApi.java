@@ -71,7 +71,8 @@ public interface UserApi {
     @Operation(
             summary = "Delete the current user's profile",
             description = "Permanently deletes the authenticated user along with all associated data " +
-                    "(journal entries, roadmaps, milestones, tasks, preferences, stats) in a single transaction. " +
+                    "across all storage layers (MySQL, PostgreSQL vectors, Redis chat sessions, " +
+                    "Redis caches, and JVM memory). The database operations execute in a single transaction. " +
                     "Returns a confirmation message on success."
     )
     @ApiResponses({

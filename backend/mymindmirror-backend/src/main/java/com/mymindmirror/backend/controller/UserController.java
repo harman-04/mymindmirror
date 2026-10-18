@@ -10,13 +10,17 @@ import com.mymindmirror.backend.payload.request.UpdateUserPreferencesRequest;
 import com.mymindmirror.backend.payload.request.UserProfileRequest;
 import com.mymindmirror.backend.payload.response.*;
 import com.mymindmirror.backend.service.ApiKeyService;
+import com.mymindmirror.backend.service.JournalReflectionService;
 import com.mymindmirror.backend.service.UserService;
 
+import com.mymindmirror.backend.service.ai.DynamicAiClientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -26,6 +30,8 @@ public class UserController implements UserApi {
 
     private final UserService userService;
     private final ApiKeyService apiKeyService;
+    private final DynamicAiClientService dynamicAiClientService;
+    private final JournalReflectionService journalReflectionService;
     private final UserMapper userMapper;
 
     @Override
@@ -41,7 +47,17 @@ public class UserController implements UserApi {
     @Override
     @DeleteMapping("/profile")
     public ResponseEntity<MessageResponse> deleteUserProfile(@CurrentUser User currentUser) {
-        userService.deleteUser(currentUser.getId());
+        UUID userId = currentUser.getId();
+
+        // 1. Delete from all databases (MySQL, Postgres)
+        userService.deleteUser(userId);
+
+        // 2. Evict from JVM memory caches
+        dynamicAiClientService.evictUserModel(userId);
+
+        // 3. Clear cached reflection questions (You'll need to add this method to JournalReflectionService)
+        journalReflectionService.clearUserCache(userId);
+
         return ResponseEntity.ok(new MessageResponse("User profile deleted successfully."));
     }
 

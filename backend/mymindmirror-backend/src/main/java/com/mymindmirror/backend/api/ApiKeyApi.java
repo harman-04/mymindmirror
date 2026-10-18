@@ -2,6 +2,7 @@ package com.mymindmirror.backend.api;
 
 import com.mymindmirror.backend.model.User;
 import com.mymindmirror.backend.payload.request.ApiKeyRequest;
+import com.mymindmirror.backend.payload.response.ApiKeySaveResponse;
 import com.mymindmirror.backend.payload.response.ApiKeyStatusResponse;
 import com.mymindmirror.backend.payload.response.ErrorResponse;
 
@@ -33,20 +34,24 @@ public interface ApiKeyApi {
 
     @Operation(
             summary = "Set or clear the user's Gemini API key",
-            description = "If the supplied 'apiKey' is non-blank, it is encrypted and stored as the user's personal " +
-                    "Gemini key, and the user's cached AI model instances are evicted so the new key takes effect " +
-                    "immediately. If 'apiKey' is null or blank, the stored key is cleared and the user falls back " +
-                    "to the shared key. Both paths return 204 No Content."
+            description = "If the supplied 'apiKey' is non-blank, it is validated against Google's API " +
+                    "before saving. If Google confirms the key works, it is encrypted, stored, and cached " +
+                    "model instances are evicted (status = VERIFIED). If Google rejects the key, the save is " +
+                    "refused and the previously stored key (if any) is left untouched (status = REJECTED). " +
+                    "If Google cannot be reached, the key is saved anyway (status = UNVERIFIED) so a " +
+                    "third-party outage does not block a user from setting up their key. If 'apiKey' is " +
+                    "null or blank, the stored key is cleared (status = CLEARED)."
     )
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "204",
-                    description = "Key updated or cleared. No response body."
+                    responseCode = "200",
+                    description = "Save attempt completed. Inspect the 'status' field for the outcome.",
+                    content = @Content(schema = @Schema(implementation = ApiKeySaveResponse.class))
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Malformed JSON or empty request body. Note: a blank 'apiKey' field is valid " +
-                            "and means 'clear the stored key' — it does not trigger validation.",
+                    description = "Validation failed (API key exceeds 250 characters), malformed JSON, or empty request body. " +
+                            "Note: a blank 'apiKey' field is valid and means 'clear the stored key'.",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
@@ -60,7 +65,7 @@ public interface ApiKeyApi {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    ResponseEntity<Void> updateApiKey(
+    ResponseEntity<ApiKeySaveResponse> updateApiKey(
             @Parameter(hidden = true) User currentUser,
             ApiKeyRequest request);
 

@@ -61,6 +61,15 @@ class UserServiceTest {
     @Mock
     private ScheduledTaskRepository scheduledTaskRepository;
 
+    @Mock
+    private DailyJournalSummaryRepository dailyJournalSummaryRepository;
+
+    @Mock
+    private EmbeddingGenerationService embeddingGenerationService;
+
+    @Mock
+    private ChatMemoryService chatMemoryService;
+
     @InjectMocks
     private UserService userService;
 
@@ -239,7 +248,11 @@ class UserServiceTest {
         when(customTaskRepository.findByUser(user)).thenReturn(List.of());
         when(roadmapRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
         when(milestoneRepository.findByUserOrderByCreationDateDesc(user)).thenReturn(List.of());
-        when(journalEntryRepository.findByUser(user)).thenReturn(List.of());
+
+        // Add a mock journal entry to verify the embedding deletion
+        JournalEntry entry = new JournalEntry();
+        entry.setId(UUID.randomUUID());
+        when(journalEntryRepository.findByUser(user)).thenReturn(List.of(entry));
         when(userStatsRepository.findByUser(user)).thenReturn(Optional.empty());
         when(userPreferencesRepository.findByUser(user)).thenReturn(Optional.empty());
         when(userRoadmapPreferencesRepository.findByUser(user)).thenReturn(Optional.empty());
@@ -252,7 +265,13 @@ class UserServiceTest {
         verify(customTaskRepository).deleteAll(anyList());
         verify(roadmapRepository).deleteAll(anyList());
         verify(milestoneRepository).deleteAll(anyList());
+
+        // --- NEW VERIFICATIONS ---
+        verify(embeddingGenerationService).deleteEmbedding(entry.getId());
+        verify(chatMemoryService).clearAllUserSessions(userId);
+
         verify(journalEntryRepository).deleteAll(anyList());
+        verify(dailyJournalSummaryRepository).deleteByUserId(userId);
         verify(userStatsRepository).findByUser(user);
         verify(userPreferencesRepository).findByUser(user);
         verify(userRoadmapPreferencesRepository).findByUser(user);
