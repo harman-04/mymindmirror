@@ -239,10 +239,15 @@ class GamificationFlowIT extends AbstractIntegrationTest {
         // 2. Perform an activity (triggers @CacheEvict using correct action)
         gamificationService.recordActivity(user, GamificationAction.JOURNAL);
 
-        // 3. Verify using record accessor methods (experiencePoints() instead of getExperiencePoints())
-        UserStatsResponse refreshedStats = gamificationService.getUserStats(user);
-        assertThat(refreshedStats).isNotNull();
-        assertThat(refreshedStats.experiencePoints()).isGreaterThan(initialStats.experiencePoints());
+        // 3. Wait for the cache to be evicted and the DB to commit, then verify
+        org.awaitility.Awaitility.await()
+                .atMost(java.time.Duration.ofSeconds(2))
+                .pollInterval(java.time.Duration.ofMillis(100))
+                .untilAsserted(() -> {
+                    UserStatsResponse refreshedStats = gamificationService.getUserStats(user);
+                    assertThat(refreshedStats).isNotNull();
+                    assertThat(refreshedStats.experiencePoints()).isGreaterThan(initialStats.experiencePoints());
+                });
     }
     // =================================================================
     // User isolation
