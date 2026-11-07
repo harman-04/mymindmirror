@@ -1331,7 +1331,7 @@ Every layer, every version, every reason. Nothing here is accidental — each de
 |---|---|---|---|
 | MySQL | **8.0** | Primary relational store | ACID, stored procedures, triggers, mature JDBC driver |
 | PostgreSQL + pgvector | **pg16** | Vector store | Native 3072-dim cosine similarity, B-tree + GIN metadata indexes |
-| Redis | **7-alpine** | Cache + ephemeral sessions | Sub-millisecond reads, TTL-scoped keys, no disk overhead |
+| Redis | **7 (Upstash / TLS)** | Cache + ephemeral sessions | Sub-millisecond reads, TTL-scoped keys, encrypted over TLS |
 
 ### Frontend
 
@@ -1767,6 +1767,8 @@ MyMindMirror reads configuration from environment variables (via `.env` file imp
 | `DATASOURCE_PASSWORD` | `root` | MySQL password |
 | `REDIS_HOST` | `localhost` | Redis hostname |
 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis port |
+| `SPRING_DATA_REDIS_PASSWORD` | *(none)* | Password for Upstash Redis (required for managed Redis). |
+| `SPRING_DATA_REDIS_SSL_ENABLED` | `false` | Must be `true` for Upstash/cloud Redis (TLS). |
 | `SPRING_CACHE_TYPE` | `redis` | Cache backend (`redis` or `simple` for tests) |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000,http://localhost` | Comma-separated list of allowed origins (no trailing slashes) |
 | `SWAGGER_ENABLED` | `true` (dev) / `false` (prod profile) | Toggle the OpenAPI spec + Swagger UI |
@@ -1799,7 +1801,7 @@ The frontend reads from `import.meta.env.VITE_*` at build time. Currently only o
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8080/api` | Base URL for API calls |
+| `VITE_API_BASE_URL` | `http://localhost:8080/api` | Base URL for API calls. **Must be set to your production backend URL in Vercel (e.g., `https://api.yourdomain.com/api`).** |
 
 ### `.env.example` template
 
@@ -1825,6 +1827,9 @@ VECTOR_DB_PASSWORD=vectorpass
 REDIS_HOST=localhost
 SPRING_DATA_REDIS_PORT=6379
 SPRING_CACHE_TYPE=redis
+# Redis (Upstash TLS)
+SPRING_DATA_REDIS_PASSWORD=your-upstash-password
+SPRING_DATA_REDIS_SSL_ENABLED=true
 
 # ─── Security / CORS ─────────────────────────────────────────
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost
@@ -2145,6 +2150,7 @@ mymindmirror/
 │       ├── Dockerfile                  # Multi-stage: Node 22 build → nginx serve
 │       ├── README.md                   # Frontend-only guide (scripts, structure, conventions)
 │       ├── nginx.conf                  # SPA fallback + /api proxy to backend
+│       ├── vercel.json                 # SPA routing rewrites for Vercel deployment
 │       ├── package.json                # React 19, Vite 7, Tailwind 4
 │       ├── package-lock.json
 │       ├── vite.config.js               # Build + PWA config (PWA only in prod)
@@ -2727,7 +2733,9 @@ For a larger dataset, switch `PgIndexType` to `HNSW` or `IVFFlat` for approximat
 
 ### Schema Management Notes
 
-**Current state:** Schema is managed by Hibernate's `ddl-auto=update` in dev and by triggers installed via `DatabaseBootstrap`. There is no Flyway or Liquibase migration pipeline.
+**Current state:** Schema is managed by Hibernate's `ddl-auto=update` in local development. **In production, it is locked to `ddl-auto=validate`** to prevent accidental schema corruption. Triggers are installed via `DatabaseBootstrap` on startup.
+
+Because there is no Flyway or Liquibase migration pipeline, the first production deployment must use `update` to generate the schema, and subsequently switch to `validate`.
 
 **Implications:**
 - On a fresh database, Hibernate creates all tables from the entity model.
@@ -2940,9 +2948,9 @@ cd backend/mymindmirror-backend
 The only package below 99% is `util/`, driven entirely by **defensive catch blocks** in the two encryption utilities:
 
 | Class | Line coverage | Uncovered code |
-|---|---|---|
-| `EncryptionUtil` | 76% | `catch` blocks for `NoSuchAlgorithmException`, `InvalidKeySpecException`, `BadPaddingException`, `IllegalBlockSizeException` |
-| `FieldEncryptionUtil` | 93% | `catch` blocks for JCE provider failures |
+|---|---------------|---|
+| `EncryptionUtil` | 82%           | `catch` blocks for `NoSuchAlgorithmException`, `InvalidKeySpecException`, `BadPaddingException`, `IllegalBlockSizeException` |
+| `FieldEncryptionUtil` | 93%           | `catch` blocks for JCE provider failures |
 
 These branches only execute when the JVM's cryptography provider is misconfigured or a cipher operation fails at the byte level — scenarios that require either a broken JRE or deep reflection into `Cipher`, `SecretKeyFactory`, or `SecureRandom`. Both are excluded from testing by design, not by oversight. The happy paths, invalid-secret paths, and malformed-data paths are all covered.
 
@@ -3085,7 +3093,8 @@ Two independent encryption systems protect different classes of data. They use d
     - Verifies signature and expiry
     - Loads the user via `UserDetailsService`
     - Populates the `SecurityContextHolder`
-5. **Endpoint protection** — `WebSecurityConfig` permits `/api/auth/**` and requires authentication for `/api/**`. Actuator health/info are public; Swagger is public when enabled.
+5. **Endpoint protection** — `WebSecurityConfig` permits `/api/auth/**` and requires authentication for `/api/**`. Swagger is public when enabled.
+6. **Actuator Lockdown:** `/actuator/health` and `/actuator/info` are public for load-balancer health checks. All other actuator endpoints (`/actuator/**`) are explicitly denied for security.
 
 **Session model:** None. `SessionCreationPolicy.STATELESS` — no server-side sessions, no cookies. Every request must carry a valid token.
 
@@ -3124,6 +3133,8 @@ Every error path — validation, auth, filter-layer rejections, unexpected runti
 - **`debug_message`** is stripped in production (`app.error.expose-debug=false`).
 - **`message`** is always client-safe.
 - **404 vs 403**: cross-user access returns 404 with a generic message.
+- **Zero PII in Logs**: Security-hardened logging redacts raw journal text, ciphertext fragments, and SQL stack traces. Only lengths and generic error classes are logged.
+- **Actuator Lockdown**: The `/actuator/**` endpoints are entirely blocked via Spring Security (`.denyAll()`), ensuring health metrics are not exposed publicly..
 
 ### CORS
 
@@ -3150,9 +3161,9 @@ Documented explicitly so they can be tracked, not hidden.
 
 | Gap | Impact | Mitigation |
 |---|---|---|
-| **No rate limiting on `/api/auth/**`** | Brute-force password attempts are limited only by BCrypt's cost | Deploy behind a reverse proxy with `limit_req` (see [Deployment](#deployment)) |
-| **Redis has no password** in the default Docker setup | Redis is on an internal Docker network, not exposed to the host or internet | Add `requirepass` before exposing Redis externally |
-| **`ddl-auto=update` is still active** | Hibernate can modify schema on startup; fine for dev, hazardous in production | Adopt Flyway, then switch to `validate` — see [Roadmap / Known Limitations](#roadmap--known-limitations) |
+| **No rate limiting on `/api/auth/**`** | Brute-force password attempts are limited only by BCrypt's cost | Deploy behind Cloudflare or a reverse proxy with `limit_req` |
+| **Local Docker Redis has no password** | The default `docker-compose` setup runs Redis on an internal network without auth (Production uses Upstash with TLS + Password). | Add `requirepass` to `docker-compose.yml` before exposing the local port externally. |
+| **No Flyway migrations** | Production is locked to `ddl-auto=validate`, but schema updates currently require manual SQL execution. | Adopt Flyway before the next major schema change. |
 | **No refresh tokens** | Users must re-login after `JWT_EXPIRATION` | Acceptable for a self-hosted personal tool; add refresh flow if multi-tenant |
 | **`DynamicAiClientService` cache is unbounded** | Long-running instances will accumulate model instances per user | Not a problem at current scale; revisit at ~500+ users |
 | **`app.error.expose-debug` must stay `false`** in production | Debug messages can leak internal paths | Enforced in `application-prod.properties` |
@@ -3208,6 +3219,7 @@ Optimized for production: quiet logs, no leaked internals, no debug surfaces.
 | Setting | Value | Why |
 |---|---|---|
 | `logging.level.root` | `WARN` | Only warnings and errors |
+| `server.forward-headers-strategy` | `framework` | Trusts cloud load balancer headers (Railway/Render/Vercel) so Spring Security correctly enforces HTTPS |
 | `logging.level.org.hibernate.SQL` | `WARN` | No SQL logging |
 | `logging.level.org.hibernate.orm.jdbc.bind` | `OFF` | No parameter logging |
 | `logging.level.org.springframework.web` | `WARN` | No request logging |
@@ -3274,6 +3286,11 @@ Spring Boot resolves properties in this precedence (later wins):
 
 ## Deployment
 
+### Frontend (Vercel)
+- The React app is deployed to Vercel.
+- **Vercel SPA Routing:** A `vercel.json` file is included to rewrite all incoming requests to `/index.html`, ensuring React Router deep-links (e.g., `/journal`) do not 404 on refresh.
+- **API Base URL:** The `VITE_API_BASE_URL` environment variable is baked in at build time.
+
 MyMindMirror ships with a Docker Compose stack that runs the full system with one command. For production, additional hardening is recommended.
 
 ### Docker Compose (Recommended)
@@ -3336,7 +3353,8 @@ FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Constrain memory for free-tier cloud hosting (Render/Railway)
+ENTRYPOINT ["java", "-Xmx450m", "-jar", "app.jar"]
 ```
 
 - **`dependency:go-offline`** downloads every dependency in a separate layer — subsequent builds reuse it if `pom.xml` hasn't changed.
@@ -3510,6 +3528,11 @@ the stored procedures in a single round trip. Add it to your `DATASOURCE_URL`:
 ```
 jdbc:mysql://host:3306/db?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&allowMultiQueries=true
 ```
+
+#### Cloud Infrastructure Constraints
+- **JVM Memory:** The Dockerfile limits the Java heap to 450MB (`-Xmx450m`) to fit within the 512MB RAM limits of free-tier PaaS platforms (Render, Railway, Fly.io).
+- **Database Pools:** HikariCP `maximumPoolSize` is tuned for free-tier databases (MySQL: 5, PostgreSQL: 3) to prevent connection exhaustion on Aiven/Neon.
+- **Proxy Headers:** `server.forward-headers-strategy=framework` is enabled so Spring Security trusts the `X-Forwarded-Proto` header from cloud load balancers (enforcing HTTPS correctly).
 
 ### Kubernetes / Orchestration (Notes)
 

@@ -608,6 +608,7 @@ function FeaturesGuide() {
       - **Stateless JWT Interceptors:** Session security is enforced across every single API route using strict JSON Web Tokens (JWT). The backend \`JwtRequestFilter\` intercepts incoming requests, verifying cryptographic signatures before routing to the business layer.
       - **Hard Cascading Account Teardown:** Triggering an account deletion fires an atomic, transactional method. The system purges your Redis chat history, wipes out your PostgreSQL vectors, executes cross-table cascade deletes across your MySQL tasks and roadmaps, and finally obliterates your primary user record.
       - **Virtual Threads Ready:** All security operations are non‑blocking and leverage virtual threads for optimal concurrency.
+      - **Managed Cloud Infrastructure:** The backend is deployed with strict security configurations: Upstash Redis over TLS (\`rediss://\`), bounded HikariCP connection pools for Aiven databases, and \`ForwardedHeaderFilter\` support so HTTPS is correctly enforced behind cloud load balancers.
       `,
     },
     {
@@ -819,6 +820,7 @@ function FeaturesGuide() {
    - *Deferred History Buffers:* Heavy paginated journal histories are completely deferred, fetching rows only when the user explicitly clicks the History tab.
    - *Network Gzip Compression:* Backend JSON response streams are compressed using Gzip, shrinking data payloads over the wire by up to 80% for rapid mobile operations.
    - *Debounced Input Streams:* Search inputs and text entry updates are heavily debounced to prevent redundant API thrashing while typing.
+ - **Cloud-Native Resource Tuning:** HikariCP connection pools are strictly bounded (MySQL: 5, Postgres: 3) and the JVM heap is capped at 450MB via the Dockerfile, allowing the backend to run flawlessly on constrained free-tier cloud hosting without out-of-memory crashes or database connection exhaustion.
  `,
     },
   ], []);
