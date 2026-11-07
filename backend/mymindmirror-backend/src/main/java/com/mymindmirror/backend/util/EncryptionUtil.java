@@ -73,7 +73,6 @@ public class EncryptionUtil {
         try {
             // Use a portion of the userSecret as a consistent salt for key derivation
             // This assumes userSecret (password hash) is long enough (e.g., from BCrypt, it's 60 chars)
-//            byte[] salt = Arrays.copyOf(userSecret.getBytes(), SALT_LENGTH);
             byte[] salt = Arrays.copyOf(userSecret.getBytes(StandardCharsets.UTF_8), SALT_LENGTH);
 
             SecretKeySpec secretKey = deriveKey(userSecret, salt);
@@ -86,7 +85,6 @@ public class EncryptionUtil {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
 
-//            byte[] encryptedBytes = cipher.doFinal(actualPlaintext.getBytes());
             byte[] encryptedBytes = cipher.doFinal(actualPlaintext.getBytes(StandardCharsets.UTF_8));
 
             // Prepend IV to ciphertext for storage
@@ -97,9 +95,8 @@ public class EncryptionUtil {
             return Base64.getEncoder().encodeToString(combined);
 
         } catch (Exception e) {
-            log.error("Encryption failed for plaintext (first 20 chars): '{}'. Error: {}",
-                    actualPlaintext.length() > 20 ? actualPlaintext.substring(0, 20) + "..." : actualPlaintext,
-                    e.getMessage(), e);
+            log.error("Encryption failed for plaintext of length {}. Error: {}",
+                    actualPlaintext.length(), e.getMessage(), e);
             return null; // Return null on encryption failure
         }
     }
@@ -126,8 +123,8 @@ public class EncryptionUtil {
             byte[] combined = Base64.getDecoder().decode(ciphertextBase64);
 
             if (combined.length < IV_LENGTH) {
-                log.warn("Decryption failed: Combined data too short to contain IV. Returning original string. Data (first 20 chars): {}",
-                        ciphertextBase64.length() > 20 ? ciphertextBase64.substring(0, 20) + "..." : ciphertextBase64);
+                log.warn("Decryption failed: Combined data too short to contain IV. Returning original string. Data length: {}",
+                        ciphertextBase64.length());
                 return ciphertextBase64; // Data is too short to be valid encrypted data with IV
             }
 
@@ -138,7 +135,6 @@ public class EncryptionUtil {
             byte[] encryptedBytes = new byte[combined.length - IV_LENGTH];
             System.arraycopy(combined, IV_LENGTH, encryptedBytes, 0, encryptedBytes.length);
 
-//            byte[] salt = Arrays.copyOf(userSecret.getBytes(), SALT_LENGTH);
             byte[] salt = Arrays.copyOf(userSecret.getBytes(StandardCharsets.UTF_8), SALT_LENGTH);
             SecretKeySpec secretKey = deriveKey(userSecret, salt);
 
@@ -146,28 +142,26 @@ public class EncryptionUtil {
             cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec);
 
             byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-//            return new String(decryptedBytes);
             return new String(decryptedBytes, StandardCharsets.UTF_8);
 
         } catch (IllegalArgumentException e) {
             // This catches "Illegal base64 character" errors.
             // Occurs when trying to decode a string that is not valid Base64 (e.g., old plain text entries).
-            log.warn("IllegalArgumentException (invalid Base64) during decryption. Returning original string. Error: {}. Data (first 20 chars): {}",
-                    e.getMessage(), ciphertextBase64.length() > 20 ? ciphertextBase64.substring(0, 20) + "..." : ciphertextBase64);
+            log.warn("IllegalArgumentException (invalid Base64) during decryption. Returning original string. Error: {}. Data length: {}",
+                    e.getMessage(), ciphertextBase64.length());
             return ciphertextBase64;
         } catch (javax.crypto.BadPaddingException | javax.crypto.IllegalBlockSizeException e) {
             // These catch errors related to incorrect padding or block size, often indicating:
             // 1. The data was not encrypted with the expected padding/mode.
             // 2. The data is corrupted.
             // 3. The wrong key/IV was used.
-            log.warn("BadPaddingException or IllegalBlockSizeException during decryption. Likely unencrypted, corrupted data, or wrong key/IV. Returning original string. Error: {}. Data (first 20 chars): {}",
-                    e.getMessage(), ciphertextBase64.length() > 20 ? ciphertextBase64.substring(0, 20) + "..." : ciphertextBase64);
+            log.warn("BadPaddingException or IllegalBlockSizeException during decryption. Likely unencrypted, corrupted data, or wrong key/IV. Returning original string. Error: {}. Data length: {}",
+                    e.getMessage(), ciphertextBase64.length());
             return ciphertextBase64;
         } catch (Exception e) {
             // Catch any other unexpected exceptions during the decryption process.
-            log.error("Generic error during decryption for ciphertext (first 20 chars): '{}'. Error: {}",
-                    ciphertextBase64.length() > 20 ? ciphertextBase64.substring(0, 20) + "..." : ciphertextBase64,
-                    e.getMessage(), e);
+            log.error("Generic error during decryption for ciphertext of length {}. Error: {}",
+                    ciphertextBase64.length(), e.getMessage(), e);
             return ciphertextBase64; // Fallback: return original string if any other error occurs
         }
     }

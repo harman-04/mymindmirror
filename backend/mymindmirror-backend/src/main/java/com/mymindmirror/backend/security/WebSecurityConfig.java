@@ -51,6 +51,8 @@ public class WebSecurityConfig {
                         //  Strict: Only permit health and info endpoints
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 
+                        .requestMatchers("/actuator/**").denyAll()
+
                         //  Swagger / OpenAPI
                         .requestMatchers(
                                 "/v3/api-docs/**",
