@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 const getToken = () => localStorage.getItem('jwtToken');
 
@@ -37,7 +37,7 @@ export const useJournalEntries = () => {
     queryFn: fetchAllJournalEntries,
     staleTime: 5000,
     refetchOnMount: true,
-    // 💡 SMART POLLING:
+    //  SMART POLLING:
     // Checks every 3 seconds ONLY if an entry is still being analyzed.
     refetchInterval: (query) => {
       const isAnalyzing = query.state.data?.some(entry => entry.moodScore === null);
@@ -72,15 +72,12 @@ const generateTodaysReflection = async (todayEntries, forceRefresh = false) => {
     const reflection = springBootResponse.data?.reflection || "Couldn't generate a reflection today. Keep journaling!";
     localStorage.setItem(cacheKey, reflection);
     return reflection;
-//  } catch (err) {
-//    console.error('Error generating reflection:', err.response ? err.response.data : err.message);
-//    throw new Error('Failed to generate reflection.');
-//  }
-} catch (err) {
+
+  } catch (err) {
     console.error('Error generating reflection:', err.response ? err.response.data : err.message);
     const backendMessage = err.response?.data?.message;
     throw new Error(backendMessage || 'Failed to generate reflection.');
-}
+  }
 };
 
 export const useTodaysReflection = (todayEntries) => {
@@ -107,9 +104,7 @@ export const useTodaysReflection = (todayEntries) => {
   return { ...query, refresh };
 };
 
-
 // --- Mutations (Add, Update, Delete) ---
-// --- Updated useAddJournalEntry ---
 export const useAddJournalEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -126,7 +121,7 @@ export const useAddJournalEntry = () => {
       // 1. Update local cache immediately
       queryClient.setQueryData(['journalEntries'], (old) => [newEntry, ...(old || [])]);
 
-      // 2. 💡 CRITICAL: Force an immediate refetch to start the polling "loop"
+      // 2.  Force an immediate refetch to start the polling "loop"
       queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
 
       clearTodayReflectionCache();
@@ -172,7 +167,7 @@ export const useUpdateJournalEntry = () => {
       clearTodayReflectionCache();
       queryClient.invalidateQueries({ queryKey: ['todaysReflection'] });
 
-      // 2. 💡 ANALYSIS NOTIFICATION (Promise version)
+      // 2.  ANALYSIS NOTIFICATION (Promise version)
       if (data.data.moodScore === null) {
         toast.promise(
           new Promise((resolve) => {
@@ -234,8 +229,6 @@ export const useDeleteJournalEntry = () => {
     },
   });
 };
-
-
 
 export const useSearchJournalEntries = (searchParams) => {
   return useQuery({
@@ -304,22 +297,19 @@ export const useSearchJournalEntries = (searchParams) => {
 };
 
 export const useKeyPhraseFrequencies = () => {
-    return useQuery({
-        queryKey: ['keyPhraseFrequencies'],
-        queryFn: async () => {
-            const token = getToken();
-            if (!token) throw new Error('Not authenticated');
-            const response = await axios.get(`${API_BASE_URL}/journal/key-phrases`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            return response.data;
-        },
-        staleTime: 10 * 60 * 1000,
-    });
+  return useQuery({
+    queryKey: ['keyPhraseFrequencies'],
+    queryFn: async () => {
+      const token = getToken();
+      if (!token) throw new Error('Not authenticated');
+      const response = await axios.get(`${API_BASE_URL}/journal/key-phrases`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
 };
-
-
-
 
 export const usePaginatedJournalEntries = (pageSize = 20, options = {}) => {
   return useInfiniteQuery({
@@ -405,9 +395,6 @@ export const useImportGrowthTip = () => {
       toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['milestones'] });
     },
-//    onError: (error) => {
-//      toast.error('Failed to add growth tip: ' + (error.response?.data?.message || error.message));
-//    },
   });
 };
 
@@ -421,7 +408,6 @@ const fetchJournalEntryById = async (entryId) => {
   return response.data;
 };
 
-// --- FIND THIS AT THE BOTTOM OF useJournalData.js ---
 export const useJournalEntryById = (entryId, enabled = true) => {
   return useQuery({
     queryKey: ['journalEntry', entryId],
@@ -434,7 +420,7 @@ export const useJournalEntryById = (entryId, enabled = true) => {
       return (data && data.moodScore === null) ? 2000 : false;
     },
 
-    // 💡 NEW: Stop the loop if the server says the entry is gone (404)
+    //  Stop the loop if the server says the entry is gone (404)
     retry: (failureCount, error) => {
       if (error?.response?.status === 404) return false; // Stop immediately on 404
       return failureCount < 3; // Otherwise retry 3 times

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 const getToken = () => localStorage.getItem('jwtToken');
 
@@ -20,9 +20,6 @@ export const useSuggestQuestion = () => {
       );
       return response.data?.answer || "What's one thing you've learned about yourself recently?";
     },
-//    onError: () => {
-//      toast.error("Failed to generate a new question.");
-//    }
   });
 };
 
@@ -42,7 +39,7 @@ export const useSendChatMessage = () => {
       return response.data.answer;
     },
     onSuccess: () => {
-      // 💡 Reward XP instantly when they chat!
+      //  Reward XP instantly when they chat!
       queryClient.invalidateQueries({ queryKey: ['gamificationStats'] });
     }
   });
@@ -64,8 +61,5 @@ export const useClearChatMemory = () => {
     onSuccess: () => {
       toast.success("AI memory cleared successfully.");
     },
-//    onError: () => {
-//      toast.error("Failed to clear AI memory.");
-//    }
   });
 };
