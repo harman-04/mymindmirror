@@ -64,7 +64,7 @@ class MySqlDatabaseConfigTest {
         assertThat(hikari.getUsername()).isEqualTo("root");
         assertThat(hikari.getPassword()).isEqualTo("secret");
         assertThat(hikari.getDriverClassName()).isEqualTo("com.mysql.cj.jdbc.Driver");
-        assertThat(hikari.getMaximumPoolSize()).isEqualTo(10);
+        assertThat(hikari.getMaximumPoolSize()).isEqualTo(5);
 
         hikari.close();
     }

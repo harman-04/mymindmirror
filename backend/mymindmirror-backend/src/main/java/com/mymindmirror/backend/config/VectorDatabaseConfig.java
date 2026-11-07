@@ -33,7 +33,7 @@ public class VectorDatabaseConfig {
         ds.setUsername(properties.username());
         ds.setPassword(properties.password());
         ds.setDriverClassName(properties.driverClassName());
-        ds.setMaximumPoolSize(5);
+        ds.setMaximumPoolSize(3);
         // Helps prevent the "connection closed" warnings from cloud databases
         ds.setMaxLifetime(240000);
         ds.setConnectionTimeout(5000);

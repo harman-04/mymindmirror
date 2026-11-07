@@ -34,7 +34,7 @@ public class MySqlDatabaseConfig {
         ds.setUsername(properties.username());
         ds.setPassword(properties.password());
         ds.setDriverClassName(properties.driverClassName());
-        ds.setMaximumPoolSize(10);
+        ds.setMaximumPoolSize(5);
         ds.setConnectionTimeout(5000);
         ds.setValidationTimeout(3000);
         ds.setMaxLifetime(240000);
