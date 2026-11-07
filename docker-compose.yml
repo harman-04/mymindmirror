@@ -76,6 +76,13 @@ services:
       spring.data.redis.host: redis
       spring.data.redis.port: 6379
       spring.cache.type: redis
+
+      # --- DOCKER OVERRIDES (For local dev only) ---
+      # Disable SSL for local Redis container
+      spring.data.redis.ssl.enabled: "false"
+      # Allow Hibernate to create tables on a fresh Docker volume
+      spring.jpa.hibernate.ddl-auto: update
+
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}

@@ -225,7 +225,10 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
-        log.error("RuntimeException: {}", ex.getMessage(), ex);
+        // SECURITY: Do not log the full stack trace for runtime errors, as Hibernate
+        // may include the failing SQL and raw user data in the exception message.
+        log.error("RuntimeException occurred: {}", ex.getClass().getName());
+
         ErrorResponse body = buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred.", request, ex.getMessage());
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);

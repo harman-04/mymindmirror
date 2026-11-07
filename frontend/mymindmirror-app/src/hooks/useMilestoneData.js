@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { parseISO } from 'date-fns';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('jwtToken');
@@ -58,7 +58,7 @@ export const useCreateMilestone = (userId) => {
     onError: (err, variables, context) => queryClient.setQueryData(['milestones', userId], context.previous),
     onSettled: () => {
       queryClient.invalidateQueries(['milestones', userId]);
-      queryClient.invalidateQueries(['gamificationStats']); // 💡 Gamification Trigger
+      queryClient.invalidateQueries(['gamificationStats']); //  Gamification Trigger
     },
   });
 };
@@ -111,7 +111,7 @@ export const useCreateMilestoneTask = (userId, expandedMilestoneId) => {
     onError: (err, variables, context) => queryClient.setQueryData(['milestones', userId], context.previous),
     onSettled: () => {
       queryClient.invalidateQueries(['milestones', userId]);
-      queryClient.invalidateQueries(['gamificationStats']); // 💡 Gamification Trigger
+      queryClient.invalidateQueries(['gamificationStats']); //  Gamification Trigger
       if (expandedMilestoneId) fetchTasks.mutate(expandedMilestoneId);
     },
   });
@@ -131,7 +131,7 @@ export const useUpdateMilestoneTask = (userId, expandedMilestoneId) => {
     onError: (err, variables, context) => queryClient.setQueryData(['milestones', userId], context.previous),
     onSettled: () => {
       queryClient.invalidateQueries(['milestones', userId]);
-      queryClient.invalidateQueries(['gamificationStats']); // 💡 Gamification Trigger
+      queryClient.invalidateQueries(['gamificationStats']); //  Gamification Trigger
       if (expandedMilestoneId) fetchTasks.mutate(expandedMilestoneId);
     },
   });
@@ -164,7 +164,7 @@ export const useMilestoneInsights = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['gamificationStats']); // 💡 Gamification Trigger
+      queryClient.invalidateQueries(['gamificationStats']); //  Gamification Trigger
     }
   });
 };

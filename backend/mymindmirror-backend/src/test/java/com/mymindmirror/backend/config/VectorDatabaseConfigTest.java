@@ -66,7 +66,7 @@ class VectorDatabaseConfigTest {
         assertThat(hikari.getUsername()).isEqualTo("vectoruser");
         assertThat(hikari.getPassword()).isEqualTo("vectorpass");
         assertThat(hikari.getDriverClassName()).isEqualTo("org.postgresql.Driver");
-        assertThat(hikari.getMaximumPoolSize()).isEqualTo(5);
+        assertThat(hikari.getMaximumPoolSize()).isEqualTo(3);
         assertThat(hikari.getMaxLifetime()).isEqualTo(240_000L);
 
         hikari.close();

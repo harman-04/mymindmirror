@@ -109,7 +109,7 @@ public class UserService {
             }
             user.setEmail(request.email());
             changed = true;
-            log.debug("Updated email to: {}", request.email());
+            log.debug("Updated email for user ID: {}", userId);
         }
 
         if (changed) {

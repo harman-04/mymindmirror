@@ -37,7 +37,7 @@ public class JournalSearchService {
 
     @Transactional(readOnly = true)
     public List<JournalEntry> searchJournalEntriesByKeyword(User user, String keyword) {
-        log.info("Searching journal entries for user: {} with keyword: '{}'", user.getUsername(), keyword);
+        log.info("Searching journal entries for user: {} with keyword of length: {}", user.getUsername(), keyword.length());
 
         String userSecret = user.getPasswordHash();
         if (userSecret == null || userSecret.isEmpty()) {

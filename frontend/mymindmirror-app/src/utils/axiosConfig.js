@@ -26,7 +26,7 @@ axios.interceptors.response.use(
   (error) => {
     const { response, request } = error;
 
- // ✅ NEW: Centralized logging — one log for every API failure
+    //  Centralized logging — one log for every API failure
     console.error('[API Error]', {
       url: error.config?.url,
       method: error.config?.method?.toUpperCase(),
@@ -44,7 +44,7 @@ axios.interceptors.response.use(
         });
       } else {
         toast.error('Request setup error', {
-        id: 'request-setup-error',
+          id: 'request-setup-error',
           description: error.message,
         });
       }
@@ -54,71 +54,48 @@ axios.interceptors.response.use(
     const { status, data } = response;
     const errorMessage = data?.message || data?.error || 'An unexpected error occurred.';
 
-// Dedupe by status + message content: same message → 1 toast, different → separate toasts
+    // Dedupe by status + message content: same message → 1 toast, different → separate toasts
     const toastId = `error-${status}-${errorMessage}`;
 
     switch (status) {
       case 400:
-//        toast.error('Bad Request', { description: errorMessage });
         toast.error('Bad Request', { id: toastId, description: errorMessage });
-
         break;
 
       case 401:
         if (/^\/login(\/|$)/.test(window.location.pathname)) {
-//          toast.error('Login failed', {
-//            description: errorMessage || 'Invalid username or password.',
-//          });
 
- toast.error('Login failed', { id: toastId, description: errorMessage || 'Invalid username or password.' });
+          toast.error('Login failed', { id: toastId, description: errorMessage || 'Invalid username or password.' });
 
         } else {
-//          toast.error('Session expired', {
-//            description: 'Please log in again.',
-//          });
-
           toast.error('Session expired', { id: 'session-expired', description: 'Please log in again.' });
-
-
           localStorage.removeItem('jwtToken');
           window.location.href = '/login';
         }
         break;
 
       case 403:
-//        toast.error('Access Denied', { description: errorMessage });
         toast.error('Access Denied', { id: toastId, description: errorMessage });
         break;
 
       case 404:
-//        toast.error('Not Found', { description: errorMessage });
         toast.error('Not Found', { id: toastId, description: errorMessage });
 
         break;
 
       case 429:
-//        toast.error('Rate limit exceeded', {
-//          description: errorMessage || 'Too many requests. Please wait a moment and try again.',
-//        });
- toast.error('Rate limit exceeded', { id: toastId, description: errorMessage || 'Too many requests. Please wait a moment and try again.' });
+        toast.error('Rate limit exceeded', { id: toastId, description: errorMessage || 'Too many requests. Please wait a moment and try again.' });
         break;
 
       case 500:
-//        toast.error('Server Error', {
-//          description: errorMessage || 'Something went wrong on our end. Please try again.',
-//        });
- toast.error('Server Error', { id: toastId, description: errorMessage || 'Something went wrong on our end. Please try again.' });
+        toast.error('Server Error', { id: toastId, description: errorMessage || 'Something went wrong on our end. Please try again.' });
         break;
 
       case 503:
-//        toast.error('Service Unavailable', {
-//          description: errorMessage || 'Our servers are temporarily overloaded. Please try again in a moment.',
-//        });
- toast.error('Service Unavailable', { id: toastId, description: errorMessage || 'Our servers are temporarily overloaded. Please try again in a moment.' });
+        toast.error('Service Unavailable', { id: toastId, description: errorMessage || 'Our servers are temporarily overloaded. Please try again in a moment.' });
         break;
 
       default:
-//        toast.error(`Error ${status}`, { description: errorMessage });
         toast.error(`Error ${status}`, { id: toastId, description: errorMessage });
 
     }

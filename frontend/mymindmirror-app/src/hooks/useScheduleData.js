@@ -4,7 +4,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('jwtToken');
@@ -57,7 +57,6 @@ export const useGenerateSchedule = () => {
             queryClient.invalidateQueries({ queryKey: ['gamificationStats'] });
             toast.success(`Schedule generated (${mode === 'custom' ? 'custom only' : 'all tasks'})!`);
         },
-//        onError: () => toast.error('Generation failed'),
     });
 };
 
@@ -72,7 +71,6 @@ export const useReoptimizeSchedule = () => {
             queryClient.invalidateQueries({ queryKey: ['gamificationStats'] });
             toast.success('Today re-optimized successfully! ⚡');
         },
-//        onError: () => toast.error('Re-optimization failed'),
     });
 };
 
@@ -95,7 +93,6 @@ export const useMoveScheduledTask = (dateRange) => {
         },
         onError: (err, vars, context) => {
             queryClient.setQueryData(['scheduledTasks', dateRange[0], dateRange[1]], context.previousEvents);
-//            toast.error('Move failed');
         },
         onSuccess: () => toast.success('Task moved'),
         onSettled: () => queryClient.invalidateQueries({ queryKey: ['scheduledTasks'] }),
@@ -118,7 +115,6 @@ export const useCompleteScheduledTask = (dateRange) => {
         },
         onError: (err, taskId, context) => {
             queryClient.setQueryData(['scheduledTasks', dateRange[0], dateRange[1]], context.previousEvents);
-//            toast.error('Failed to complete');
         },
         onSuccess: () => toast.success('Completed! 🎉'),
         onSettled: () => {
@@ -139,7 +135,6 @@ export const useScheduleCustomTask = () => {
             queryClient.invalidateQueries({ queryKey: ['scheduledTasks'] });
             toast.success('Task scheduled successfully!');
         },
-//        onError: () => toast.error('Failed to schedule task'),
     });
 };
 
